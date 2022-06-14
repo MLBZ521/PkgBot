@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.github.mlbz521.pkgbot.service</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/autopkg/python</string>
+		<string>/Library/AutoPkg/PkgBotServer/pkgbot.py</string>
+	</array>
+	<key>KeepAlive</key>
+	<true/>
+	<key>WorkingDirectory</key>
+	<string>Library/AutoPkg/PkgBotServer</string>
+	<key>StandardErrorPath</key>
+	<string>/var/log/PkgBotServer-Service.log</string>
+	<key>StandardOutPath</key>
+	<string>/var/log/PkgBotServer-Service.log</string>
+</dict>
+</plist>

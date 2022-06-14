@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+
+    <title>PkgBot:  {% block title %} {% endblock %}</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-md navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('index')}}">PkgBot</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+              <!-- <li class="nav-item active">
+                  <a class="nav-link" href=" url_for(name='userlogin') }}">Login</a>
+              </li> -->
+              <li class="nav-item active">
+                  <a class="nav-link" href="{{ url_for(name='package_history') }}">Packages</a>
+              </li>
+              <li class="nav-item active">
+                  <a class="nav-link" href="{{ url_for(name='recipe_list') }}">Recipes</a>
+              </li>
+              <!-- <li class="nav-item active">
+                  <a class="nav-link" href="#">KB Articles</a>
+              </li> -->
+              <li class="nav-item active">
+                  <a class="nav-link" href="#">About</a>
+              </li>
+            </ul>
+        </div>
+
+        <style>
+            .btn-main, .btn-main:active, .btn-main:not(:disabled):not(.disabled):active {
+                background-color: #8C1D40;
+                border-color: #8C1D40;
+                color:white;
+            }
+            .btn-main:hover, .btn-main:focus, .btn-main:not(:disabled):not(.disabled):focus {
+            /* .button:active:after { */
+                opacity: 1;
+                transition: 0s;
+                background: #BB2657;
+                box-shadow: 0 0 10px #BB2657;
+            }
+        </style>
+        {% if session["logged_in"] %}
+
+        <form method="POST" action="/auth/logout">
+            <div class="form-row align-items-center">
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm btn-main" color="8C1D40">Logout</button>
+                </div>
+            </div>
+        </form>
+
+
+        {% else %}
+
+        <form method="POST" action="/auth/login">
+            <div class="form-row align-items-center">
+                <div class="form-floating col-auto">
+                    <input type="text" name="username" class="form-control" id="username" placeholder="username">
+                    <label class="col-form-label col-form-label-sm" for="username">Username</label>
+                  </div>
+                <div class="form-floating col-auto">
+                    <input type="password" name="password" class="form-control" id="password" placeholder="password">
+                    <label class="col-form-label col-form-label-sm" for="password">Password</label>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm btn-main" color="8C1D40">Login</button>
+                </div>
+            </div>
+        </form>
+
+        {% endif %}
+
+    </nav>
+    <div class="container">
+        {% block content %} {% endblock %}
+    </div>
+
+
+    <footer><center>This service is managed by the Endpoint Management team.</center></footer>
+
+  </body>
+</html>

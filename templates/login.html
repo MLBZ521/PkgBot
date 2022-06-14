@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+<div>
+    <form>
+        <div class="form-group">
+          <label for="Username">Username</label>
+          <input type="Username" class="form-control" id="Username" aria-describedby="Username" placeholder="Username">
+          <small id="Username" class="form-text text-muted">Enter your Jamf Pro credentials.</small>
+        </div>
+        <div class="form-group">
+          <label for="Password">Password</label>
+          <input type="password" class="form-control" id="Password" placeholder="Password">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+</div>
+
+
+<form>
+    <div class="form-row align-items-center">
+      <div class="col-auto">
+        <label class="sr-only" for="inlineFormInput">Name</label>
+        <input type="text" class="form-control mb-2" id="inlineFormInput" placeholder="Jane Doe">
+      </div>
+      <div class="col-auto">
+        <label class="sr-only" for="inlineFormInputGroup">Username</label>
+        <div class="input-group mb-2">
+          <div class="input-group-prepend">
+            <div class="input-group-text">@</div>
+          </div>
+          <input type="text" class="form-control" id="inlineFormInputGroup" placeholder="Username">
+        </div>
+      </div>
+      <div class="col-auto">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="autoSizingCheck">
+          <label class="form-check-label" for="autoSizingCheck">
+            Remember me
+          </label>
+        </div>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-2">Submit</button>
+      </div>
+    </div>
+</form>
+
+
+<form class="row g-3">
+    <div class="col-auto">
+      <label for="staticEmail2" class="visually-hidden">Email</label>
+      <input type="text" readonly class="form-control-plaintext" id="staticEmail2" value="email@example.com">
+    </div>
+    <div class="col-auto">
+      <label for="inputPassword2" class="visually-hidden">Password</label>
+      <input type="password" class="form-control" id="inputPassword2" placeholder="Password">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary mb-3">Confirm identity</button>
+    </div>
+</form>
+
+
+
+<div class="form-floating mb-3">
+    <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com">
+    <label for="floatingInput">Email address</label>
+  </div>
+  <div class="form-floating">
+    <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+    <label for="floatingPassword">Password</label>
+  </div>
+
+<br />
+<div>
+<form>
+    <div class="form-row align-items-center">
+        <div class="form-floating col-auto">
+            <input type="Username" class="form-control" id="floatingInput" placeholder="Username">
+            <label for="floatingInput">Username</label>
+          </div>
+        <div class="form-floating col-auto">
+            <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+            <label for="floatingPassword">Password</label>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </div>
+</form>
+</div>
+<form>
+    <div class="form-row align-items-center">
+        <div class="form-floating col-auto">
+            <input type="Username" class="form-control" id="floatingInput" placeholder="Username">
+            <label for="floatingInput">Username</label>
+          </div>
+        <div class="form-floating col-auto">
+            <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+            <label for="floatingPassword">Password</label>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </div>
+</form>
+
+        
+{% endblock %}

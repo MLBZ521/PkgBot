@@ -1,0 +1,160 @@
+---
+# PkgBot Configuration
+
+AutoPkg:
+  # Specify non-standard binary to use
+  # binary:
+  # FAIL_RECIPES_WITHOUT_TRUST_INFO
+  UseTrustInfo: True
+  # Location of non-standard RecipeOverrides directory
+  # recipe_overrides: /path/to/RecipeOverrides
+
+# Location of a yaml formatted file with defined recipe configurations
+# recipe_config: ./settings/recipe_config.yaml
+# Location a of plain text file that lists all repos that are decencies of your recipes
+# public_repo_list: list_of_public_repos.txt
+
+
+JamfPro_Dev:
+  autopkg_prefs: /Library/AutoPkg/PkgBot/settings/dev_autopkg_prefs.plist
+  jps_url: https://dev.server.org:8443
+  verify_ssl: True
+  api_user: 
+  api_password: 
+  # If you are using a On Prem HTTPS/SMB/etc. Distribution Point
+  dp1_name: 
+  dp1_user: 
+  dp1_password: 
+
+
+JamfPro_Prod:
+  autopkg_prefs: /Library/AutoPkg/PkgBot/settings/prod_autopkg_prefs.plist
+  jps_url: https://prod.server.org:8443
+  verify_ssl: True
+  api_user: 
+  api_password: 
+  # If you are using a On Prem HTTPS/SMB/etc. Distribution Point
+  dp1_name: 
+  dp1_user: 
+  dp1_password: 
+  # Name of the recipe that will be used when promoting packages to public
+  recipe_template: com.github.mlbz521.jss.ProductionTemplate
+
+
+Git:
+  # Specify non-standard binary to use
+  # binary: 
+  user_name: PkgBot
+  user_email: 
+  private_repo: git@git.org:autopkg/recipes.git
+  ssh_config: |
+    Host *
+    AddKeysToAgent yes
+    UseKeychain yes
+  ssh_known_hosts: |
+    <list of hosts>
+  ssh_private_key: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    <...>
+    -----END OPENSSH PRIVATE KEY-----
+
+
+Services:
+  # The name of the LaunchDaemon that will ensure that the PkgBot service is running
+  pkgbot_service_LaunchDaemon_label: com.github.mlbz521.pkgbot
+  # The name of the LaunchAgent that will run autopkg on a schedule
+  autopkg_service_LaunchAgent_label: com.github.mlbz521.autopkg.service
+  autopkg_service_LaunchAgent_start_interval: 14400
+
+
+Slack:
+  signing_secret: 
+  bot_token: 
+  bot_name: PkgBot
+  slack_id: 
+  channel: 
+
+
+PkgBot:
+  # enable_ssl: True
+  # host: pkgbot.server.org
+  # ip: 
+  # port: 443
+  host: localhost
+  port: 8000
+  # ssl_keyfile: /Library/AutoPkg/PkgBot/settings/private2022.key
+  # ssl_certfile: /Library/AutoPkg/PkgBot/settings/certificate_chain2022.pem
+  # Reload the server when changes are made
+  keep_alive: True
+  Admins:
+    <username>: <slack_id>
+    <jps_api_username>: null # Yes, _null_ -- only need to set the username here
+  # Jinja Template Directory
+  jinja_templates: templates
+  # How long the web view token is valid for (in minutes)
+  token_valid_for: 30
+  # Logging info
+  uvicorn_log_level: debug
+  log_config:
+    version: 1
+    disable_existing_loggers: False
+    formatters:
+      default:
+        (): 'uvicorn.logging.DefaultFormatter'
+        fmt: '%(asctime)s | %(name)s | %(levelname)s | %(message)s'
+      debug:
+        (): 'uvicorn.logging.DefaultFormatter'
+        fmt: '%(asctime)s | %(name)s | %(levelname)s | %(filename)s:%(lineno)s - %(funcName)20s() | %(message)s'
+      access:
+        (): 'uvicorn.logging.AccessFormatter'
+        fmt: '%(asctime)s | %(name)s | %(levelname)s | %(client_addr)s - "%(request_line)s" %(status_code)s'
+    handlers:
+      default:
+        formatter: default
+        class: logging.handlers.RotatingFileHandler
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+        filename: ./log/PkgBotServer.log
+        level: INFO
+      debugging:
+        formatter: debug
+        class: logging.handlers.RotatingFileHandler
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+        filename: ./log/PkgBotServer-Debug.log
+        level: DEBUG
+      access:
+        formatter: access
+        class: logging.handlers.RotatingFileHandler
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+        filename: ./log/PkgBotServer.HTTP.Access.log
+    loggers:
+      uvicorn.debug:
+        level: DEBUG
+        handlers:
+          - debugging
+      uvicorn.error:
+        level: ERROR
+        handlers:
+          - default
+      uvicorn.access:
+        level: INFO
+        propagate: False
+        handlers:
+          - access
+      PkgBot:
+        level: DEBUG
+        handlers:
+          - default
+          - debugging
+
+
+Common:
+  # Strings that you do not want to be be printed "pubically" in notifications
+  # Any/all passwords/secrets/keys above are already included in the redacttion logic
+  # This value will be parsed as *REGEX*
+  # RedactionStrings: <some_internal_string>|\b<username>\b

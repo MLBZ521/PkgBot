@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}List of Recipes{% endblock %}
+{% block content %}
+        <style>
+            table {
+                border-collapse: collapse;
+                /* border: 1px solid black; */
+                table-layout: auto;
+                width: 100%;
+                /* padding: 8px; */
+                white-space: nowrap;
+                text-align: left;
+            }
+            td {
+                /* border: 1px solid black; */
+                padding: 5px;
+            }
+            td:nth-child(2) {
+                text-align: center;
+            }
+            td:first-child {
+                border: 0px;
+            }
+            tr:nth-child(even) td:not(:first-child) {
+                background-color: #f2f2f2;
+            }
+            tr:hover td:not(:first-child) {
+                background-color: #FFC627;
+            }
+            th:nth-child(n+1) {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                background-color: #8C1D40;
+                color: white;
+            }
+        </style>
+
+
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+        <script type="text/javascript" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
+
+
+
+
+        <table id="recipes" class="recipes">
+            <thead>
+                <tr>
+                    {% for header in table_headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% set sort_on = request.sort_on | default("id") %}
+                {% for recipe in recipes | sort(attribute=sort_on) %}
+                <tr>
+                    <td><a href="{{ url_for(name='recipe_page', id=recipe.id) }}"><span class="badge badge-warning">{{ recipe.id }}</span></a></td>
+                    <td>{{ recipe.recipe_id }}</td>
+                    <td>{{ recipe.name }}</td>
+                    <td>{{ recipe.enabled }}</td>
+                    <td>{{ recipe.pkg_only }}</td>
+                    <td>{{ recipe.last_ran | strftime }}</td>
+                    <td>{{ recipe.schedule }}</td>
+                    <td>{{ recipe.notes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <script type="text/javascript">
+            $(document).ready(
+                function() { 
+                $('#recipes').DataTable(); 
+                } 
+            );
+        </script>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+    {% if session["protected_page"] %}
+
+        <div class="alert alert-danger alert-dismissible">
+            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+            <strong>Access Denied:</strong>  You must login before accessing this page!
+        </div>
+
+    {% endif %}
+
+<h2>PkgBot:  Systems Online</h3>
+
+<p>PkgBot will record software version history for Jamf Pro.</p>
+
+<p>PkgBot is a framework to manage software packaging, testing, and promoting from a development to production environment.  It utilizes the open source project <a href="https://www.github.com/autopkg">AutoPkg</a> to download and package software.  From there, the <a href="https://www.github.com/autopkg">JSSImporter</a> Processor is utilized to upload packages into Jamf Pro.  Several customizations have been made to provide the functionality that PkgBot offers.</p>
+
+<p>Within this site, you will find software version history including it's current status, as well as AutoPkg recipe configurations and status.</p>
+
+<p>This site will provide Site Admins greater visibility into third party software updates and more in the future.  We hope this project promotes more collaboration with Deskside groups to validate software .pkgs before they're made available in production and customer systems.</p>
+
+{% endblock %}

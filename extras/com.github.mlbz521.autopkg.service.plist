@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.github.mlbz521.autopkg.service</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/autopkg/python</string>
+		<string>-m</string>
+		<string>execute.autopkg</string>
+		<string>run</string>
+		<string>--all</string>
+		<string>--environment</string>
+		<string>dev</string>
+		<string>--pkgbot_config</string>
+		<string>/Library/AutoPkg/PkgBotServer/settings/pkgbot_config.yaml</string>
+	</array>
+	<key>KeepAlive</key>
+	<false/>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PYTHONPATH</key>
+		<string>/Library/AutoPkg/PkgBotServer</string>
+	</dict>
+	<key>AbandonProcessGroup</key>
+	<true/>
+	<key>StartInterval</key>
+	<integer>14400</integer>
+	<key>StandardErrorPath</key>
+	<string>/Users/ahlbetsroff/Library/Logs/PkgBot.AutoPkg.Service.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/ahlbetsroff/Library/Logs/PkgBot.AutoPkg.Service.log</string>
+</dict>
+</plist>

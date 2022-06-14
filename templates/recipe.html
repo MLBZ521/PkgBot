@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{% block title %} Edit "{{ recipe['recipe_id'] }}" {% endblock %}</h1>
+
+<form method="post" action="/recipe/{{ recipe['recipe_id'] }}">
+
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" name="enabled">
+        <label class="form-check-label" for="enabled">Enabled</label>
+    </div>
+
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" name="pkg_only">
+        <label class="form-check-label" for="pkg_only">Upload package only to production?</label>
+    </div>
+
+    <div class="form-group">
+        <label for="notes">Schedule (days: int)</label>
+        <textarea name="notes" placeholder="schedule"
+                  class="form-control">{{ request.form['schedule'] or recipe['schedule'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea name="notes" placeholder="Notes"
+                  class="form-control">{{ request.form['notes'] or recipe['notes'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+</form>
+<hr>
+{% endblock %}

@@ -1,0 +1,10 @@
+2022-06-13 17:55:57,603 | uvicorn.error | INFO | Uvicorn running on [1mhttp://localhost:8000[0m (Press CTRL+C to quit)
+2022-06-13 17:55:57,603 | uvicorn.error | INFO | Started reloader process [[36m[1m45077[0m] using [36m[1mstatreload[0m
+2022-06-13 17:55:58,397 | uvicorn.error | INFO | Started server process [[36m45079[0m]
+2022-06-13 17:55:58,397 | uvicorn.error | INFO | Waiting for application startup.
+2022-06-13 17:55:58,433 | uvicorn.error | INFO | Application startup complete.
+2022-06-13 17:58:05,276 | uvicorn.error | INFO | Shutting down
+2022-06-13 17:58:05,378 | uvicorn.error | INFO | Waiting for application shutdown.
+2022-06-13 17:58:05,385 | uvicorn.error | INFO | Application shutdown complete.
+2022-06-13 17:58:05,385 | uvicorn.error | INFO | Finished server process [[36m45079[0m]
+2022-06-13 17:58:05,583 | uvicorn.error | INFO | Stopping reloader process [[36m[1m45077[0m]

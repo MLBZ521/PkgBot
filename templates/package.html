@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{% block title %} Edit "{{ package['name'] }} - {{ package['version'] }}" {% endblock %}</h1>
+
+<form method="post" action="/package/{{ package['id'] }}">
+
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" name="do_not_delete">
+        <label class="form-check-label" for="do_not_delete">Prevent Deletion</label>
+    </div>
+
+    <div class="form-group">
+        <label for="special_flags">Special Flags</label>
+        <textarea name="special_flags" placeholder="Special Flags??"
+                  class="form-control">{{ request.form['special_flags'] or package['special_flags'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="notes">Special Remarks</label>
+        <textarea name="notes" placeholder="Notes"
+                  class="form-control">{{ request.form['notes'] or package['notes'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+</form>
+<hr>
+{% endblock %}

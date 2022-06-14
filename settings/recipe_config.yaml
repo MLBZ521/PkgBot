@@ -1,0 +1,166 @@
+recipes:
+  com.github.mlbz521.jss.AdobeCCDA:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.AdobeReader:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.AmazonCorretto11:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.AmazonCorretto8:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.AndroidStudio:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.AndroidStudioSDKCLITools:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.AutoCAD:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 30
+  com.github.mlbz521.jss.AutoCADLatestPatch:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.BomgarConsole:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 30
+  com.github.mlbz521.jss.BomgarJumpClient:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 30
+  com.github.mlbz521.jss.CiscoAnyConnect:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 30
+  com.github.mlbz521.jss.CrowdStrikeFalcon:
+    enabled: false
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Dropbox:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Firefox:
+    enabled: false
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.GoogleChrome:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.HPPrinterDrivers:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.JamfProTools:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 30
+  com.github.mlbz521.jss.MicrosoftRemoteDesktop:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Office:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.PPPCUtility:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.ParallelsDesktop:
+    enabled: true
+    last_ran: 0
+    pkg_only: true
+    schedule: 0
+  com.github.mlbz521.jss.Privileges:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.ProfileCreator:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Python3:
+    enabled: false
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Slack:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.SuspiciousPackage:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.VLC:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.VisualStudioCode:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.XcodeCLITools:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.XcodeIDE:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.XeroxCommonDrivers:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Zoom-ForIT:
+    enabled: false
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
+  com.github.mlbz521.jss.Zoom-OutlookPlugin:
+    enabled: true
+    last_ran: 0
+    pkg_only: false
+    schedule: 0
