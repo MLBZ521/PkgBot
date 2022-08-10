@@ -1,13 +1,13 @@
-#!/usr/local/autopkg/python
-
 import asyncio
 import hashlib
 import hmac
 import logging.config
 import os
+import pickle
 import plistlib
 import re
 import shlex
+import sqlalchemy
 import subprocess
 import yaml
 
@@ -28,7 +28,7 @@ def log_setup(name="PkgBot"):
 		logger.debug("LOGGER HAS NO HANDLERS!")
 
 		# Get the log configuration
-		log_config = yaml.safe_load("{}".format(config.pkgbot_config.get("PkgBot.log_config")))
+		log_config = yaml.safe_load(f"{config.pkgbot_config.get('PkgBot.log_config')}")
 
 		# Load log configuration
 		logging.config.dictConfig(log_config)
@@ -80,6 +80,43 @@ async def run_process_async(command, input=None):
 	}
 
 
+def execute_process(command, input=None):
+	"""
+	A helper function for asyncio's subprocess.
+
+	Args:
+		command:  The command line level syntax that would be
+			written in shell or a terminal window.  (str)
+	Returns:
+		Results in a dictionary.
+	"""
+
+	# Validate that command is not a string
+	if not isinstance(command, str):
+		raise TypeError('Command must be a str type')
+
+	# Format the command
+	# command = shlex.quote(command)
+
+	# Run the command
+	process = subprocess.Popen(
+		command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+		stderr=subprocess.PIPE)
+
+	if input:
+		(stdout, stderr) = process.communicate(input=bytes(input, "utf-8"))
+
+	else:
+		(stdout, stderr) = process.communicate()
+
+	return {
+		"stdout": (stdout.decode()).strip(),
+		"stderr": (stderr.decode()).strip() if stderr != None else None,
+		"status": process.returncode,
+		"success": True if process.returncode == 0 else False
+	}
+
+
 async def ask_yes_or_no(question):
 	"""Ask a yes/no question via input() and determine the value of the answer.
 
@@ -91,7 +128,7 @@ async def ask_yes_or_no(question):
 
 	"""
 
-	print("{} [Yes/No] ".format(question), end="")
+	print(f"{question} [Yes/No] ", end="")
 
 	while True:
 
@@ -137,14 +174,14 @@ async def datetime_to_string(datetime_string: str, format_string: str = None):
 	if not format_string:
 		format_string = "%Y-%m-%d %I:%M:%S"
 
-	converted = datetime.fromisoformat(str(datetime_string))
+	converted = datetime.fromisoformat(datetime_string)
 
 	return converted.strftime(format_string)
 
 
-async def compute_hex_digest(key: bytes, message: bytes):
+async def compute_hex_digest(key: bytes, message: bytes, hash: '_hashlib.HASH' = hashlib.sha256):
 
-	return hmac.new( key, message, hashlib.sha256 ).hexdigest()
+	return hmac.new( key, message, hash ).hexdigest()
 
 
 async def load_yaml(config_file):
@@ -179,6 +216,31 @@ async def replace_sensitive_strings(message, sensitive_strings=None):
 
 	if sensitive_strings:
 
-		default_sensitive_strings = "{}|{}".format(default_sensitive_strings, sensitive_strings)
+		default_sensitive_strings = f"{default_sensitive_strings}|{sensitive_strings}"
 
 	return re.sub(default_sensitive_strings, '<redacted>', message)
+
+
+async def get_task_results(task_id: str):
+
+	db_engine=sqlalchemy.create_engine('sqlite:///db/db.sqlite3')
+
+	Session = sessionmaker(db_engine)
+
+	with Session.begin() as session:
+		result = session.execute(f"SELECT result from celery_taskmeta where id = {task_id};").fetchone()
+
+	return pickle.loads(result)
+
+
+async def find_receipt_plist(content):
+
+	run_receipt = re.search(r'Receipt written to (.*)', content)[1]
+	return await plist_reader(run_receipt)
+
+
+async def parse_recipe_receipt(content, processor):
+
+	for step in reversed(content):
+		if re.search(processor, step.get("Processor"), re.IGNORECASE):
+			return step

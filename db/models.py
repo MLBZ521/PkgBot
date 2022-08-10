@@ -1,4 +1,4 @@
-#!/usr/local/autopkg/python
+from pydantic import BaseModel
 
 from tortoise import fields
 from tortoise.models import Model
@@ -11,10 +11,11 @@ class Packages(Model):
 	name = fields.CharField(64)
 	version = fields.CharField(64)
 	pkg_name = fields.CharField(256, null=True)
-	jps_url = fields.CharField(64, null=True)
-	icon_id = fields.CharField(64, null=True)
-	jps_id_dev = fields.IntField(unique=True, null=True)
-	jps_id_prod = fields.IntField(unique=True, null=True)
+	# jps_url = fields.CharField(64, null=True)
+	# icon_id = fields.CharField(64, null=True)
+	icon = fields.CharField(1024)
+	# jps_id_dev = fields.IntField(unique=True, null=True)
+	# jps_id_prod = fields.IntField(unique=True, null=True)
 	packaged_date = fields.DatetimeField(auto_now_add=True)
 	promoted_date = fields.DatetimeField(null=True, default=None)
 	last_update = fields.DatetimeField(auto_now=True)
@@ -36,6 +37,7 @@ class Recipes(Model):
 	recipe_id = fields.CharField(512, unique=True)
 	name = fields.CharField(64)
 	enabled = fields.BooleanField(default=True)
+	manual_only = fields.BooleanField(default=False)
 	pkg_only = fields.BooleanField(default=False)
 	last_ran = fields.DatetimeField(null=True, default=None)
 	schedule = fields.IntField(default=0)
@@ -72,3 +74,48 @@ class ErrorMessages(Model):
 ErrorMessage_Out = pydantic_model_creator(ErrorMessages, name="ErrorMessage_Out")
 ErrorMessage_In = pydantic_model_creator(
 	ErrorMessages, name="ErrorMessage_In", exclude_readonly=True)
+
+
+class TrustUpdates(Model):
+	id = fields.IntField(pk=True)
+	recipe_id = fields.CharField(1024)
+	slack_ts = fields.CharField(32, null=True)
+	slack_channel = fields.CharField(32, null=True)
+	response_url = fields.CharField(1024, null=True)
+	status_updated_by = fields.CharField(64, default="PkgBot")
+	last_update = fields.DatetimeField(auto_now=True)
+	status = fields.CharField(64, null=True)
+
+TrustUpdate_Out = pydantic_model_creator(TrustUpdates, name="TrustUpdate_Out")
+TrustUpdate_In = pydantic_model_creator(
+	TrustUpdates, name="TrustUpdate_In", exclude_readonly=True)
+
+
+class AutopkgCMD(BaseModel):
+	action: str
+	# recipe_id: str
+	prefs: str
+	verbose:  str
+	# ignore_parent_trust: bool
+	# post_processor: str
+	# match_pkg: str
+	# pkg_only:  bool
+	# description: Union[str, None] = None
+	# price: float
+	# tax: Union[float, None] = None
+
+
+class AutoPkgTaskResults(BaseModel):
+	recipe_id: str
+	task_type: str
+	results:  str
+	status: str
+	# id:  int
+
+    # username: str
+    # data: dict
+    # event: str
+    # timestamp: datetime.datetime
+    # model: str
+    # request_id: UUID
+

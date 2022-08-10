@@ -1,6 +1,4 @@
-#!/usr/local/autopkg/python
-
-from fastapi import  status
+from fastapi import status
 from tortoise.contrib.fastapi import HTTPNotFoundError
 
 
@@ -49,9 +47,9 @@ TORTOISE_CONFIG = {
 custom_responses = {
 	# 404: {"description": "Item not found"},
 	# 302: {"description": "The item was moved"},
-	status.HTTP_401_UNAUTHORIZED: { "description": 
+	status.HTTP_401_UNAUTHORIZED: { "description":
 		"You must authenticate before utilizing this endpoint." },
-	status.HTTP_403_FORBIDDEN: { "description": 
+	status.HTTP_403_FORBIDDEN: { "description":
 		"You are not authorized to utilize this endpoint." },
 	status.HTTP_404_NOT_FOUND: { "model": HTTPNotFoundError },
 	status.HTTP_409_CONFLICT: { "description": "The object already exists." }

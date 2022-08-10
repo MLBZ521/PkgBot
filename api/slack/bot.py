@@ -1,5 +1,3 @@
-#!/usr/local/autopkg/python
-
 import hmac
 import json
 import ssl
@@ -53,7 +51,7 @@ class SlackClient(object):
 			)
 
 		except SlackApiError as error:
-			log.error("Slack encountered an error:  {}".format(error.response["error"]))
+			log.error(f"Slack encountered an error:  {error.response['error']}")
 			raise error from error
 
 		return response
@@ -72,7 +70,7 @@ class SlackClient(object):
 			)
 
 		except SlackApiError as error:
-			log.error("Slack encountered an error:  {}".format(error.response["error"]))
+			log.error(f"Slack encountered an error:  {error.response['error']}")
 			raise error from error
 
 		return response
@@ -89,7 +87,7 @@ class SlackClient(object):
 			return { "Result":  "Successfully deleted message" }
 
 		except SlackApiError as error:
-			log.error("Slack encountered an error:  {}".format(error.response["error"]))
+			log.error(f"Slack encountered an error:  {error.response['error']}")
 			return error
 
 
@@ -104,7 +102,7 @@ class SlackClient(object):
 			)
 
 			if response.status_code != 200:
-				log.error("Failed to update message! Status code:  {} | Error message:  {}".format(response.status_code, response.body))
+				log.error(f"Failed to update message! Status code:  {response.status_code} | Error message:  {response.body}")
 
 			else:
 				log.debug("Successfully updated msg via response_url")
@@ -112,9 +110,9 @@ class SlackClient(object):
 			return response
 
 		except SlackApiError as error:
-			log.error("Slack encountered an error:  {}".format(error))
-			log.error("Slack encountered an error.dir:  {}".format(dir(error)))
-			log.error("Slack encountered an error.response['error']:  {}".format(error.response["error"]))
+			log.error(f"Slack encountered an error:  {error}")
+			log.error(f"Slack encountered an error.dir:  {dir(error)}")
+			log.error(f"Slack encountered an error.response['error']:  {error.response['error']}")
 			raise error from error
 
 
@@ -131,7 +129,7 @@ class SlackClient(object):
 			)
 
 		except SlackApiError as error:
-			log.error("Slack encountered an error:  {}".format(error.response["error"]))
+			log.error(f"Slack encountered an error:  {error.response['error']}")
 			raise error from error
 
 		return response
@@ -154,7 +152,7 @@ class SlackClient(object):
 			)
 
 		except SlackApiError as error:
-			log.error("Slack encountered an error:  {}".format(error.response["error"]))
+			log.error(f"Slack encountered an error:  {error.response['error']}")
 			raise error from error
 
 		return response
@@ -174,7 +172,7 @@ class SlackClient(object):
 
 		try:
 			return await self.client.api_call(
-				"reactions.{}".format(kwargs.get("action")),
+				f"reactions.{kwargs.get('action')}",
 				params = kwargs
 			)
 
@@ -185,7 +183,7 @@ class SlackClient(object):
 				kwargs.get("action") == "add" and error_key == "already_reacted" or
 				kwargs.get("action") == "remove" and error_key == "no_reaction"
 			):
-				log.error("Slack encountered an error:  {}".format(error_key))
+				log.error(f"Slack encountered an error:  {error_key}")
 				raise error from error
 
 			else:
@@ -236,7 +234,7 @@ class SlackClient(object):
 		return await self.invoke_reaction(action=action, name=emoji, ts=ts, **kwargs)
 
 
-async def verify_slack_request(request: Request):
+async def validate_slack_request(request: Request):
 
 	try:
 		slack_timestamp = request.headers.get("X-Slack-Request-Timestamp")
@@ -247,7 +245,7 @@ async def verify_slack_request(request: Request):
 			return False
 
 		slack_body = (await request.body()).decode("UTF-8")
-		signature_basestring = ("v0:{}:{}".format(slack_timestamp, slack_body)).encode()
+		signature_basestring = (f"v0:{slack_timestamp}:{slack_body}").encode()
 
 		computed_signature = "v0=" + await utils.compute_hex_digest(
 			bytes(config.pkgbot_config.get("Slack.signing_secret"), "UTF-8"),
@@ -283,12 +281,12 @@ async def startup_constructor():
 
 @router.post("/receive", summary="Handles incoming messages from Slack",
 	description="This endpoint receives incoming messages from Slack and calls the required "
-		"actions based on the message after verify the authenticity of the source.")
+		"actions based on the message after verifying the authenticity of the source.")
 async def receive(request: Request, background_tasks: BackgroundTasks):
 
-	valid_request = await verify_slack_request(request)
+	# valid_request = await validate_slack_request(request)
 
-	if valid_request:
+	if await validate_slack_request(request):
 
 		form_data = await request.form()
 		payload = form_data.get("payload")
@@ -305,9 +303,10 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 			payload_object.get("actions")[0].get("value")).split(":")
 
 		log.debug("Incoming details:\n"
-			"user id:  {}\nusername:  {}\nchannel:  {}\nmessage_ts:  {}\nresponse_url:  {}\nbutton_text:  "
-			"{}\nbutton_value_type:  {}\nbutton_value:  {}\n".format(
-			user_id, username, channel, message_ts, response_url, button_text, button_value_type, button_value))
+			f"user id:  {user_id}\nusername:  {username}\nchannel:  {channel}\nmessage_ts:  "
+			f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
+			f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
+		)
 
 		slack_user_object = models.PkgBotAdmin_In(
 			username = username,
@@ -395,7 +394,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 
 		else:
 
-			log.warning("Unauthorized user:  `{}` [{}].".format(username, user_id))
+			log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
 			blocks = await build_msg.unauthorized_msg(username)
 
 			await SlackBot.post_ephemeral_message(user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")

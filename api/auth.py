@@ -1,5 +1,3 @@
-#!/usr/local/autopkg/python
-
 import os
 from datetime import datetime, timedelta
 
@@ -49,8 +47,7 @@ async def exc_handler(request, exc):
 async def authenticate_user(username: str, password: str):
 
 	# Request a token based on the provided credentials
-	response_get_token = requests.post( "{}/api/v1/auth/token".format(jps_url), 
-		auth=( username, password ) )
+	response_get_token = requests.post(f"{jps_url}/api/v1/auth/token", auth=(username, password))
 
 	if response_get_token.status_code == 200:
 
@@ -83,8 +80,8 @@ async def user_authorizations(token: str = Depends(oauth2_scheme)):
 
 	# GET all user details
 	response_user_details = requests.get(
-		"{}/api/v1/auth".format(jps_url), 
-		headers={ "Authorization": "jamf-token {}".format(token) }
+		f"{jps_url}/api/v1/auth",
+		headers={ "Authorization": f"jamf-token {token}" }
 	)
 
 	# Get the response content from the API
@@ -104,13 +101,13 @@ async def user_authorizations(token: str = Depends(oauth2_scheme)):
 			if int(site["id"]) in site_ids:
 				site_names.append(site["name"])
 
-	except:
+	except Exception:
 		pass
 
 	return site_names
 
 
-@login_manager.user_loader
+@login_manager.user_loader()
 async def load_user(username: str):
 
 	user_model = models.PkgBotAdmin_In(
@@ -126,7 +123,7 @@ async def load_user(username: str):
 	return None
 
 
-@router.post("/login", summary="Login to web views", 
+@router.post("/login", summary="Login to web views",
 	description="Handles authentication on web views.")
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 
@@ -145,7 +142,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 	return response
 
 
-@router.post("/logout", summary="Logout of web views", 
+@router.post("/logout", summary="Logout of web views",
 	description="Handles logging out of web views.")
 async def logout(response: HTMLResponse):
 
@@ -154,7 +151,7 @@ async def logout(response: HTMLResponse):
 	return response
 
 
-@router.post("/token", summary="Request a JWT", 
+@router.post("/token", summary="Request a JWT",
 	description="Handles acquiring a JSON Web Token for use with the PkgBot API.")
 async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
@@ -170,14 +167,14 @@ async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
 	return { "access_token": user.jps_token, "token_type": "bearer" }
 
 
-# @router.get("/test", summary="Return user's JWT", 
+# @router.get("/test", summary="Return user's JWT",
 #     description="Test endpoint to return the current user's token.")
 # async def test(user: models.PkgBotAdmin_In = Depends(user.get_current_user)):
 
 #     return { "token": user.jps_token }
 
 
-@router.get("/authorizations", summary="Check user permissions", 
+@router.get("/authorizations", summary="Check user permissions",
 	description="Returns the authenticated user's permissions (e.g. Site access).")
 async def authorizations(user: models.PkgBotAdmin_In = Depends(user.get_current_user)):
 

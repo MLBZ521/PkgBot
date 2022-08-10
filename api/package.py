@@ -1,5 +1,3 @@
-#!/usr/local/autopkg/python
-
 from typing import List, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from tortoise.contrib.fastapi import HTTPNotFoundError
@@ -7,6 +5,9 @@ from tortoise.contrib.fastapi import HTTPNotFoundError
 import utils
 from db import models
 from api import user, settings
+from api.slack import send_msg
+from tasks import task
+# from tasks.task import autopkg_promote
 
 
 log = utils.log
@@ -18,7 +19,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", summary="Get all packages", description="Get all packages in the database.", 
+@router.get("/", summary="Get all packages", description="Get all packages in the database.",
 	dependencies=[Depends(user.get_current_user)])
 async def get_packages():
 
@@ -27,16 +28,18 @@ async def get_packages():
 	return { "total": len(packages), "packages": packages }
 
 
-@router.get("/id/{id}", summary="Get package by id", description="Get a package by its id.", 
+@router.get("/id/{id}", summary="Get package by id", description="Get a package by its id.",
 	dependencies=[Depends(user.get_current_user)], response_model=models.Package_Out)
 async def get_package_by_id(id: int):
+
+	# log.debug(f"id:  {id}")
 
 	pkg_object = await models.Package_Out.from_queryset_single(models.Packages.get(id=id))
 
 	return pkg_object
 
 
-@router.post("/", summary="Create a package", description="Create a package.", 
+@router.post("/", summary="Create a package", description="Create a package.",
 	dependencies=[Depends(user.verify_admin)], response_model=models.Package_Out)
 async def create(pkg_object: models.Package_In = Depends(models.Package_In)):
 
@@ -45,7 +48,7 @@ async def create(pkg_object: models.Package_In = Depends(models.Package_In)):
 	return await models.Package_Out.from_tortoise_orm(created_pkg)
 
 
-@router.put("/id/{id}", summary="Update package by id", description="Update a package by id.", 
+@router.put("/id/{id}", summary="Update package by id", description="Update a package by id.",
 	dependencies=[Depends(user.verify_admin)], response_model=models.Package_Out)
 async def update(id: int, pkg_object: models.Package_In = Depends(models.Package_In)):
 
@@ -57,7 +60,7 @@ async def update(id: int, pkg_object: models.Package_In = Depends(models.Package
 	return await models.Package_Out.from_queryset_single(models.Packages.get(id=id))
 
 
-@router.delete("/id/{id}", summary="Delete package by id", description="Delete a package by id.", 
+@router.delete("/id/{id}", summary="Delete package by id", description="Delete a package by id.",
 	dependencies=[Depends(user.verify_admin)])
 async def delete_package_by_id(id: int):
 
@@ -67,4 +70,53 @@ async def delete_package_by_id(id: int):
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package does not exist.")
 
 	else:
-		return { "result":  "Successfully deleted package id:  {}".format(id) }
+		return { "result":  f"Successfully deleted package id:  {id}" }
+
+
+@router.post("/promote", summary="Promote package to production",
+description="Promote a package to production by id.", dependencies=[Depends(user.verify_admin)])
+# async def promote_package(background_tasks, id: int = Depends(get_package_by_id)):
+async def promote_package(pkg_object: models.Package_Out = Depends(get_package_by_id)):
+
+	# log.debug(f"pkg_object:  {pkg_object.recipe_id}")
+
+	# pkg_object = await get_package_by_id(id)
+
+	# background_tasks.add_task(
+	# 	recipe_runner.main,
+	# 	[
+	# 		"run",
+	# 		"--action", "promote",
+	# 		"--environment", "prod",
+	# 		"--recipe-identifier", pkg_object.dict().get("recipe_id"),
+	# 		"--pkg-name", "{}".format(pkg_object.dict().get("pkg_name"))
+	# 	]
+	# )
+
+	queued_task = task.autopkg_promote.delay(pkg_object.dict())
+
+	return { "Result": "Queued background task..." , "task_id": queued_task.id }
+
+
+@router.post("/deny", summary="Do not promote package to production",
+	description="Performs the necessary actions when a package is not approved to production use.",
+	dependencies=[Depends(user.verify_admin)])
+async def deny_package(id: int = Depends(get_package_by_id)):
+
+	# pkg_object = await package.get_package_by_id(id)
+
+	# background_tasks.add_task(
+	# 	recipe_manager.main,
+	# 	[
+	# 		"single",
+	# 		"--recipe-identifier", pkg_object.dict().get("recipe_id"),
+	# 		"--disable",
+	# 		"--force"
+	# 	]
+	# )
+
+	pkg_object = await models.Packages.filter(id=id).first()
+	pkg_object.status = "Denied"
+	pkg_object.save()
+
+	return await send_msg.deny_pkg_msg(pkg_object)

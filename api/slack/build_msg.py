@@ -1,5 +1,3 @@
-#!/usr/local/autopkg/python
-
 import json
 
 from fastapi import APIRouter, Depends, Response
@@ -20,12 +18,12 @@ router = APIRouter(
 )
 
 
-@router.get("/new-pkg-msg", summary="Build new package message", 
+@router.get("/new-pkg-msg", summary="Build new package message",
 	description="Builds a 'new package' message for Slack after "
 	"a .pkg has been added to the dev environment.")
 async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)):
 
-	blocks = [ 
+	blocks = [
 		await block_builders.brick_header(pkg_object),
 		await block_builders.brick_main(pkg_object),
 		await block_builders.brick_footer_dev(pkg_object)
@@ -37,7 +35,7 @@ async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	return json.dumps(blocks, indent=4)
 
 
-@router.get("/recipe-error", summary="Build error message", 
+@router.get("/recipe-error", summary="Build error message",
 	description="Builds an 'error' message for Slack after a recipe has returned an error.")
 async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
@@ -47,12 +45,12 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 	return json.dumps(brick_error, indent=4)
 
 
-@router.get("/trust-diff-msg", summary="Build trust diff message", 
+@router.get("/trust-diff-msg", summary="Build trust diff message",
 	description="Builds a message with the trust diff contents "
 	"for Slack after a recipe's parent trust info has changed.")
 async def trust_diff_msg(id: int, recipe: str, error: str = None):
 
-	blocks = [ 
+	blocks = [
 		await block_builders.brick_trust_diff_header(),
 		await block_builders.brick_trust_diff_main(recipe)
 	]
@@ -65,12 +63,12 @@ async def trust_diff_msg(id: int, recipe: str, error: str = None):
 	return json.dumps(blocks, indent=4)
 
 
-@router.get("/deny-pkg-msg", summary="Build deny package message", 
+@router.get("/deny-pkg-msg", summary="Build deny package message",
 	description="Builds a 'package denied message' for Slack when "
 	"a .pkg is not approved for the production environment.")
 async def deny_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)):
 
-	brick_footer = await block_builders.brick_footer_dev(pkg_object)    
+	brick_footer = await block_builders.brick_footer_dev(pkg_object)
 	brick_footer.get("elements").append(
 		await block_builders.brick_footer_denied(pkg_object)
 	)
@@ -84,7 +82,7 @@ async def deny_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In
 	return json.dumps(blocks, indent=4)
 
 
-@router.get("/deny-trust-msg", summary="Build deny trust message", 
+@router.get("/deny-trust-msg", summary="Build deny trust message",
 	description="Builds an message for Slack stating a recipe's "
 	"parent trust info changes were not approved.")
 async def deny_trust_msg(
@@ -98,7 +96,7 @@ async def deny_trust_msg(
 	return json.dumps(blocks, indent=4)
 
 
-@router.get("/promote-msg", summary="Build promoted package message", 
+@router.get("/promote-msg", summary="Build promoted package message",
 	description="Builds a 'package has been promoted' message for Slack "
 	"after a .pkg has been approved for the production environment.")
 async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)):
@@ -116,7 +114,7 @@ async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	return json.dumps(blocks, indent=4)
 
 
-@router.get("/update-trust-success-msg", summary="Build trust update success message", 
+@router.get("/update-trust-success-msg", summary="Build trust update success message",
 	description="Builds a 'success' message for Slack when a "
 	"recipe's trust info is updated successfully.")
 async def update_trust_success_msg(
@@ -130,34 +128,34 @@ async def update_trust_success_msg(
 	return json.dumps(blocks, indent=4)
 
 
-@router.get("/update-trust-error-msg", summary="Build trust update error message", 
+@router.get("/update-trust-error-msg", summary="Build trust update error message",
 	description="Builds an 'error' message for Slack when a recipe's trust info fails to update.")
 async def update_trust_error_msg(msg: str,
 	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
 
 	return json.dumps(
-		[ await block_builders.brick_update_trust_error_msg(error_object, msg) ], 
+		[ await block_builders.brick_update_trust_error_msg(error_object, msg) ],
 		indent=4
 	)
 
 
-@router.get("/unauthorized-msg", summary="Build unauthorized message", 
+@router.get("/unauthorized-msg", summary="Build unauthorized message",
 	description="Builds a 'unauthorized' message for Slack when a user attempts to "
 	"perform a Slack interation with PkgBot that they're not authorized to perform.")
 async def unauthorized_msg(user):
 
 	return json.dumps(
-		await block_builders.unauthorized(user), 
+		await block_builders.unauthorized(user),
 		indent=4
 	)
 
 
-@router.get("/missing-recipe-msg", summary="Build unauthorized message", 
+@router.get("/missing-recipe-msg", summary="Build unauthorized message",
 	description="Builds a 'missing recipe' message for Slack when unable to locate "
 	"a recipe for a requested action.")
 async def missing_recipe_msg(recipe_id, text):
 
 	return json.dumps(
-		await block_builders.missing_recipe_msg(recipe_id, text), 
+		await block_builders.missing_recipe_msg(recipe_id, text),
 		indent=4
 	)

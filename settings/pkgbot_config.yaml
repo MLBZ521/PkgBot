@@ -89,6 +89,7 @@ PkgBot:
   Admins:
     <username>: <slack_id>
     <jps_api_username>: null # Yes, _null_ -- only need to set the username here
+  webhook_secret:  some_long_string to validate incoming messages
   # Jinja Template Directory
   jinja_templates: templates
   # How long the web view token is valid for (in minutes)
@@ -100,13 +101,13 @@ PkgBot:
     disable_existing_loggers: False
     formatters:
       default:
-        (): 'uvicorn.logging.DefaultFormatter'
+        (): 'uvicorn._logging.DefaultFormatter'
         fmt: '%(asctime)s | %(name)s | %(levelname)s | %(message)s'
       debug:
-        (): 'uvicorn.logging.DefaultFormatter'
+        (): 'uvicorn._logging.DefaultFormatter'
         fmt: '%(asctime)s | %(name)s | %(levelname)s | %(filename)s:%(lineno)s - %(funcName)20s() | %(message)s'
       access:
-        (): 'uvicorn.logging.AccessFormatter'
+        (): 'uvicorn._logging.AccessFormatter'
         fmt: '%(asctime)s | %(name)s | %(levelname)s | %(client_addr)s - "%(request_line)s" %(status_code)s'
     handlers:
       default:

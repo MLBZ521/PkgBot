@@ -1,5 +1,3 @@
-#!/usr/local/autopkg/python
-
 import asyncio
 import functools
 import time
@@ -69,13 +67,13 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 	pkgs = await package_api.get_packages()
 
-	table_headers = [ 
-		"", "", "Name", "Version", "Status", "Updated By", 
-		"Packaged", "Promoted", "COMMON", "Flags", "Notes" 
+	table_headers = [
+		"", "", "Name", "Version", "Status", "Updated By",
+		"Packaged", "Promoted", "COMMON", "Flags", "Notes"
 	]
 
-	return templates.TemplateResponse("packages.html", 
-		{ "request": request, "session": session, 
+	return templates.TemplateResponse("packages.html",
+		{ "request": request, "session": session,
 			"table_headers": table_headers, "packages": pkgs.get("packages") })
 
 
@@ -86,7 +84,7 @@ async def package(request: Request, user = Depends(auth.login_manager)):
 
 	pkg = await package_api.get_package_by_id(request.path_params['id'])
 
-	return templates.TemplateResponse("package.html", 
+	return templates.TemplateResponse("package.html",
 		{ "request": request, "session": session, "package": pkg })
 
 
@@ -95,7 +93,7 @@ async def edit(request: Request, user = Depends(auth.login_manager)):
 
 	pkg = await package_api.get_package_by_id(request.path_params['id'])
 
-	return templates.TemplateResponse("edit.html", 
+	return templates.TemplateResponse("edit.html",
 		{ "request": request, "session": session, "package": pkg })
 
 
@@ -106,12 +104,12 @@ async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 
 	pkgs = await recipe_api.get_recipes()
 
-	table_headers = [ 
+	table_headers = [
 		"ID", "Recipe ID", "Name", "Enable", "Pkg Only", "Last Ran", "Schedule",  "Notes"
 	]
 
-	return templates.TemplateResponse("recipes.html", 
-		{ "request": request, "session": session, 
+	return templates.TemplateResponse("recipes.html",
+		{ "request": request, "session": session,
 			"table_headers": table_headers, "recipes": pkgs.get("recipes") })
 
 
@@ -122,5 +120,5 @@ async def recipe_page(request: Request, user = Depends(auth.login_manager)):
 
 	pkg = await recipe_api.get_by_id(request.path_params['id'])
 
-	return templates.TemplateResponse("recipe.html", 
+	return templates.TemplateResponse("recipe.html",
 		{ "request": request, "session": session, "recipe": pkg })

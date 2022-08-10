@@ -1,5 +1,3 @@
-#!/usr/local/autopkg/python
-
 import os
 import sys
 import yaml
@@ -24,7 +22,7 @@ def load(args=None, **kwargs):
 	# print(f"kwargs:  {kwargs}")
 	passed_config_file = kwargs.get('pkgbot_config', None)
 	# env_config_file = os.environ.get('PKGBOT_CONFIG')
-	env_config_file = "./settings/local_pkgbot_config.yaml"
+	env_config_file = "./settings/pkgbot_config.yaml"
 
 	# print(f"passed_config_file:  {passed_config_file}")
 
@@ -49,7 +47,7 @@ def load(args=None, **kwargs):
 
 	for section in configuration:
 		for key in configuration.get(section):
-			PkgBotConfig.add("{}.{}".format(section, key), configuration[section].get(key))
+			PkgBotConfig.add(f"{section}.{key}", configuration[section].get(key))
 
 	if configuration.get("AutoPkg").get("binary") is None:
 		PkgBotConfig.add("AutoPkg.binary", "/usr/local/bin/autopkg")

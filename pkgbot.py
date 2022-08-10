@@ -4,7 +4,7 @@ import argparse
 import multiprocessing
 import sys
 
-sys.path.insert(0, "/Library/AutoPkg/PkgBot")
+sys.path.insert(0, "/Library/AutoPkg/PkgBotPackages")
 
 import asyncio
 import secure
@@ -16,6 +16,8 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from tortoise.contrib.fastapi import register_tortoise
 
+# from settings.celery_utils import create_celery
+
 import config, utils
 from db import models
 from api import auth, autopkg, package, recipe, settings, user, views
@@ -24,14 +26,18 @@ from api.slack import bot, build_msg, send_msg
 
 log = utils.log
 
+
+# def create_app() -> FastAPI:
 app = FastAPI(
 	title="PkgBot API",
 	description="A framework to manage software packaging, testing, and promoting from a "
 		"development to production environment.",
-	version="0.1.0",
+	version="0.2.0",
 	openapi_tags=settings.tags_metadata,
 	docs_url="/api"
 )
+
+# app.celery_app = create_celery()
 
 app.include_router(views.router)
 app.include_router(auth.router)
@@ -42,6 +48,12 @@ app.include_router(bot.router)
 app.include_router(build_msg.router)
 app.include_router(send_msg.router)
 app.include_router(user.router)
+
+# return app
+
+
+# app = create_app()
+# celery = app.celery_app
 
 register_tortoise(
 	app,

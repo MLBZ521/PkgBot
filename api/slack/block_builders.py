@@ -1,11 +1,11 @@
-#!/usr/local/autopkg/python
-
 from fastapi import Depends
 
 import utils
 from db import models
 
+
 log = utils.log
+
 
 async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In)):
 
@@ -24,16 +24,11 @@ async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In))
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": "*Name:*  `{}`\n*Version:*  `{}`\n*Package Name:*  `{}`".format(
-				pkg_object.dict().get("name"), pkg_object.dict().get("version"), 
-				pkg_object.dict().get("pkg_name", "Unknown")
-			)
+			"text": f"*Name:*  `{pkg_object.dict().get('name')}`\n*Version:*  `{pkg_object.dict().get('version')}`\n*Package Name:*  `{pkg_object.dict().get('pkg_name', 'Unknown')}`"
 		},
 		"accessory": {
 			"type": "image",
-			"image_url": "{}/iconservlet/?id={}".format(pkg_object.dict().get("jps_url"), 
-				pkg_object.dict().get("icon_id")
-			),
+			"image_url": f"{pkg_object.dict().get('jps_url')}/iconservlet/?id={pkg_object.dict().get('icon_id')}",
 			"alt_text": "computer thumbnail"
 		}
 	}
@@ -46,8 +41,7 @@ async def brick_footer_dev(pkg_object: models.Package_In = Depends(models.Packag
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": "*Dev*:  {}\t*Uploaded by*:  @{}".format(
-						pkg_object.dict().get("packaged_date"), "PkgBot")
+					"text": f"*Dev*:  {pkg_object.dict().get('packaged_date')}\t*Uploaded by*:  @PkgBot"
 				}
 			]
 		}
@@ -57,9 +51,7 @@ async def brick_footer_promote(pkg_object: models.Package_In = Depends(models.Pa
 
 	return {
 			"type": "mrkdwn",
-			"text": "*Prod*:  {}\t*Approved by*:  @{}".format(
-				pkg_object.dict().get("promoted_date"), pkg_object.dict().get("status_updated_by")
-			)
+			"text": f"*Prod*:  {pkg_object.dict().get('promoted_date')}\t*Approved by*:  @{pkg_object.dict().get('status_updated_by')}"
 		}
 
 
@@ -67,8 +59,7 @@ async def brick_footer_denied(pkg_object: models.Package_In = Depends(models.Pac
 
 	return {
 			"type": "mrkdwn",
-			"text": "*Denied by*: @{}\t*On*:  @{}".format(
-				pkg_object.dict().get("status_updated_by"), pkg_object.dict().get("last_update"))
+			"text": f"*Denied by*: @{pkg_object.dict().get('status_updated_by')}\t*On*:  @{pkg_object.dict().get('last_update')}"
 		}
 
 
@@ -79,9 +70,7 @@ async def brick_footer_denied_trust(error_object):
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": "*Denied by*:  @{}\t*On*:  {}".format(
-						error_object.dict().get("status_updated_by"), 
-						error_object.dict().get("last_update"))
+					"text": f"*Denied by*:  @{error_object.dict().get('status_updated_by')}\t*On*:  {error_object.dict().get('last_update')}"
 				}
 			]
 		}
@@ -89,7 +78,7 @@ async def brick_footer_denied_trust(error_object):
 
 async def brick_button(pkg_object: models.Package_In = Depends(models.Package_In)):
 
-	return 	(
+	return	(
 		{
 			"type": "section",
 			"text": {
@@ -108,7 +97,7 @@ async def brick_button(pkg_object: models.Package_In = Depends(models.Package_In
 						"text": "Approve"
 					},
 					"style": "primary",
-					"value": "Package:{}".format(pkg_object.dict().get("id"))
+					"value": f"Package:{pkg_object.dict().get('id')}"
 				},
 				{
 					"type": "button",
@@ -118,7 +107,7 @@ async def brick_button(pkg_object: models.Package_In = Depends(models.Package_In
 						"text": "Deny"
 					},
 					"style": "danger",
-					"value": "Package:{}".format(pkg_object.dict().get("id"))
+					"value": f"Package:{pkg_object.dict().get('id')}"
 				}
 			]
 		}
@@ -131,7 +120,7 @@ async def brick_error(recipe_id, error):
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": "Encountered an error in:  {}".format(recipe_id),
+				"text": f"Encountered an error in:  {recipe_id}",
 				"emoji": True
 			}
 		},
@@ -139,7 +128,7 @@ async def brick_error(recipe_id, error):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "```{}```".format(error)
+				"text": f"```{error}```"
 			},
 			"accessory": {
 				"type": "image",
@@ -155,8 +144,7 @@ async def brick_update_trust_success_msg(error_object):
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": "Trust info was updated for:  `{}`".format(
-				error_object.dict().get("recipe_id"))
+			"text": f"Trust info was updated for:  `{error_object.dict().get('recipe_id')}`"
 		}
 	}
 
@@ -168,9 +156,7 @@ async def brick_footer_update_trust_success_msg(error_object):
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": "*Updated by*:  @{}\t*On*:  {}".format(
-						error_object.dict().get("status_updated_by"), 
-						error_object.dict().get("last_update"))
+					"text": f"*Updated by*:  @{error_object.dict().get('status_updated_by')}\t*On*:  {error_object.dict().get('last_update')}"
 				}
 			]
 		}
@@ -182,8 +168,7 @@ async def brick_update_trust_error_msg(error_object, msg):
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": "Failed to update trust info for `{}`".format(
-					error_object.dict().get("recipe_id")),
+				"text": f"Failed to update trust info for `{error_object.dict().get('recipe_id')}`",
 				"emoji": True
 			}
 		},
@@ -191,7 +176,7 @@ async def brick_update_trust_error_msg(error_object, msg):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "```{}```".format(msg)
+				"text": f"```{msg}```"
 			},
 			"accessory": {
 				"type": "image",
@@ -218,8 +203,7 @@ async def brick_deny_trust(error_object):
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": "Denied update to trust info for `{}`".format(
-				error_object.dict().get("recipe_id"))
+			"text": f"Denied update to trust info for `{error_object.dict().get('recipe_id')}`"
 		},
 		# "accessory": {
 		# 	"type": "image",
@@ -246,7 +230,7 @@ async def brick_trust_diff_main(recipe):
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": "*Recipe:*  `{}`\n\n_Trust diff review required._\n\n".format(recipe)
+			"text": f"*Recipe:*  `{recipe}`\n\n_Trust diff review required._\n\n"
 		},
 		# "accessory": {
 		# 	"type": "image",
@@ -262,7 +246,7 @@ async def brick_trust_diff_content(error):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Diff Output:*```{}```".format(error)
+				"text": f"*Diff Output:*```{error}```"
 			}
 		}
 
@@ -280,7 +264,7 @@ async def brick_trust_diff_button(id):
 						"text": "Approve"
 					},
 					"style": "primary",
-					"value": "Trust:{}".format(id)
+					"value": f"Trust:{id}"
 				},
 				{
 					"type": "button",
@@ -290,7 +274,7 @@ async def brick_trust_diff_button(id):
 						"text": "Deny"
 					},
 					"style": "danger",
-					"value": "Trust:{}".format(id)
+					"value": f"Trust:{id}"
 				}
 			]
 		}
@@ -311,8 +295,8 @@ async def unauthorized(user):
 			"text": {
 				"type": "mrkdwn",
 				"text": "_*Warning:*_  you are not a PkgBot admin and are not authorized to "
-				"perform this action.\n\n`{}` will be reported to the "
-				"robot overloads.".format(user)
+				f"perform this action.\n\n`{user}` will be reported to the "
+				"robot overloads."
 			},
 			"accessory": {
 				"type": "image",
@@ -330,7 +314,7 @@ async def missing_recipe_msg(recipe_id, text):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "Failed to {} `{}`".format(text, recipe_id),
+				"text": f"Failed to {text} `{recipe_id}`"
 			},
 			"accessory": {
 				"type": "image",
