@@ -1,10 +1,10 @@
 from fastapi import Depends
 
-import utils
+import utilities.common as utility
 from db import models
 
 
-log = utils.log
+log = utility.log
 
 
 async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In)):

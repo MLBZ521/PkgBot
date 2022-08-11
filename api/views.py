@@ -9,14 +9,14 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-import config, utils
+import config, utilities.common as utility
 
 from api import auth
 from api import package as package_api
 from api import recipe as recipe_api
 
 
-log = utils.log
+log = utility.log
 config.load()
 
 

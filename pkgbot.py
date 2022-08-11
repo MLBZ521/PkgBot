@@ -18,13 +18,13 @@ from tortoise.contrib.fastapi import register_tortoise
 
 # from settings.celery_utils import create_celery
 
-import config, utils
+import config, settings, utilities.common as utility
 from db import models
-from api import auth, autopkg, package, recipe, settings, user, views
+from api import auth, autopkg, package, recipe, user, views
 from api.slack import bot, build_msg, send_msg
 
 
-log = utils.log
+log = utility.log
 
 
 # def create_app() -> FastAPI:
@@ -33,7 +33,7 @@ app = FastAPI(
 	description="A framework to manage software packaging, testing, and promoting from a "
 		"development to production environment.",
 	version="0.2.0",
-	openapi_tags=settings.tags_metadata,
+	openapi_tags=settings.api.tags_metadata,
 	docs_url="/api"
 )
 
@@ -57,7 +57,7 @@ app.include_router(user.router)
 
 register_tortoise(
 	app,
-	config = settings.TORTOISE_CONFIG,
+	config = settings.db.TORTOISE_CONFIG,
 	generate_schemas = True,
 	add_exception_handlers = True
 )
@@ -65,13 +65,13 @@ register_tortoise(
 
 async def number_of_workers():
 	number_of_threads = (multiprocessing.cpu_count() * 2) - 1
-	log.debug("Number of workers:  {}".format(number_of_threads))
+	log.debug(f"Number of workers:  {number_of_threads}")
 	return number_of_threads
 
 
 def load_config(cli_args=None):
 
-	log.debug('PkgBot.Load_Config:\n\tAll calling args:  {}'.format(cli_args))
+	log.debug(f'PkgBot.Load_Config:\n\tAll calling args:  {cli_args}')
 
 	parser = argparse.ArgumentParser(description="PkgBot Main.")
 	parser.add_argument(
@@ -81,7 +81,7 @@ def load_config(cli_args=None):
 		help='A config file with defined environmental configurations.')
 	args = parser.parse_known_args(cli_args)
 
-	log.debug('PkgBot.Load_Config:\n\tArgparse args:  {}'.format(args))
+	log.debug(f'PkgBot.Load_Config:\n\tArgparse args:  {args}')
 
 	if len(sys.argv) != 0:
 

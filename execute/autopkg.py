@@ -6,11 +6,11 @@ import sys
 
 sys.path.insert(0, "/Library/AutoPkg/PkgBot")
 
-import utils
+import utilities.common as utility
 from execute import recipe_manager, recipe_runner
 
 
-log = utils.log
+log = utility.log
 
 
 async def main(run_args=sys.argv[1:]):

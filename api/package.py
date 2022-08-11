@@ -1,26 +1,27 @@
 from typing import List, Dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from tortoise.contrib.fastapi import HTTPNotFoundError
 
-import utils
+import settings, utilities.common as utility
 from db import models
-from api import user, settings
+from api import user
 from api.slack import send_msg
 from tasks import task
 # from tasks.task import autopkg_promote
 
 
-log = utils.log
+log = utility.log
 
 router = APIRouter(
 	prefix = "/package",
 	tags = ["package"],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 
 @router.get("/", summary="Get all packages", description="Get all packages in the database.",
-	dependencies=[Depends(user.get_current_user)])
+	dependencies=[Depends(user.get_current_user)], response_model=dict)
 async def get_packages():
 
 	packages = await models.Package_Out.from_queryset(models.Packages.all())

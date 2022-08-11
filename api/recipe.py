@@ -3,25 +3,24 @@ from typing import List, Dict
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
 
-import config, utils
+import config, settings, utilities.common as utility
 from db import models
-from api import user, settings
+from api import user
 from api.slack import bot, build_msg, send_msg
 from execute import recipe_manager, recipe_runner
 
 
-log = utils.log
+log = utility.log
 config.load()
 router = APIRouter(
 	prefix = "/recipe",
 	tags = ["recipe"],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 
 @router.get("s/", summary="Get all recipes", description="Get all recipes in the database.",
 	dependencies=[Depends(user.get_current_user)], response_model=dict)
-##### TO DO:  Set a response model here
 async def get_recipes():
 
 	recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
@@ -122,7 +121,7 @@ async def recipe_error(recipe_id: str, error: str):
 		error_list = error.split(': ')
 		error_dict = reduce(lambda x, y: {y:x}, error_list[::-1])
 
-	except:
+	except Exception:
 		error_dict = { recipe_id: error }
 
 	results = await send_msg.recipe_error_msg(recipe_id, error_message.id, error_dict)
@@ -251,8 +250,8 @@ async def recipe_trust_update_failed(recipe_id: str, msg: str):
 	description="Performs the necessary actions after parent recipe trust info has changed.",
 	dependencies=[Depends(user.verify_admin)])
 # async def trust_error(payload: dict = Body(...)):
-async def reciepe_trust_verify_failed(payload: dict = Body(...)):
-# async def reciepe_trust_verify_failed(recipe_id: str, msg: str):
+async def recipe_trust_verify_failed(payload: dict = Body(...)):
+# async def recipe_trust_verify_failed(recipe_id: str, msg: str):
 	""" When `autopkg verify-trust-info <recipe_id>` fails """
 
 	recipe_id = payload.get("recipe_id")

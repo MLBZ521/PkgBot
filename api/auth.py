@@ -10,13 +10,13 @@ from fastapi.templating import Jinja2Templates
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
-import config, utils
+import config, settings, utilities.common as utility
 from db import models
-from api import settings, user
+from api import user
 
 
 config.load()
-log = utils.log
+log = utility.log
 LOGIN_SECRET = os.urandom(1024).hex()
 
 jps_url = config.pkgbot_config.get("JamfPro_Prod.jps_url")
@@ -28,7 +28,7 @@ templates = Jinja2Templates(directory=config.pkgbot_config.get("PkgBot.jinja_tem
 router = APIRouter(
 	prefix = "/auth",
 	tags = ["auth"],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 
@@ -66,7 +66,7 @@ async def authenticate_user(username: str, password: str):
 				username = username,
 				full_admin = user_exists[0].full_admin if user_exists else False,
 				jps_token = response_json["token"],
-				jps_token_expires = await utils.string_to_datetime(
+				jps_token_expires = await utility.string_to_datetime(
 					response_json["expires"], "%Y-%m-%dT%H:%M:%S.%fZ"),
 				site_access = ', '.join(sites)
 			)

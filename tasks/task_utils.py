@@ -3,7 +3,7 @@ import re
 
 from datetime import datetime, timedelta
 
-import config, utils
+import config, utilities.common as utility
 
 
 config.load()
@@ -30,7 +30,7 @@ def get_user_context():
 def get_console_user():
 
 	# Get the Console User
-	results_console_user = utils.execute_process("/usr/sbin/scutil", "show State:/Users/ConsoleUser")
+	results_console_user = utility.execute_process("/usr/sbin/scutil", "show State:/Users/ConsoleUser")
 	return re.sub("(Name : )|(\n)", "", ( re.search("Name : .*\n", results_console_user["stdout"])[0] ))
 
 
@@ -49,7 +49,7 @@ def check_recipe_schedule(interval, last_ran):
 
 	if interval != 0 and last_ran != None:
 
-		current_time = utils.utc_to_local(datetime.now())
+		current_time = utility.utc_to_local(datetime.now())
 		last_ran_time = datetime.fromisoformat(last_ran)
 		interval_in_hours = interval * 24
 

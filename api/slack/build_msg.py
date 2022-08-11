@@ -2,19 +2,19 @@ import json
 
 from fastapi import APIRouter, Depends, Response
 
-import utils
+import settings, utilities.common as utility
 from db import models
-from api import settings, user
+from api import user
 from api.slack import block_builders
 
 
-log = utils.log
+log = utility.log
 SlackBot = None
 router = APIRouter(
 	prefix = "/slackbot/build",
 	tags = ["slackbot"],
 	dependencies = [Depends(user.verify_admin)],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 

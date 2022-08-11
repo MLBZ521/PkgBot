@@ -7,27 +7,26 @@ from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends, Header, Request
 
-
-import config, utils
+import config, settings, utilities.common as utility
 from db import models
-from api import package, recipe, settings, user
+from api import package, recipe, user
 from api.slack import send_msg
 # from execute import recipe_manager, recipe_runner
 from tasks import task, task_utils
 
 
-from settings.celery_utils import get_task_info
+from utilities.celery import get_task_info
 
 
 
 config.load()
-log = utils.log
+log = utility.log
 router = APIRouter(
 	prefix = "/autopkg",
 	tags = ["autopkg"],
 ##### Temp removal for development/testing
 	# dependencies = [Depends(user.verify_admin)],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 
@@ -70,7 +69,7 @@ async def workflow_prod(pkg_object: models.Package_In = Body()):
 	else:
 		date_to_convert = pkg_object.promoted_date
 
-	pkg_object.promoted_date = await utils.utc_to_local(date_to_convert)
+	pkg_object.promoted_date = await utility.utc_to_local(date_to_convert)
 
 	pkg_object.status = "prod"
 
@@ -236,7 +235,7 @@ async def verify_pkgbot_webhook(request: Request):
 		# 	return False
 
 		if hmac.compare_digest(
-				utils.compute_hex_digest(
+				utility.compute_hex_digest(
 					bytes(config.pkgbot_config.get('PkgBot.webhook_secret'), "utf-8"),
 					(await request.body()),#.decode("UTF-8")
 					hashlib.sha512
@@ -384,13 +383,13 @@ async def receive(
 
 		elif event in ("recipe_run_dev", "recipe_run_prod") :
 
-			plist_contents = await utils.find_receipt_plist(stdout)
+			plist_contents = await utility.find_receipt_plist(stdout)
 
 
 			if task_results.get("success"):
 
-				pkg_results = await utils.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
-				policy_results = await utils.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
+				pkg_results = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
+				policy_results = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
 
 				pkg_data = {
 					"name": pkg_results.get("Input").get("pkg_name").rsplit("-", 1)[0],
@@ -450,13 +449,13 @@ async def receive(
 					# 		run_error = step.get("RecipeError")
 					# 		break
 					# run_error = utils.find_and_parse_recipe_receipt(stdout, "RecipeError")
-					pkg_results = await utils.parse_recipe_receipt(plist_contents, "RecipeError")
+					pkg_results = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
 
 
 				except:
 					run_error = stderr
 
-				redacted_error = await utils.replace_sensitive_strings(run_error)
+				redacted_error = await utility.replace_sensitive_strings(run_error)
 
 				await recipe.error(recipe_id, redacted_error)
 

@@ -10,21 +10,21 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.webhook.async_client import AsyncWebhookClient
 
-import config, utils
+import config, settings, utilities.common as utility
 from db import models
-from api import autopkg, package, recipe, settings, user
+from api import autopkg, package, recipe, user
 from api.slack import build_msg
 
 
 config.load()
-log = utils.log
+log = utility.log
 
 SlackBot = None
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 router = APIRouter(
 	prefix = "/slackbot",
 	tags = ["slackbot"],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 
@@ -45,7 +45,7 @@ class SlackClient(object):
 			response = await self.client.chat_postMessage(
 				channel = self.channel,
 				text = text,
-				blocks = await utils.replace_sensitive_strings(blocks),
+				blocks = await utility.replace_sensitive_strings(blocks),
 				username = self.bot_name,
 				icon_emoji = ":x:"
 			)
@@ -63,7 +63,7 @@ class SlackClient(object):
 			response = await self.client.chat_update(
 				channel = self.channel,
 				text = text,
-				blocks = await utils.replace_sensitive_strings(blocks),
+				blocks = await utility.replace_sensitive_strings(blocks),
 				ts = str(ts)
 				# username = self.bot_name,
 				# icon_emoji = ":x:"
@@ -97,7 +97,7 @@ class SlackClient(object):
 			webhook = AsyncWebhookClient(url=response_url, ssl=ssl_context)
 			response = await webhook.send(
 				text = text,
-				blocks = await utils.replace_sensitive_strings(blocks),
+				blocks = await utility.replace_sensitive_strings(blocks),
 				replace_original = True
 			)
 
@@ -123,7 +123,7 @@ class SlackClient(object):
 				channel = self.channel,
 				user = user,
 				text = text,
-				blocks = await utils.replace_sensitive_strings(blocks),
+				blocks = await utility.replace_sensitive_strings(blocks),
 				username = self.bot_name,
 				icon_emoji = ":x:"
 			)
@@ -146,7 +146,7 @@ class SlackClient(object):
 				filename = filename,
 				filetype = filetype,
 				title = title,
-				initial_comment = await utils.replace_sensitive_strings(text),
+				initial_comment = await utility.replace_sensitive_strings(text),
 				thread_ts = thread_ts,
 				username = self.bot_name
 			)
@@ -247,7 +247,7 @@ async def validate_slack_request(request: Request):
 		slack_body = (await request.body()).decode("UTF-8")
 		signature_basestring = (f"v0:{slack_timestamp}:{slack_body}").encode()
 
-		computed_signature = "v0=" + await utils.compute_hex_digest(
+		computed_signature = "v0=" + await utility.compute_hex_digest(
 			bytes(config.pkgbot_config.get("Slack.signing_secret"), "UTF-8"),
 			signature_basestring)
 

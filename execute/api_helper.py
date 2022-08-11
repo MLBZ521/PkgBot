@@ -7,11 +7,11 @@ sys.path.insert(0, "/Library/AutoPkg/PkgBot")
 
 import httpx
 
-import config, utils
+import config, utilities.common as utility
 
 
 config.load()
-log = utils.log
+log = utility.log
 
 
 async def request(method, endpoint, data=None, json=None):

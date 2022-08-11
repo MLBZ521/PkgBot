@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
-import utils
+import settings, utilities.common as utility
 from db import models
-from api import settings
 
 
-log = utils.log
+log = utility.log
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 router = APIRouter(
 	prefix = "/user",
 	tags = ["user"],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 

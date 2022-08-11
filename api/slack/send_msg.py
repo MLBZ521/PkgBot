@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, Response
 
-import utils
+import settings, utilities.common as utility
 from db import models
-from api import package, settings, user
+from api import package, user
 from api.slack import bot, build_msg
 
 
-log = utils.log
+log = utility.log
 SlackBot = None
 router = APIRouter(
 	prefix = "/slackbot/send",
 	tags = ["slackbot"],
 	dependencies = [Depends(user.verify_admin)],
-	responses = settings.custom_responses
+	responses = settings.db.custom_responses
 )
 
 max_content_size = 1500

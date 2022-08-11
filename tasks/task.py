@@ -14,7 +14,7 @@ from celery import shared_task
 from celery.result import AsyncResult
 
 # Internal modules
-import config, utils
+import config, utilities.common as utility
 
 # from api import recipe
 # from api.slack import bot
@@ -29,7 +29,7 @@ from settings.celery_config import settings
 # from collections.abc import Callable
 
 config.load()
-log = utils.log
+log = utility.log
 
 
 # register_tortoise(
@@ -105,7 +105,7 @@ def send_webhook(self, task_id):
 	# log.debug(f"digest:  {digest}")
 
 	# headers["x-hook-signature"] = task_utils.generate_hook_signature(data)
-	headers["x-hook-signature"] = utils.compute_hex_digest(
+	headers["x-hook-signature"] = utility.compute_hex_digest(
 		bytes(config.pkgbot_config.get('PkgBot.webhook_secret'), "utf-8"),
 		(request.body()),#.decode("UTF-8")
 		hashlib.sha512
@@ -144,7 +144,7 @@ def git_pull_private_repo():
 	if task_utils.get_user_context():
 		git_pull_command = f"su - {console_user} -c \"{git_pull_command}\""
 
-	results_git_pull_command = utils.execute_process(git_pull_command)
+	results_git_pull_command = utility.execute_process(git_pull_command)
 
 	if not results_git_pull_command["success"]:
 		log.error("stdout:\n{}".format(results_git_pull_command["stdout"]))
@@ -171,7 +171,7 @@ def autopkg_repo_update():
 	if task_utils.get_user_context():
 		autopkg_repo_update_command = f"su - {console_user} -c \"{autopkg_repo_update_command}\""
 
-	results_autopkg_repo_update = utils.execute_process(autopkg_repo_update_command)
+	results_autopkg_repo_update = utility.execute_process(autopkg_repo_update_command)
 
 	##### TO DO:
 	###### * Add parent recipe repos update success
@@ -333,7 +333,7 @@ def run_recipe(self, parent_task_results: str, recipe_id: str, switches: dict):
 
 		log.debug(f"Command to execute:  {cmd}")
 
-		results = utils.execute_process(cmd)
+		results = utility.execute_process(cmd)
 		# return results  ### <-- NO, not doing this
 		# Instead, need to convert the PkgBot AutoPkg Post Processor into logic here
 
@@ -381,7 +381,7 @@ def autopkg_verify_trust(recipe_id: str, switches: dict):
 
 	log.debug(f"Command to execute:  {cmd}")
 
-	results = utils.execute_process(cmd)
+	results = utility.execute_process(cmd)
 
 	return results
 
@@ -421,7 +421,7 @@ def autopkg_update_trust(self, recipe_id: str, switches: dict):
 
 	log.debug(f"Command to execute:  {cmd}")
 
-	results = utils.execute_process(cmd)
+	results = utility.execute_process(cmd)
 
 	send_webhook.apply_async((self.request.id), queue='autopkg', priority=4)
 
