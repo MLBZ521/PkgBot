@@ -7,6 +7,8 @@ from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends, Header, Request
 
+from fastapi_utils.tasks import repeat_every
+
 import config, settings, utilities.common as utility
 from db import models
 from api import package, recipe, user
@@ -137,10 +139,10 @@ async def determine_callback(caller: str):
 
 
 
-
+@repeat_every(seconds=config.pkgbot_config.get('Services.autopkg_service_start_interval'))
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
-async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
+async def autopkg_run_recipes(switches: models.AutopkgCMD | None = Body(), called_by: str = "schedule"):
 	"""Run all recipes in the database.
 
 	Args:

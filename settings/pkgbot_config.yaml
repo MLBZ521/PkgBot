@@ -62,9 +62,8 @@ Git:
 Services:
   # The name of the LaunchDaemon that will ensure that the PkgBot service is running
   pkgbot_service_LaunchDaemon_label: com.github.mlbz521.pkgbot
-  # The name of the LaunchAgent that will run autopkg on a schedule
-  autopkg_service_LaunchAgent_label: com.github.mlbz521.autopkg.service
-  autopkg_service_LaunchAgent_start_interval: 14400
+  # The interval between running configured autopkg recipes
+  autopkg_service_start_interval: 14400
 
 
 Slack:
@@ -155,7 +154,7 @@ PkgBot:
 
 
 Common:
-  # Strings that you do not want to be be printed "pubically" in notifications
-  # Any/all passwords/secrets/keys above are already included in the redacttion logic
+  # Strings that you do not want to be be printed "publicly" in notifications
+  # Any/all passwords/secrets/keys above are already included in the redaction logic
   # This value will be parsed as *REGEX*
   # RedactionStrings: <some_internal_string>|\b<username>\b
