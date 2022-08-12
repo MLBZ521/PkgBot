@@ -11,9 +11,10 @@ from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.webhook.async_client import AsyncWebhookClient
 
 import config, settings, utilities.common as utility
-from db import models
 from api import autopkg, package, recipe, user
 from api.slack import build_msg
+from db import models
+from tasks import task, task_utils
 
 
 config.load()
@@ -316,7 +317,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 		user_that_clicked = await user.get_user(slack_user_object)
 
 		# try:
-
+##### Disabled for testing
 		# 	if user_that_clicked.full_admin:
 		# 		full_admin = True
 
@@ -337,7 +338,8 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 					await package.update(button_value,
 						{ "response_url": response_url, "status_updated_by": username })
 
-					background_tasks.add_task( autopkg.promote_package, background_tasks, button_value )
+					# background_tasks.add_task( autopkg.promote_package, background_tasks, button_value )
+					await autopkg.promote_package(button_value)
 ##### Testing this function -- can be removed
 					# await SlackBot.reaction(
 					# 	action = "remove",
@@ -348,13 +350,16 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 				elif button_value_type == "Trust":
 					log.debug("  --> Updating Trust Info")
 
-					error_object = await models.ErrorMessages.filter(id=button_value).first()
+					# error_object = await models.ErrorMessages.filter(id=button_value).first()
+					trust_object = await models.TrustUpdates.filter(id=button_value).first()
 
 					updates = { "response_url": response_url, "status_updated_by": username, "slack_ts": message_ts }
 
-					await models.ErrorMessages.update_or_create(updates, id=error_object.id)
+					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
 
-					background_tasks.add_task( recipe.trust_recipe, button_value, background_tasks, user_id=user_id, channel=channel )
+					# background_tasks.add_task( recipe.trust_recipe, button_value, background_tasks, user_id=user_id, channel=channel )
+					# task.autopkg_update_trust.apply_async()
+					await recipe.recipe_trust_update(trust_object)
 
 			elif button_text == "Deny":
 				log.debug("  -> DENY")
@@ -369,8 +374,10 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 						"notes":  "This package was not approved for use in production." }
 					)
 
-					background_tasks.add_task( autopkg.deny_package,
-						background_tasks, button_value )
+					# background_tasks.add_task( autopkg.deny_package,
+					# 	background_tasks, button_value )
+
+					await package.deny_package(button_value)
 
 				if button_value_type == "Trust":
 					log.debug("  --> Disapprove Trust Changes")

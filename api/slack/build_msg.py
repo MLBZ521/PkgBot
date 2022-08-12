@@ -37,7 +37,7 @@ async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 
 @router.get("/recipe-error", summary="Build error message",
 	description="Builds an 'error' message for Slack after a recipe has returned an error.")
-async def recipe_error_msg(recipe_id: str, id: int, error: str):
+async def recipe_error_msg(recipe_id: str, id: int, error: dict):
 
 	formatted_error = json.dumps(error, indent=4)
 	brick_error = await block_builders.brick_error(recipe_id, formatted_error)

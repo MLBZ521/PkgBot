@@ -53,7 +53,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	blocks = await build_msg.recipe_error_msg(recipe_id, id, error)
 
-	return await bot.SlackBot.post_message(blocks, text="Encountered recipe error")
+	return await bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
 
 
 @router.post("/trust-diff-msg", summary="Send trust diff message",

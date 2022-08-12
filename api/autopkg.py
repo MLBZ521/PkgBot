@@ -50,11 +50,6 @@ async def workflow_dev(pkg_object: models.Package_In = Body()):
 	pkg_db_object.slack_channel = results.get("channel")
 	await pkg_db_object.save()
 
-	# Update the "Last Ran" attribute for this recipe
-	recipe_object = await models.Recipes.filter(recipe_id=pkg_db_object.recipe_id).first()
-	recipe_object.last_ran = pkg_db_object.packaged_date
-	await recipe_object.save()
-
 	return { "Result": "Success" }
 
 
@@ -99,7 +94,7 @@ async def workflow_prod(pkg_object: models.Package_In = Body()):
 # 			"--action", "promote",
 # 			"--environment", "prod",
 # 			"--recipe-identifier", pkg_object.dict().get("recipe_id"),
-# 			"--pkg-name", "{}".format(pkg_object.dict().get("pkg_name"))
+# 			"--pkg-name", f"{pkg_object.dict().get('pkg_name')}"
 # 		]
 # 	)
 
@@ -227,6 +222,7 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = Bo
 async def verify_pkgbot_webhook(request: Request):
 
 	try:
+##### Add a timestamp check
 		# slack_timestamp = request.headers.get("X-Slack-Request-Timestamp")
 
 		# if abs(time.time() - int(slack_timestamp)) > 60 * 5:
@@ -275,190 +271,120 @@ async def receive(
 	# 	return {"result": "Content too long"}
 
 
-
 	# log.debug(f"payload:  {str(json.dumps(payload.dict())).encode('utf-8')}")
 	# log.debug(f"x_hook_signature:  {x_hook_signature}")
 
-	# if x_hook_signature and not hmac.compare_digest(
-	# 	task_utils.generate_hook_signature(task_id),
-	# 	x_hook_signature
-	# ):
+	if not await verify_pkgbot_webhook(request):
+		return
 
-		# raw_input = str(json.dumps(payload.dict())).encode("utf-8")
+	log.debug(f"task_id:  {task_id}")
 
-		# input_hmac = hmac.new(
-		# 	key=bytes(config.pkgbot_config.get('PkgBot.webhook_secret'), "utf-8"),
-		# 	msg=raw_input,
-		# 	digestmod="sha512"
-		# )
-		# log.debug(f"input_hmac.hexdigest():  {input_hmac.hexdigest()}")
+	task_results = await utility.get_task_results(task_id)
 
-		# log.error("Invalid message signature")
-		# # response.status_code = 400
-		# # log.warning("Invalid request")
-		# # return { "results":  500 }
-		# return {"Result": "Invalid message signature"}
+	event = task_results.get("event")
+	event_id = task_results.get("event_id", "")
+	recipe_id = task_results.get("recipe_id")
+	success = task_results.get("success")
+	stdout = task_results.get("stdout")
+	stderr = task_results.get("stderr")
 
+	if event == "error":
+		await recipe.error(recipe_id, stdout)
 
-	# log.info("Message signature checked ok")
+	elif event == "failed_trust":
+		""" Update Slack message that recipe_id failed verify-trust-info """
+		await recipe.recipe_trust_verify_failed({ "recipe_id": recipe_id, "msg": stderr })
 
-	if await verify_pkgbot_webhook(request):
+	elif event == "update_trust_info":
+		""" Update Slack message with result of update-trust-info attempt """
 
-	# request_body = await request.body()
-	# request_json = await request.body()
-	# log.debug(f"request:  {request}")
-	# log.debug(f"request.dir:  {dir(request)}")
-	# log.debug(f"request.body():  {await request.body()}")
-	# log.debug(f"request.body().decoded:  {(await request.body()).decode()}")
-	# log.debug(f"request.body().decoded.type:  {type((await request.body()).decode())}")
-	# log.debug(f"request.json():  {await request.json()}")
-	# log.debug(f"request.keys():  {request.keys()}")
-	# log.debug(f"request.values():  {request.values()}")
-	# log.debug(f"request_json:  {request_json}")
+		if success:
+			await recipe.recipe_trust_update_success(recipe_id, success, event_id)
 
+		else:
+			await recipe.recipe_trust_update_failed(recipe_id, success, event_id)
 
-	# task_id = (await request.body()).decode().split("=")[1]
-	# log.debug(f"task_id: {task_id}")
-	# log.debug(get_task_info(task_id))
+	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
-		log.debug(f"task_id:  {task_id}")
-	# recipe_id = payload.get("recipe_id")
-	# log.debug(f"recipe_id:  {recipe_id}")
-	# log.debug(f"recipe_id.type:  {type(recipe_id)}")
-	# error_msg = payload.get("msg")
-	# log.debug(f"error_msg:  {error_msg}")
+		plist_contents = await utility.find_receipt_plist(stdout)
+
+		if task_results.get("success"):
+
+			pkg_results = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
+			# policy_results = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
+##### Do we care about Policy updates at all?  (I don't think so...)
+			pkg_data = {
+				"name": pkg_results.get("Input").get("pkg_name").rsplit("-", 1)[0],
+				"pkg_name": pkg_results.get("Output").get("pkg_name"),
+				"recipe_id": recipe_id,
+				"version": pkg_results.get("Output").get("data").get("version"),
+				"pkg_notes": pkg_results.get("Input").get("pkg_notes")
+			}
 
 
-	# else:
-	# 	log.info("No message signature to check")
-	# return {"result": "ok"}
+			if event == "recipe_run_dev":
 
+				if pkg_results.get("Output").get("pkg_uploaded"):
 
-		task_results = await get_task_results(task_id)
-
-		event = task_results.get("event")
-		recipe_id = task_results.get("recipe_id")
-		success = task_results.get("success")
-		stdout = task_results.get("stdout")
-		stderr = task_results.get("stderr")
-
-		if event == "error":
-			# api_helper.chat_recipe_error(recipe_id, results_autopkg_recipe_trust['stdout'] )
-			await recipe.error(recipe_id, stdout)
-
-
-		elif event == "failed_trust":
-			""" Update Slack message that recipe_id failed verify-trust-info """
-			# api_helper.chat_failed_trust(recipe_id, results_autopkg_recipe_trust['stderr'] )
-
-			# payload = {
-			# 	"recipe_id": recipe_id,
-			# 	"msg": stderr
-			# }
-
-			# await request( "post", "/recipe/trust/verify/failed", json=payload )
-
-			await recipe.reciepe_trust_verify_failed(payload)
-
-
-		elif event == "update_trust_info":
-			""" Update slack message that recipe_id was trusted """
-		# or failed
-			# if result == "success":
-			# 	endpoint = "trust/update/success"
-			# 	api_helper.chat_update_trust_msg(recipe_id, result="success", error_id = error_id)
-			# else:
-			# 	endpoint = "trust/update/failed"
-
-##### Need to figure out where the error_id is coming from...  (How it's going to be passed to/back)
-			if success:
-
-				await recipe_trust_update_success(recipe_id, msg, error_id)
-
-			else:
-
-				await recipe_trust_update_failed(recipe_id, msg, error_id)
-
-
-
-		elif event in ("recipe_run_dev", "recipe_run_prod") :
-
-			plist_contents = await utility.find_receipt_plist(stdout)
-
-
-			if task_results.get("success"):
-
-				pkg_results = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
-				policy_results = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
-
-				pkg_data = {
-					"name": pkg_results.get("Input").get("pkg_name").rsplit("-", 1)[0],
-					"pkg_name": pkg_results.get("Input").get("pkg_name"),
-					"recipe_id": recipe_id,
-					"version": pkg_results.get("Input").get("version"),
-					"pkg_notes": pkg_results.get("Input").get("pkg_notes")
-				}
-
-
-
-				if pkg_results.get("Input").get("JSS_URL") == config.pkgbot_config.get('JamfPro_Dev.jps_url'):
-				# if event == "recipe_run_dev":
 					log.debug("Posted to dev...")
-
+##### Need to figure out icon logic
 					pkg_data["icon"] = "/path/to/icon"
 					# pkg_data["jps_id_dev"] = jps_pkg_id
 					# pkg_data["jps_url"] = config.pkgbot_config.get('JamfPro_Dev.jps_url')
 
 					await workflow_dev(pkg_data)
 
-				# if event == "recipe_run_prod":
-				elif pkg_results.get("Input").get("JSS_URL") == config.pkgbot_config.get('JamfPro_Prod.jps_url'):
-					log.debug("Promoted to Production...")
+				# else:
+					# No new pkg
 
-					format_string = "%Y-%m-%d %H:%M:%S.%f"
-					promoted_date = datetime.strftime(datetime.now(), format_string)
-
-					# pkg_data["jps_id_prod"] = jps_pkg_id,
-					pkg_data["promoted_date"] = promoted_date
+				# Update the "Last Ran" attribute for this recipe
+				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
+				recipe_object.last_ran = await utility.utc_to_local(datetime.now())
+				await recipe_object.save()
 
 
-					# if jps_icon_id:
-					# 	pkg_data["icon_id"] = jps_icon_id
-					# 	pkg_data["jps_url"] = jps_url
+			elif event == "recipe_run_prod":
+				log.debug("Promoted to production...")
+
+				format_string = "%Y-%m-%d %H:%M:%S.%f"
+				promoted_date = datetime.strftime(datetime.now(), format_string)
+
+				# pkg_data["jps_id_prod"] = jps_pkg_id,
+				pkg_data["promoted_date"] = promoted_date
+
+				# if jps_icon_id:
+				# 	pkg_data["icon_id"] = jps_icon_id
+				# 	pkg_data["jps_url"] = jps_url
+
+				await workflow_prod(pkg_data)
 
 
-					await workflow_prod(pkg_data)
-
-
-			else:
+		else:
 
 ##### Failed running recipe
-				# Post Slack Message with results
-				log.error("Failed running:  {}".format(recipe_id))
-				# log.error("return code status:  {}".format(results_autopkg_run['status']))
-				# log.error("stdout:  {}".format(stdout))
-				# log.error("stderr:  {}".format(stderr))
+			# Post Slack Message with results
+			log.error(f"Failed running:  {recipe_id}")
+			# log.error(f"return code status:  {results_autopkg_run['status']}")
+			# log.error(f"stdout:  {stdout}")
+			# log.error(f"stderr:  {stderr}")
 
-				try:
-					# run_receipt = re.search(
-					# 	r'Receipt written to (.*)', stdout).group(1)
-					# plist_contents = await utils.plist_reader(run_receipt)
+			try:
+				run_error = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
+			except Exception:
+				run_error = stderr
 
-					# for step in reversed(plist_contents):
-					# 	if step.get("RecipeError") != None:
-					# 		run_error = step.get("RecipeError")
-					# 		break
-					# run_error = utils.find_and_parse_recipe_receipt(stdout, "RecipeError")
-					pkg_results = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
+			redacted_error = await utility.replace_sensitive_strings(run_error)
 
 
-				except:
-					run_error = stderr
+			if event == "recipe_run_prod":
+				# Promotion Failed
+				log.error("Failed to promote pkg!")
+##### Need the promotion event_id here!  Or....?
+				# event_id = ""
+##### Can we determine more info to relate it to an event id?
+				redacted_error = { "Failed to promote a pkg": redacted_error }
 
-				redacted_error = await utility.replace_sensitive_strings(run_error)
-
-				await recipe.error(recipe_id, redacted_error)
-
+			await recipe.recipe_error(recipe_id, redacted_error)
 
 
 

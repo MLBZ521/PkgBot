@@ -8,6 +8,7 @@ from db import models
 from api import user
 from api.slack import bot, build_msg, send_msg
 from execute import recipe_manager, recipe_runner
+from tasks import task, task_utils
 
 
 log = utility.log
@@ -113,7 +114,7 @@ async def delete_by_recipe_id(recipe_id: str):
 	dependencies=[Depends(user.verify_admin)])
 async def recipe_error(recipe_id: str, error: str):
 
-	# Create DB Entry in errors table
+	# Create DB entry in errors table
 	error_message = await models.ErrorMessages.create( recipe_id=recipe_id )
 
 	# Post Slack Message
@@ -146,41 +147,28 @@ async def recipe_error(recipe_id: str, error: str):
 	description="Update a recipe's trust information.  Runs `autopkg update-trust-info <recipe_id>`.",
 	dependencies=[Depends(user.verify_admin)])
 # async def trust_recipe(id: int, background_tasks: BackgroundTasks, user_id: str, channel: str):
-async def recipe_trust_update(id: int, background_tasks: BackgroundTasks, user_id: str, channel: str):
-
-	# Get Error ID
-	error_object = await models.ErrorMessage_Out.from_queryset_single(models.ErrorMessages.get(id=id))
+# async def recipe_trust_update(id: int, background_tasks: BackgroundTasks, user_id: str, channel: str):
+async def recipe_trust_update(trust_object: models.TrustUpdates, switches: dict = None):
 
 	# Get recipe object
-	recipe_object = await models.Recipes.filter(recipe_id=error_object.recipe_id).first()
+	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
 
-	# extra_args = { 'error_id': id }
+##### Maybe create a trust_object db entry if one doesn't exist for direct call to endpoint (without first a failure)
 
 	if recipe_object:
-		background_tasks.add_task(
-			recipe_runner.main,
-			[
-				"--recipe-identifier", error_object.recipe_id,
-				"--action", "trust",
-				# str(extra_args)
-				"--error_id", id
-			]
-		)
 
-		# Mark the recipe enabled
-		recipe_object.enabled = True
-		await recipe_object.save()
+		queued_task = task.autopkg_update_trust.apply_async(trust_object.recipe_id, switches, trust_object.id)
 
-		return { "Result": "Queued background task..." }
+		return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
 	else:
 
-		blocks = await build_msg.missing_recipe_msg(error_object.recipe_id, "update trust for")
+		blocks = await build_msg.missing_recipe_msg(trust_object.recipe_id, "update trust for")
 
 		await bot.SlackBot.post_ephemeral_message(
-			user_id, blocks,
-			channel=channel,
-			text=f"Encountered error attempting to update trust for `{error_object.recipe_id}`"
+			trust_object.status_updated_by, blocks,
+			channel=trust_object.slack_channel,
+			text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
 		)
 
 
@@ -192,10 +180,10 @@ async def recipe_trust_update(id: int, background_tasks: BackgroundTasks, user_i
 # async def disapprove_changes(id: int):
 async def recipe_trust_deny(id: int):
 
-	# Get Error ID
-	error_object = await models.ErrorMessage_Out.from_queryset_single(models.ErrorMessages.get(id=id))
+	# Get TrustUpdates ID
+	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=id))
 
-	await send_msg.deny_trust_msg(error_object)
+	await send_msg.deny_trust_msg(trust_object)
 
 
 # @router.post("/trust-update-success", summary="Trust info was updated successfully",
@@ -203,42 +191,44 @@ async def recipe_trust_deny(id: int):
 	description="Performs the necessary actions after trust info was successfully updated.",
 	dependencies=[Depends(user.verify_admin)])
 # async def trust_update_success(recipe_id: str, msg: str):
-async def recipe_trust_update_success(recipe_id: str, msg: str, error_id: int):
-	""" When update-trust-info succeeds """
+async def recipe_trust_update_success(recipe_id: str, msg: str, trust_id: int):
 
-	# results = await models.ErrorMessage_Out.from_queryset(models.ErrorMessages.filter(recipe_id=recipe_id))
 	# Get DB Entry
-	error_object = await models.ErrorMessage_Out.from_queryset_single(models.ErrorMessages.get(id=error_id))
+	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_id))
 
-	# Hacky work around if there are multiple "error messages" in the database for the recipe id
-	# while not results[-1].response_url:
-	# 	del results[-1]
+	if trust_object:
+		return await send_msg.update_trust_success_msg(trust_object)
 
-	return await send_msg.update_trust_success_msg(error_object)
+	# else:
+##### Post message to whomever requested the update?
+		# await bot.SlackBot.post_ephemeral_message(
+		# 	trust_object.status_updated_by, blocks,
+		# 	channel=trust_object.slack_channel,
+		# 	text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
+		# )
 
 
 # @router.post("/trust-update-error", summary="Trust info failed to update",
-@router.post("/trust/update/failed", summary="Trust info failed to update",
+@router.post("/trust/update/failed", summary="Failed to update recipe trust info",
 	description="Performs the necessary actions after trust info failed to update.",
 	dependencies=[Depends(user.verify_admin)])
 # async def trust_update_error(recipe_id: str, msg: str): #,
 async def recipe_trust_update_failed(recipe_id: str, msg: str):
-	""" When update-trust-info fails """
 
-	# Get DB Entry
-	error_object = await models.ErrorMessage_Out.from_queryset_single(models.ErrorMessages.get(recipe_id=recipe_id))
+	# Get DB entry
+	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(recipe_id=recipe_id))
 
-	results = await send_msg.update_trust_error_msg(msg, error_object)
+	results = await send_msg.update_trust_error_msg(msg, trust_object)
 
 	updates = {
 		"slack_ts": results.get('ts'),
 		"slack_channel": results.get('channel')
 	}
 
-	await models.ErrorMessages.update_or_create(updates, id=error_object.id)
+	await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
 
 	# Mark the recipe disabled
-	recipe_object = await models.Recipes.filter(recipe_id=error_object.recipe_id).first()
+	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
 	recipe_object.enabled = False
 	await recipe_object.save()
 
@@ -257,21 +247,17 @@ async def recipe_trust_verify_failed(payload: dict = Body(...)):
 	recipe_id = payload.get("recipe_id")
 	log.debug(f"recipe_id:  {recipe_id}")
 	log.debug(f"recipe_id.type:  {type(recipe_id)}")
-	error_msg = payload.get("msg")
-	log.debug(f"error_msg:  {error_msg}")
+	diff_msg = payload.get("msg")
+	log.debug(f"diff_msg:  {diff_msg}")
 
-	# Create DB Entry in errors table
-	error_object = await models.ErrorMessages.create(recipe_id=recipe_id)
-	# error_message = await models.ErrorMessages.create( recipe_id=recipe_id )
-
-	# created_pkg = await models.ErrorMessages.create(**pkg_object.dict(exclude_unset=True, exclude_none=True))
-
+	# Create DB entry in TrustUpdates table
+	trust_object = await models.TrustUpdates.create(recipe_id=recipe_id)
 
 	# Post Slack Message
-	results = await send_msg.trust_diff_msg(error_msg, error_object)
+	await send_msg.trust_diff_msg(diff_msg, trust_object)
 
 	# Mark the recipe disabled
-	recipe_object = await models.Recipes.filter(recipe_id=error_object.recipe_id).first()
+	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
 	recipe_object.enabled = False
 	await recipe_object.save()
 

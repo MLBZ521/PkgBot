@@ -33,8 +33,6 @@ async def get_packages():
 	dependencies=[Depends(user.get_current_user)], response_model=models.Package_Out)
 async def get_package_by_id(id: int):
 
-	# log.debug(f"id:  {id}")
-
 	pkg_object = await models.Package_Out.from_queryset_single(models.Packages.get(id=id))
 
 	return pkg_object
@@ -94,7 +92,14 @@ async def promote_package(pkg_object: models.Package_Out = Depends(get_package_b
 	# 	]
 	# )
 
-	queued_task = task.autopkg_promote.delay(pkg_object.dict())
+	recipe = [ pkg_object.dict().get("recipe_id") ]
+	switches = {
+		"promote": True,
+		"--pkg-name": pkg_object.dict().get("pkg_name")
+	}
+
+	# queued_task = task.autopkg_run.delay(recipe, switches)
+	queued_task = task.autopkg_run.apply_async((recipe, switches), queue='autopkg', priority=6)#, link=None, link_error=None)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
