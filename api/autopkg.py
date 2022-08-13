@@ -11,7 +11,7 @@ from fastapi_utils.tasks import repeat_every
 
 import config, settings, utilities.common as utility
 from db import models
-from api import package, recipe, user
+from api import package, recipe, user, views
 from api.slack import send_msg
 # from execute import recipe_manager, recipe_runner
 from tasks import task, task_utils
@@ -311,28 +311,31 @@ async def receive(
 
 		if task_results.get("success"):
 
-			pkg_results = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
-			# policy_results = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
+			pkg_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
+			policy_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
 ##### Do we care about Policy updates at all?  (I don't think so...)
+	# Need the icon from it?
 			pkg_data = {
-				"name": pkg_results.get("Input").get("pkg_name").rsplit("-", 1)[0],
-				"pkg_name": pkg_results.get("Output").get("pkg_name"),
+				"name": pkg_processor.get("Input").get("pkg_name").rsplit("-", 1)[0],
+				"pkg_name": pkg_processor.get("Output").get("pkg_name"),
 				"recipe_id": recipe_id,
-				"version": pkg_results.get("Output").get("data").get("version"),
-				"pkg_notes": pkg_results.get("Input").get("pkg_notes")
+				"version": pkg_processor.get("Output").get("data").get("version"),
+				"pkg_notes": pkg_processor.get("Input").get("pkg_notes")
 			}
-
 
 			if event == "recipe_run_dev":
 
-				if pkg_results.get("Output").get("pkg_uploaded"):
+				if pkg_processor.get("Output").get("pkg_uploaded"):
 
 					log.debug("Posted to dev...")
-##### Need to figure out icon logic
-					pkg_data["icon"] = "/path/to/icon"
+
 					# pkg_data["jps_id_dev"] = jps_pkg_id
 					# pkg_data["jps_url"] = config.pkgbot_config.get('JamfPro_Dev.jps_url')
 
+##### Need to figure out icon logic
+					policy_results = policy_processor.get("Output").get("jamfpolicyuploader_summary_result").get("data")
+					pkg_data["icon"] = policy_results.get("icon")
+					await views.upload_icon(policy_results.get("policy_icon_path"))
 					await workflow_dev(pkg_data)
 
 				# else:
@@ -342,7 +345,6 @@ async def receive(
 				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
 				recipe_object.last_ran = await utility.utc_to_local(datetime.now())
 				await recipe_object.save()
-
 
 			elif event == "recipe_run_prod":
 				log.debug("Promoted to production...")

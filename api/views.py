@@ -1,11 +1,12 @@
 import asyncio
 import functools
+import shutil
 import time
 
 from datetime import datetime
 from typing import Callable
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -122,3 +123,15 @@ async def recipe_page(request: Request, user = Depends(auth.login_manager)):
 
 	return templates.TemplateResponse("recipe.html",
 		{ "request": request, "session": session, "recipe": pkg })
+
+
+@router.post("/icons")
+async def upload_icon(icon: UploadFile = File(), user = Depends(auth.login_manager)):
+
+	try:
+		with open(f"/static/icons/{icon.filename}", "wb") as icon_obj:
+			shutil.copyfileobj(icon.file, icon_obj)
+	finally:
+		icon.file.close()
+
+	return { "results":  200, "icon": icon.filename }

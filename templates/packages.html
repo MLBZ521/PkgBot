@@ -55,7 +55,8 @@
                 {% set sort_on = request.sort_on | default("id") %}
                 {% for app in packages | sort(attribute=sort_on) %}
                 <tr>
-                    <td><img src="{{ app.jps_url }}/iconservlet/?id={{ app.icon_id }}" width="30" height="30"/></td>
+                    <!-- <td><img src="{{ app.jps_url }}/iconservlet/?id={{ app.icon_id }}" width="30" height="30"/></td> -->
+                    <td><img src="{{ url_for(name='static/icons', =app.icon) }}" width="30" height="30"/></td>
                     <td><a href="{{ url_for(name='package', id=app.id) }}"><span class="badge badge-warning">{{ app.id }}</span></a></td>
                     <!-- <td>{{ app.id }}</td> -->
                     <td>{{ app.name }}</td>
