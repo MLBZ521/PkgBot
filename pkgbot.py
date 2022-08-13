@@ -24,8 +24,8 @@ from api import auth, autopkg, package, recipe, user, views
 from api.slack import bot, build_msg, send_msg
 
 
+config.load()
 log = utility.log
-
 
 # def create_app() -> FastAPI:
 app = FastAPI(
@@ -69,28 +69,29 @@ async def number_of_workers():
 	return number_of_threads
 
 
-def load_config(cli_args=None):
+##### I think I'm going to remove function.
+# def load_config(cli_args=None):
 
-	log.debug(f'PkgBot.Load_Config:\n\tAll calling args:  {cli_args}')
+# 	log.debug(f'PkgBot.Load_Config:\n\tAll calling args:  {cli_args}')
 
-	parser = argparse.ArgumentParser(description="PkgBot Main.")
-	parser.add_argument(
-		'--pkgbot_config', '-pc',
-		metavar='./pkgbot.config',
-		default=None, type=str, required=False,
-		help='A config file with defined environmental configurations.')
-	args = parser.parse_known_args(cli_args)
+# 	parser = argparse.ArgumentParser(description="PkgBot Main.")
+# 	parser.add_argument(
+# 		'--pkgbot_config', '-pc',
+# 		metavar='./pkgbot.config',
+# 		default=None, type=str, required=False,
+# 		help='A config file with defined environmental configurations.')
+# 	args = parser.parse_known_args(cli_args)
 
-	log.debug(f'PkgBot.Load_Config:\n\tArgparse args:  {args}')
+# 	log.debug(f'PkgBot.Load_Config:\n\tArgparse args:  {args}')
 
-	if len(sys.argv) != 0:
+# 	if len(sys.argv) != 0:
 
-		config.load(args)
+# 		config.load(args)
 
-	else:
+# 	else:
 
-		parser.print_help()
-		sys.exit(0)
+# 		parser.print_help()
+# 		sys.exit(0)
 
 
 @app.on_event("startup")
@@ -144,7 +145,7 @@ if config.pkgbot_config.get("PkgBot.enable_ssl"):
 if __name__ == "__main__":
 
 	# Load Configuration
-	load_config(cli_args=sys.argv)
+	# load_config(cli_args=sys.argv)
 
 	uvicorn.run(
 		"pkgbot:app",
