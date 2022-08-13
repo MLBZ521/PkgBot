@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-
 from tortoise import fields
 from tortoise.models import Model
 from tortoise.contrib.pydantic import pydantic_model_creator
@@ -91,31 +90,21 @@ TrustUpdate_In = pydantic_model_creator(
 	TrustUpdates, name="TrustUpdate_In", exclude_readonly=True)
 
 
+##### May make this a Tortoise Model, to support tracking who/what generated each command
 class AutopkgCMD(BaseModel):
-	action: str
+	ignore_parent_trust: bool = False
+	match_pkg: str | None = None
+	pkg_only: bool = False
+	prefs: str | None = None
+	promote: bool = False
 	# recipe_id: str
-	prefs: str
-	verbose:  str
-	# ignore_parent_trust: bool
-	# post_processor: str
-	# match_pkg: str
-	# pkg_only:  bool
-	# description: Union[str, None] = None
-	# price: float
-	# tax: Union[float, None] = None
+	verbose: str = "v"
 
 
 class AutoPkgTaskResults(BaseModel):
+	event: str
+	event_id: str = ""
 	recipe_id: str
-	task_type: str
-	results:  str
-	status: str
-	# id:  int
-
-    # username: str
-    # data: dict
-    # event: str
-    # timestamp: datetime.datetime
-    # model: str
-    # request_id: UUID
-
+	success: str
+	stdout: str
+	stderr: str

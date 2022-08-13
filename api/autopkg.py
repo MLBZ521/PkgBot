@@ -142,7 +142,7 @@ async def determine_callback(caller: str):
 @repeat_every(seconds=config.pkgbot_config.get('Services.autopkg_service_start_interval'))
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
-async def autopkg_run_recipes(switches: models.AutopkgCMD | None = Body(), called_by: str = "schedule"):
+async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
 	"""Run all recipes in the database.
 
 	Args:
@@ -151,7 +151,6 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD | None = Body(), calle
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
-
 
 	log.info("Running all recipes")
 
