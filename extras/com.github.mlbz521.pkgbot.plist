@@ -3,19 +3,18 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.github.mlbz521.pkgbot.service</string>
+	<string>com.github.mlbz521.pkgbot</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/usr/local/autopkg/python</string>
-		<string>/Library/AutoPkg/PkgBotServer/pkgbot.py</string>
+		<string>/Library/AutoPkg/PkgBot/pkgbot.py</string>
 	</array>
 	<key>KeepAlive</key>
 	<true/>
 	<key>WorkingDirectory</key>
-	<string>Library/AutoPkg/PkgBotServer</string>
+	<string>/Library/AutoPkg/PkgBot</string>
 	<key>StandardErrorPath</key>
-	<string>/var/log/PkgBotServer-Service.log</string>
+	<string>/Library/AutoPkg/PkgBot/log/PkgBotServer-Service.log</string>
 	<key>StandardOutPath</key>
-	<string>/var/log/PkgBotServer-Service.log</string>
+	<string>/Library/AutoPkg/PkgBot/log/PkgBotServer-Service.log</string>
 </dict>
 </plist>
