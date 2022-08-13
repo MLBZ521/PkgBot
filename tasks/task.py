@@ -3,6 +3,7 @@ import json
 import os
 import requests
 
+import git
 from celery import Celery, group, chain
 
 import config, utilities.common as utility
@@ -53,26 +54,52 @@ def git_pull_private_repo():
 
 	log.info("Checking for private repo updates...")
 
-	console_user = task_utils.get_console_user()
+	# console_user = task_utils.get_console_user()
 
-	git_pull_command = "{binary} -C \"{path}\" switch main > /dev/null && {binary} -C \"{path}\" pull && $( {binary} -C \"{path}\" rev-parse --verify trust-updates > /dev/null 2>&1 && {binary} -C \"{path}\" switch trust-updates > /dev/null || {binary} -C \"{path}\" switch -c trust-updates > /dev/null )".format(
-		binary=config.pkgbot_config.get("Git.binary"),
-		path=f"/Users/{console_user}/Library/AutoPkg/RecipeOverrides/"
-##### Set this path in a config file some where?
-	)
+# 	git_pull_command = "{binary} -C \"{path}\" switch main > /dev/null && {binary} -C \"{path}\" pull && $( {binary} -C \"{path}\" rev-parse --verify trust-updates > /dev/null 2>&1 && {binary} -C \"{path}\" switch trust-updates > /dev/null || {binary} -C \"{path}\" switch -c trust-updates > /dev/null )".format(
+# 		binary=config.pkgbot_config.get("Git.binary"),
+# 		path=f"/Users/{console_user}/Library/AutoPkg/RecipeOverrides/"
+# ##### Set this path in a config file some where?
+# 	)
 
-	if task_utils.get_user_context():
-		git_pull_command = f"su - {console_user} -c \"{git_pull_command}\""
+	# if task_utils.get_user_context():
+	# 	git_pull_command = f"su - {console_user} -c \"{git_pull_command}\""
 
-	results_git_pull_command = utility.execute_process(git_pull_command)
+	# results_git_pull_command = utility.execute_process(git_pull_command)
 
+	try:
+
+		private_repo = git.Repo(os.path.expanduser(config.pkgbot_config.get("Git.local_repo_dir")))
+		private_repo.git.checkout(config.pkgbot_config.get("Git.repo_primary_branch"))
+		private_repo.remotes.origin.pull()
+
+		if private_repo.is_dirty():
+			if config.pkgbot_config.get("Git.repo_push_branch") not in private_repo.branches:
+				private_repo.git.branch(config.pkgbot_config.get("Git.repo_push_branch"))
+			private_repo.git.checkout(config.pkgbot_config.get("Git.repo_push_branch"))
+
+		results_git_pull_command = {
+			"stdout": "Success",
+			"stderr": "",
+			"status": 0,
+			"success": True
+		}
+
+		log.info("Successfully updated private repo")
+
+	except Exception as error:
+
+		results_git_pull_command = {
+			"stdout": "Error occurred during git operation",
+			"stderr": error,
+			"status": 1,
+			"success": False
+		}
+
+##### This if statement could likely be removed...
 	if not results_git_pull_command["success"]:
 		log.error(f"stdout:\n{results_git_pull_command['stdout']}")
 		log.error(f"stderr:\n{results_git_pull_command['stderr']}")
-
-	else:
-		log.info("Successfully updated private local autopkg repo.")
-		log.debug(results_git_pull_command["stdout"])
 
 	results_git_pull_command["event"] = "private_git_pull"
 	return results_git_pull_command

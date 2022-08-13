@@ -55,6 +55,9 @@ Git:
   user_name: PkgBot
   user_email: 
   private_repo: git@git.org:autopkg/recipes.git
+  local_repo_dir: ~/Library/AutoPkg/RecipeOverrides/
+  repo_primary_branch: main
+  repo_push_branch: main
   ssh_config: |
     Host *
     AddKeysToAgent yes
