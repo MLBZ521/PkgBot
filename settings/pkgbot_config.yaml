@@ -15,6 +15,14 @@ AutoPkg:
 # public_repo_list: list_of_public_repos.txt
 
 
+Celery:
+  broker_url: amqp://guest:guest@localhost:5672//
+
+
+Database:
+  location: "/db/db.sqlite"
+
+
 JamfPro_Dev:
   autopkg_prefs: /Library/AutoPkg/PkgBot/settings/dev_autopkg_prefs.plist
   jps_url: https://dev.server.org:8443

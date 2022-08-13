@@ -21,11 +21,11 @@ import config, utilities.common as utility
 # from api.recipe import reciepe_trust_verify_failed
 # from db import models
 from tasks import task_utils
+import settings
 
 # import api.settings
 
 
-from settings.celery_config import settings
 # from collections.abc import Callable
 
 config.load()
@@ -73,7 +73,7 @@ log = utility.log
 
 
 celery = Celery()
-celery.config_from_object(settings)
+celery.config_from_object(settings.celery.settings)
 # celery = Celery(
 # 	'tasks',
 # 	broker = "amqp://guest:guest@localhost:5672//",

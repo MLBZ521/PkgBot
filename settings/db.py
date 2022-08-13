@@ -1,8 +1,12 @@
+import config
+
+
+config.load()
 
 TORTOISE_CONFIG = {
 	"connections": {
 		# "default": "sqlite://:memory:"
-		"default": "sqlite://db/db.sqlite3"
+		"default": f"sqlite:/{config.pkgbot_config.get('Database.location')}"
 	},
 	"apps": {
 		"app": {

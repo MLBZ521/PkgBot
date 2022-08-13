@@ -1,12 +1,12 @@
 from celery import current_app as current_celery_app
 from celery.result import AsyncResult
 
-from settings.celery_config import settings
+import settings
 
 
 def create_celery():
 	celery_app = current_celery_app
-	celery_app.config_from_object(settings, namespace='CELERY')
+	celery_app.config_from_object(settings.celery.settings, namespace='CELERY')
 	celery_app.conf.update(task_track_started=True)
 	celery_app.conf.update(task_serializer='pickle')
 	celery_app.conf.update(result_serializer='pickle')
@@ -30,3 +30,6 @@ def get_task_info(task_id):
 		"task_result": task_result.result
 	}
 	return result
+
+
+##### This file currently isn't used
