@@ -238,7 +238,7 @@ async def verify_pkgbot_webhook(request: Request):
 					(await request.body()),#.decode("UTF-8")
 					hashlib.sha512
 				),
-				(request.headers.get("x_hook_signature")).encode()
+				(request.headers.get("pkgbot_hook_signature")).encode()
 			):
 
 			log.debug("Valid PkgBot Webhook message")

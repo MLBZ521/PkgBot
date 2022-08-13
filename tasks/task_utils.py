@@ -3,6 +3,8 @@ import re
 
 from datetime import datetime, timedelta
 
+from celery.result import AsyncResult
+
 import config, utilities.common as utility
 
 
@@ -10,9 +12,8 @@ config.load()
 
 
 def get_task_info(task_id):
-	"""
-	return task info for the given task_id
-	"""
+	""" Return task info for the given task_id """
+
 	task_result = AsyncResult(task_id)
 	result = {
 		"task_id": task_id,
@@ -39,7 +40,7 @@ def check_recipe_schedule(interval, last_ran):
 
 	Args:
 		interval (int): The "schedule" in number of days to not for
-		last_ran (str): datetime object in str format when repice was last ran
+		last_ran (str): datetime object in str format when recipe was last ran
 
 	Returns:
 		boolean:

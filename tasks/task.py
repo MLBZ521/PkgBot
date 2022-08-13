@@ -1,91 +1,29 @@
-# import asyncio
 import hashlib
-# import hmac
 import json
 import os
-# import re
 import requests
-import time
-
-import httpx
 
 from celery import Celery, group, chain
-from celery import shared_task
-from celery.result import AsyncResult
 
-# Internal modules
 import config, utilities.common as utility
 
-# from api import recipe
-# from api.slack import bot
-# from api.recipe import reciepe_trust_verify_failed
-# from db import models
 from tasks import task_utils
 import settings
 
-# import api.settings
+import time  # Was used for testing tasks
 
-
-# from collections.abc import Callable
 
 config.load()
 log = utility.log
 
-
-# register_tortoise(
-# 	pkgbot.app,
-# 	config = api.settings.TORTOISE_CONFIG,
-# 	generate_schemas = True,
-# 	add_exception_handlers = True
-# )
-
-# from tortoise import Tortoise
-
-# asyncio.run(Tortoise.init(config = api.settings.TORTOISE_CONFIG))
-
-# # Generate the schema
-# asyncio.run(Tortoise.generate_schemas())
-
-# asyncio.run(bot.startup_constructor())
-
-
-# async def wrap_db_ctx(func: Callable, *args, **kwargs) -> None:
-# 	# try:
-# 		# await connect_db()
-# 	await Tortoise.init(config = api.settings.TORTOISE_CONFIG)
-# 	await Tortoise.generate_schemas()
-# 	await func(*args, **kwargs)
-# 	# finally:
-# 		# await disconnect_db()
-# 	await Tortoise.close_connections()
-
-
-# def async_to_sync(func: Callable, *args, **kwargs) -> None:
-# 	# print(f"func:  {func}")
-# 	# print(f"args:  {args}")
-# 	# print(f"kwargs:  {kwargs}")
-# 	asyncio.run(wrap_db_ctx(func, *args, **kwargs))
-
-
-
-
-
-
-
 celery = Celery()
 celery.config_from_object(settings.celery.settings)
-# celery = Celery(
-# 	'tasks',
-# 	broker = "amqp://guest:guest@localhost:5672//",
-# 	backend = "rpc://"
-# )
 
 
 @celery.task(namebind=True)
 def send_webhook(self, task_id):
 	""" Sends webhook after a task is complete """
 
-	# pkgbot_server, headers = asyncio.run(task_utils.api_url_helper())
 	pkgbot_server, headers = task_utils.api_url_helper()
 
 	data = {
@@ -97,30 +35,11 @@ def send_webhook(self, task_id):
 		# "stderr": parent_task_results["stderr"],
 	}
 
-	# log.debug(f"data:  {str(json.dumps(data)).encode('utf-8')}")
-	# digest = hmac.new(
-	# 	bytes(f"{config.pkgbot_config.get('PkgBot.webhook_secret')}", "utf-8"),
-	# 	msg=str(json.dumps(data)).encode("utf-8"),
-	# 	digestmod='sha512'
-	# ).hexdigest()
-	# log.debug(f"digest:  {digest}")
-
-	# headers["x-hook-signature"] = task_utils.generate_hook_signature(data)
-	headers["x-hook-signature"] = utility.compute_hex_digest(
+	headers["pkgbot-hook-signature"] = utility.compute_hex_digest(
 		bytes(config.pkgbot_config.get('PkgBot.webhook_secret'), "utf-8"),
-		# (request.body()),#.decode("UTF-8")
-##### I think this is what needs to be put here.
-		(data),#.decode("UTF-8")
+		(data),#.decode("UTF-8")  ##### I think `data` is what needs to be put here.
 		hashlib.sha512
 	)
-	# with httpx.AsyncClient() as client:
-
-		# asyncio.run(client.post(f"{pkgbot_server}/autopkg/receive",
-	# asyncio.run(httpx.AsyncClient().post(f"{pkgbot_server}/autopkg/receive",
-	# 	headers=headers,
-	# 	data=data,
-	# 	json=data
-	# ))
 
 	requests.post(f"{pkgbot_server}/autopkg/receive",
 		headers=headers,
@@ -128,12 +47,10 @@ def send_webhook(self, task_id):
 	)
 
 
-
-
-
 @celery.task(name="git:pull_private_repo")
 def git_pull_private_repo():
 	"""Perform a `git pull` for the local private repo"""
+
 	log.info("Checking for private repo updates...")
 
 	console_user = task_utils.get_console_user()
@@ -161,9 +78,6 @@ def git_pull_private_repo():
 	return results_git_pull_command
 
 
-
-
-
 @celery.task(name="autopkg:repo_update")
 def autopkg_repo_update():
 	"""Performs an `autopkg repo-update all`"""
@@ -176,21 +90,13 @@ def autopkg_repo_update():
 		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
 
 	results_autopkg_repo_update = utility.execute_process(autopkg_repo_update_command)
-
-	##### TO DO:
-	###### * Add parent recipe repos update success
-			# To what.....?  What was I thinking here..??
+	results_autopkg_repo_update["event"] = "autopkg_repo_update"
 
 	if not results_autopkg_repo_update["success"]:
 		log.error("Failed to update parent recipe repos")
 		log.error(results_autopkg_repo_update['stderr'])
 
-	results_autopkg_repo_update["event"] = "autopkg_repo_update"
 	return results_autopkg_repo_update
-
-
-
-
 
 
 @celery.task(name="autopkg:run", bind=True)
@@ -206,15 +112,17 @@ def autopkg_run(self, recipes: list, switches: dict):
 	"""
 
 	log.debug(f"recipes:  {recipes}")
-	# time.sleep(30)
+	# time.sleep(30) ## Used in testing tasks
 
 	promote = switches.pop("promote", False)
 
 	if not promote:
 
 		# Run checks if we're not promoting the recipe
+##### Method 1 to run parent tasks
 		# task_autopkg_repo_update = autopkg_repo_update.apply_async(queue='autopkg', priority=3).get(disable_sync_subtasks=False)
 		# task_private_repo_update = git_pull_private_repo.apply_async(queue='autopkg', priority=3).get(disable_sync_subtasks=False)
+##### Method 2 to run parent tasks -- likely final
 		tasks = [
 			autopkg_repo_update.signature(),
 ##### Disabled for testing
@@ -238,7 +146,6 @@ def autopkg_run(self, recipes: list, switches: dict):
 
 				return task_result
 
-
 	for a_recipe in recipes:
 
 		log.debug(f"a_recipe:  {a_recipe}")
@@ -253,15 +160,18 @@ def autopkg_run(self, recipes: list, switches: dict):
 			):
 
 				# Verify trust info and wait
+##### Method 1 to run parent task
 				# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, switches), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
 				# task_autopkg_verify_trust.wait()
 
+##### Method 3 to run parent task -- likely final
 				recipe_run = chain(
 					autopkg_verify_trust.signature((recipe_id, switches)) | run_recipe.signature((recipe_id, switches))
 				)()
 
+##### Need to determine which method will be used here
 				# recipe_run.apply_async(queue='autopkg', priority=7, immutable=True)
-				# Possible alternate method:
+##### Possible alternate method:
 				# autopkg_verify_trust.apply_async((recipe_id, switches), queue='autopkg', priority=7, link=run_recipe.apply_async((recipe_id, switches), queue='autopkg', priority=7))
 
 		else:
@@ -269,6 +179,7 @@ def autopkg_run(self, recipes: list, switches: dict):
 
 ##### Some changes need to be made to the below call for "promoting."
 	# Working on this
+		# Getting close (I think) -- testing my need to be performed
 
 			if a_recipe.get("pkg_only"):
 				# Only upload the .pkg, do not create/update a Policy
@@ -285,11 +196,8 @@ def autopkg_run(self, recipes: list, switches: dict):
 					extra_switches = f"{extra_switches} --key '{override_key}'"
 
 ##### How will the extra_switches be passed?
-			run_recipe.apply_async(({"promote": True}, recipe_id, switches), queue='autopkg', priority=6)
+			run_recipe.apply_async(({"promote": True}, recipe_id, switches, extra_switches), queue='autopkg', priority=6)
 		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "switches": switches}), queue='autopkg', priority=6)
-
-
-
 
 
 @celery.task(name="autopkg:run_recipe", bind=True)
@@ -350,6 +258,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, switches: dict, 
 		cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} run {recipe_id} -{switches.pop('verbose', 'v')}"
 
 		# print(switches)
+
 		for k, v in switches.items():
 			cmd = f"{cmd} --{k} '{v}'"
 
@@ -360,18 +269,6 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, switches: dict, 
 		log.debug(f"Command to execute:  {cmd}")
 
 		results = utility.execute_process(cmd)
-		# return results  ### <-- NO, not doing this
-		# Instead, need to convert the PkgBot AutoPkg Post Processor into logic here
-
-##### NO!  Send webhook to perform these actions
-	##### Need to parse results here and then do something
-		# If dev run:
-			# Create pkg:  package.create()
-				# & Slack msg
-					# Does package.create() also send a slack msg?
-		# If prod run:
-			# update existing Slack msg
-		# return results
 
 		# Send task complete notification
 		send_webhook.apply_async((self.request.id), queue='autopkg', priority=4)
@@ -384,7 +281,6 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, switches: dict, 
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
 		}
-
 
 
 @celery.task(name="autopkg:verify-trust")
@@ -420,9 +316,6 @@ def autopkg_verify_trust(recipe_id: str, switches: dict):
 	log.debug(f"Command to execute:  {cmd}")
 
 	return utility.execute_process(cmd)
-
-
-
 
 
 @celery.task(name="autopkg:update-trust", bind=True)
@@ -469,4 +362,3 @@ def autopkg_update_trust(self, recipe_id: str, switches: dict, trust_id: int = N
 		"stdout": results["stdout"],
 		"stderr": results["stderr"],
 	}
-
