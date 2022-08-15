@@ -339,7 +339,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 						{ "response_url": response_url, "status_updated_by": username })
 
 					# background_tasks.add_task( autopkg.promote_package, background_tasks, button_value )
-					await autopkg.promote_package(button_value)
+					await package.promote_package(button_value)
 ##### Testing this function -- can be removed
 					# await SlackBot.reaction(
 					# 	action = "remove",
@@ -391,7 +391,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 					}
 
 					await models.ErrorMessages.update_or_create(updates, id=error_object.id)
-					await recipe.disapprove_changes(button_value)
+					await recipe.recipe_trust_deny(button_value)
 
 			await SlackBot.reaction(
 				action = "add",
