@@ -1,0 +1,42 @@
+Description: This is a recipe template that is used to pull details from a "dev"
+  run for a package and perform a "production" run for a particular software title.
+
+  The matched .pkg will be uploaded into Jamf Pro and optionally, a Policy created or updated.
+Identifier: com.github.mlbz521.ProductionTemplate
+Input:
+Process:
+- Processor: PkgBotPromoter
+  Arguments:
+    custom_variables:
+    - CUSTOM_TRIGGER
+    - EXCLUSION
+    - EXCLUSION2
+    - EXCLUSION3
+    - SCRIPT_NAME
+    - SCRIPT_PARAMETER_1
+    - SCRIPT_PARAMETER_2
+    - SCRIPT_PARAMETER_3
+    - SCRIPT_PARAMETER_4
+    - SCRIPT_PARAMETER_5
+    - SCRIPT_PARAMETER_6
+    - SCRIPT_PARAMETER_7
+    - SCRIPT_PARAMETER_8
+    - SCRIPT_PRIORITY
+    match_pkg: '%match_pkg%'
+    recipe_id: '%recipe_id%'
+- Processor: com.github.grahampugh.jamf-upload.processors/JamfCategoryUploader
+  Arguments:
+    category_name: "%CATEGORY%"
+- Processor: com.github.grahampugh.jamf-upload.processors/JamfPackageUploader
+  Arguments:
+    pkg_category: "%CATEGORY%"
+- Processor: StopProcessingIf
+  Arguments:
+    predicate: PKG_ONLY == TRUE
+- Processor: com.github.grahampugh.jamf-upload.processors/JamfPolicyUploader
+  Arguments:
+    icon: "%SELF_SERVICE_ICON%"
+    policy_name: "%POLICY_NAME%"
+    policy_template: "%POLICY_TEMPLATE%"
+    replace_policy: "True"
+  Comment: Self Service install policy
