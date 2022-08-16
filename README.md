@@ -123,15 +123,28 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
   * Obtain a publicly trusted cert using the CSR
   * Update your `pkgbot_config.yaml` with these values
 
-7. Configure your environments' settings (`/[path/to/PkgBot]/settings/pkgbot_config.yaml`)
-
+7. Configure your environments' settings:
+  * PkgBot:  Most settings should be specified in:  `/[path/to/PkgBot]/settings/pkgbot_config.yaml`
+    * Some other settings files can be found in:  `[...]/PkgBot/settings/`
+  * Celery:  `[...]/PkgBot/settings/celery.py`
+  * RabbitMQ:  (This is just a minimum example of the possible configurations)
+    * Create a user:
+      * `rabbitmqctl add_user "<username>"`
+    * Set permissions for created user:
+      * `rabbitmqctl set_permissions "<username>" ".*" ".*" ".*"`
+    * Delete the default guest user:
+      * `rabbitmqctl delete "guest"`
+ 
 8. Start the required services:
   * PkgBot:  `pkgbot.py`
-  * Celery:  
-  * RabbitMQ:  
-
-
-An example LaunchDaemon is provided to run PkgBot.  Samples will be provided in the extras directory.
+  * Celery:  `/usr/local/autopkg/python -m celery -A -tasks.task.celery worker --loglevel=info -Q autopkg`
+  * RabbitMQ:  `rabbitmq-server`
+  * To ensure the required services are always running:
+    * Example LaunchDaemon servers are provided that need to be put in `/Library/LaunchDaemons` and bootstrapped and enabled:
+      * PkgBot:  `com.github.mlbz521.pkgbot.plist`
+      * Celery:  `com.github.mlbz521.pkgbot.celery.plist`
+    * RabbitMQ:  `sudo brew services start rabbitmq`
+      * This will create a service managed by Brew
 
 
 ### "_Basic_" Examples
