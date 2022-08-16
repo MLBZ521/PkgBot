@@ -47,6 +47,7 @@ JamfPro_Prod:
   dp1_password: 
   # Name of the recipe that will be used when promoting packages to public
   recipe_template: com.github.mlbz521.ProductionTemplate
+  recipe_template_pkg_only: com.github.mlbz521.ProductionTemplate
 
 
 Git:

@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/local/autopkg/python
 #
 # Copyright 2022 Zack Thompson (MLBZ521)
-# 
-# Based on Graham R Pugh's `JSSRecipeReceiptChecker.py`
+#
+# Inspired by Graham R Pugh's `JSSRecipeReceiptChecker.py`
 #   https://github.com/autopkg/grahampugh-recipes/blob/main/CommonProcessors/JSSRecipeReceiptChecker.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +16,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""See docstring for JSSRecipeReceiptChecker class"""
-
-from __future__ import absolute_import
+"""See docstring for PkgBotPromoter class"""
 
 import os
 import plistlib
@@ -30,14 +28,15 @@ from os.path import expanduser, getmtime, exists
 from autopkglib import Processor, ProcessorError
 
 
-__all__ = ["JSSRecipeReceiptChecker"]
+__all__ = ["PkgBotPromoter"]
 
 
-class JSSRecipeReceiptChecker(Processor):
+class PkgBotPromoter(Processor):
     """An AutoPkg processor which works out the latest receipt from a different
     AutoPkg recipe, and provides useful values from its contents, which can be
     used to run a different recipe based on those values."""
 
+    description = __doc__
     input_variables = {
         "name": {
             "description": (
@@ -77,7 +76,6 @@ class JSSRecipeReceiptChecker(Processor):
             "required": False,
         }
     }
-
     output_variables = {
         "version": {
             "description": "The current package version."
@@ -94,18 +92,13 @@ class JSSRecipeReceiptChecker(Processor):
         "SELF_SERVICE_ICON": {
             "description": "The self service icon."
         },
-        "package_notes": {
+        "pkg_notes": {
             "description": "The package notes."
-        },
-        "prod_name": {
-            "description": "The prod name of the Policy."
         },
         "PARENT_RECIPES": {
             "description": "The parent recipes, used to locate the self service icon."
         }
     }
-
-    description = __doc__
 
 
     def get_recipe_receipts(self, cache_dir, name):
@@ -129,8 +122,8 @@ class JSSRecipeReceiptChecker(Processor):
             files.sort(key=lambda x: getmtime(x), reverse=True)
             return files
 
-        except IOError as e:
-            raise ProcessorError("No receipts found!") from e
+        except IOError as error:
+            raise ProcessorError("No receipts found!") from error
 
 
     def main(self):
@@ -152,8 +145,11 @@ class JSSRecipeReceiptChecker(Processor):
         version_found = False
         found_parent_recipes = False
 
+        ignore_keys = [ "API_PASSWORD", "API_USERNAME", "JSS_REPOS", "JSS_URL", "JSS_VERIFY_SSL" ]
+
+
         if name:
-            name = f"local.jss.{name}"
+            name = f"local.jamf.{name}"
 
         elif recipe_id:
             name = recipe_id
@@ -204,7 +200,7 @@ class JSSRecipeReceiptChecker(Processor):
 
                         continue
 
-                    if step.get("Processor"):
+                    elif step.get("Processor"):
 
                         if re.search("InputVariableTextSubstituter", step.get("Processor"), re.IGNORECASE):
                             processor_output = step.get("Output")
@@ -214,17 +210,16 @@ class JSSRecipeReceiptChecker(Processor):
                             self.env[key] = value
                             continue
 
-                        if re.search("JSSImporter", step.get("Processor"), re.IGNORECASE):
-                            jssimporter_input = step.get("Input")
+                        elif re.search("JamfPackageUploader", step.get("Processor"), re.IGNORECASE):
+                            processor_input = step.get("Input")
 
-                            for key, value in jssimporter_input.items():
+                            for key, value in processor_input.items():
 
-                                # We don't want to pull these values, incase they're different.
-                                if key not in { 
-                                    "API_PASSWORD", "API_USERNAME", "JSS_REPOS", "JSS_URL", "JSS_VERIFY_SSL" }:
+                                # We don't want to pull these values, incase they're different
+                                if key not in ignore_keys:
 
                                     # Set the proper CASE for these variables
-                                    var_name = ( key if key in { "package_notes", "package_priority", "pkg_path", "prod_name", "version" } 
+                                    var_name = ( key if key in { "pkg_notes", "package_priority", "pkg_path", "version" } 
                                         else key.upper() )
 
                                     self.env[var_name] = value
@@ -232,6 +227,23 @@ class JSSRecipeReceiptChecker(Processor):
 
                             if self.env["version"] and os.path.basename(self.env["pkg_path"]) == match_pkg:
                                 version_found = True
+
+                            continue
+
+                        elif re.search("JamfPolicyUploader", step.get("Processor"), re.IGNORECASE):
+                            processor_input = step.get("Input")
+
+                            for key, value in processor_input.items():
+
+                                # We don't want to pull these values, incase they're different
+                                if key not in ignore_keys:
+
+                                    # Set the proper CASE for these variables
+                                    var_name = ( key if key in { "replace_policy" } 
+                                        else key.upper() )
+
+                                    self.env[var_name] = value
+                                    self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=2)
 
                             continue
 
@@ -254,5 +266,5 @@ class JSSRecipeReceiptChecker(Processor):
 
 
 if __name__ == "__main__":
-    PROCESSOR = JSSRecipeReceiptChecker()
+    PROCESSOR = PkgBotPromoter()
     PROCESSOR.execute_shell()

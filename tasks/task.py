@@ -208,15 +208,16 @@ def autopkg_run(self, recipes: list, switches: dict):
 	# Working on this
 		# Getting close (I think) -- testing my need to be performed
 
-			if a_recipe.get("pkg_only"):
-				# Only upload the .pkg, do not create/update a Policy
-				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template_pkg_only")
-			else:
-				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template")
-
 			switches["prefs"] = os.path.abspath(config.pkgbot_config.get("JamfPro_Prod.autopkg_prefs"))
 			switches["promote_recipe_id"] = a_recipe.get("recipe_id")
 			extra_switches = "--ignore-parent-trust-verification-errors"
+
+			if a_recipe.get("pkg_only"):
+				# Only upload the .pkg, do not create/update a Policy
+				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template_pkg_only")
+				extra_switches = "{} --key PKG_ONLY=True".format(extra_switches)
+			else:
+				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template")
 
 			if switches["override_keys"]:
 				for override_key in switches["override_keys"]:
