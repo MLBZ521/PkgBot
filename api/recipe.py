@@ -138,6 +138,7 @@ async def recipe_error(recipe_id: str, error: str):
 	# Mark the recipe disabled
 	recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
 	recipe_object.enabled = False
+	recipe_object.recurring_fail_count = recipe_object.recurring_fail_count + 1
 	await recipe_object.save()
 
 	return { "Result": "Success" }

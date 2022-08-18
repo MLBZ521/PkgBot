@@ -344,6 +344,7 @@ async def receive(
 				# Update the "Last Ran" attribute for this recipe
 				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
 				recipe_object.last_ran = await utility.utc_to_local(datetime.now())
+				recipe_object.recurring_fail_count = 0
 				await recipe_object.save()
 
 			elif event == "recipe_run_prod":
