@@ -20,9 +20,9 @@ def load(args=None, **kwargs):
 
 	# print(f"args:  {args}")
 	# print(f"kwargs:  {kwargs}")
-	passed_config_file = os.path.abspath(kwargs.get('pkgbot_config', None))
+	passed_config_file = kwargs.get('pkgbot_config', None)
 	# env_config_file = os.environ.get('PKGBOT_CONFIG')
-	env_config_file = os.path.abspath("./settings/pkgbot_config.yaml")
+	env_config_file = "./settings/pkgbot_config.yaml"
 
 	# print(f"passed_config_file:  {passed_config_file}")
 
@@ -37,7 +37,7 @@ def load(args=None, **kwargs):
 		sys.exit(1)
 
 	# Read in the configuration file
-	with open(config_file, "rb") as yaml_file:
+	with open(os.path.abspath(config_file), "rb") as yaml_file:
 		configuration = yaml.safe_load(yaml_file)
 
 	##################################################
