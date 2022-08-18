@@ -20,9 +20,9 @@ def load(args=None, **kwargs):
 
 	# print(f"args:  {args}")
 	# print(f"kwargs:  {kwargs}")
-	passed_config_file = kwargs.get('pkgbot_config', None)
+	passed_config_file = os.path.abspath(kwargs.get('pkgbot_config', None))
 	# env_config_file = os.environ.get('PKGBOT_CONFIG')
-	env_config_file = "./settings/pkgbot_config.yaml"
+	env_config_file = os.path.abspath("./settings/pkgbot_config.yaml")
 
 	# print(f"passed_config_file:  {passed_config_file}")
 
