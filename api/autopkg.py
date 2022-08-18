@@ -156,7 +156,7 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 
 	# callback = await determine_callback(called_by)
 
-	recipes = (await recipe.get_recipes()).get("recipes")
+	recipes = (await recipe.get_recipes({ "enable": True, "manual_only": False })).get("recipes")
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 

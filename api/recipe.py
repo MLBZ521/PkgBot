@@ -7,7 +7,7 @@ import config, settings, utilities.common as utility
 from db import models
 from api import user
 from api.slack import bot, build_msg, send_msg
-from execute import recipe_manager, recipe_runner
+# from execute import recipe_manager, recipe_runner
 from tasks import task, task_utils
 
 
@@ -22,9 +22,10 @@ router = APIRouter(
 
 @router.get("s/", summary="Get all recipes", description="Get all recipes in the database.",
 	dependencies=[Depends(user.get_current_user)], response_model=dict)
-async def get_recipes():
+async def get_recipes(recipe_object: models.Recipe_In | None = None):
 
-	recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
+	# recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
+	recipes = await models.Recipe_Out.from_queryset(models.Recipes.filter(**recipe_object.dict()))
 
 	return { "total": len(recipes), "recipes": recipes }
 
