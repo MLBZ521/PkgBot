@@ -150,7 +150,7 @@ async def recipe_error(recipe_id: str, error: str):
 	dependencies=[Depends(user.verify_admin)])
 # async def trust_recipe(id: int, background_tasks: BackgroundTasks, user_id: str, channel: str):
 # async def recipe_trust_update(id: int, background_tasks: BackgroundTasks, user_id: str, channel: str):
-async def recipe_trust_update(trust_object: models.TrustUpdates, switches: dict = None):
+async def recipe_trust_update(trust_object: models.TrustUpdate_In, switches: dict = None):
 
 	# Get recipe object
 	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
