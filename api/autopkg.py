@@ -28,7 +28,7 @@ router = APIRouter(
 	tags = ["autopkg"],
 ##### Temp removal for development/testing
 	# dependencies = [Depends(user.verify_admin)],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 

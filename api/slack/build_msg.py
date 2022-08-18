@@ -14,7 +14,7 @@ router = APIRouter(
 	prefix = "/slackbot/build",
 	tags = ["slackbot"],
 	dependencies = [Depends(user.verify_admin)],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 

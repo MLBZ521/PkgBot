@@ -12,7 +12,7 @@ router = APIRouter(
 	prefix = "/slackbot/send",
 	tags = ["slackbot"],
 	dependencies = [Depends(user.verify_admin)],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 max_content_size = 1500

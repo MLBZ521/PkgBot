@@ -10,7 +10,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 router = APIRouter(
 	prefix = "/user",
 	tags = ["user"],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 

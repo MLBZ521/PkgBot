@@ -25,7 +25,7 @@ ssl_context = ssl.create_default_context(cafile=certifi.where())
 router = APIRouter(
 	prefix = "/slackbot",
 	tags = ["slackbot"],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 

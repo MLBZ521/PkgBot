@@ -16,7 +16,7 @@ log = utility.log
 router = APIRouter(
 	prefix = "/package",
 	tags = ["package"],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 

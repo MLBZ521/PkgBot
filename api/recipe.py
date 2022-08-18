@@ -16,7 +16,7 @@ config.load()
 router = APIRouter(
 	prefix = "/recipe",
 	tags = ["recipe"],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 

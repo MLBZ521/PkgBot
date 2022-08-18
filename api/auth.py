@@ -28,7 +28,7 @@ templates = Jinja2Templates(directory=config.pkgbot_config.get("PkgBot.jinja_tem
 router = APIRouter(
 	prefix = "/auth",
 	tags = ["auth"],
-	responses = settings.db.custom_responses
+	responses = settings.api.custom_responses
 )
 
 
