@@ -74,10 +74,10 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
       * only required if setting up for testing/development work
 
 2. Clone this repo and store it on your AutoPkg Runner.
-    * `git clone https://github.com/mlbz521/PkgBot.git "/Library/AutoPkg/"`
+    * `sudo git clone https://github.com/mlbz521/PkgBot.git "/Library/AutoPkg/PkgBot"`
 
 3. Install the requirements
-    * e.g. `/usr/local/autopkg/python -m pip install -r requirements.txt`
+    * e.g. `/usr/local/autopkg/python -m pip install -r /Library/AutoPkg/PkgBot/requirements.txt`
     * Or, if you're simply testing, create a virtual environment and install the requirements
 
 4. Create a Slack Bot/App
@@ -118,33 +118,35 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
         * The forwarding address will need to be entered into your Slack Bot configuration
 
 6. Optionally, create a private/public certificate for use with Uvicorn (_not required when testing with ngrok_)
-  * Generate a private key and a CSR:
-    * `openssl req -new -newkey rsa:2048 -nodes -keyout private.key -out pkgbot_csr.csr`
-  * Obtain a publicly trusted cert using the CSR
-  * Update your `pkgbot_config.yaml` with these values
+    * Generate a private key and a CSR:
+      * `openssl req -new -newkey rsa:2048 -nodes -keyout private.key -out pkgbot_csr.csr`
+    * Obtain a publicly trusted cert using the CSR
+    * Update your `pkgbot_config.yaml` with these values
 
 7. Configure your environments' settings:
-  * PkgBot:  Most settings should be specified in:  `/[path/to/PkgBot]/settings/pkgbot_config.yaml`
-    * Some other settings files can be found in:  `[...]/PkgBot/settings/`
-  * Celery:  `[...]/PkgBot/settings/celery.py`
-  * RabbitMQ:  (This is just a minimum example of the possible configurations)
-    * Create a user:
-      * `rabbitmqctl add_user "<username>"`
-    * Set permissions for created user:
-      * `rabbitmqctl set_permissions "<username>" ".*" ".*" ".*"`
-    * Delete the default guest user:
-      * `rabbitmqctl delete "guest"`
- 
+    * PkgBot:  Most settings should be specified in:  `/[path/to/PkgBot]/settings/pkgbot_config.yaml`
+      * Some other settings files can be found in:  `[...]/PkgBot/settings/`
+    * Celery:  `[...]/PkgBot/settings/celery.py`
+    * RabbitMQ:  (This is just a minimum example of the possible configurations; the RabbitMQ server must be running to execute these commands)
+      * Create a user:
+        * `rabbitmqctl add_user "<username>"`
+      * Set permissions for created user:
+        * `rabbitmqctl set_permissions "<username>" ".*" ".*" ".*"`
+      * Delete the default guest user:
+        * `rabbitmqctl delete_user "guest"`
+      * Optionally, set the desired [level of access](https://www.rabbitmq.com/management.html#permissions) for the user:
+        * `rabbitmqctl set_user_tags <username> <access_level_tag>`
+
 8. Start the required services:
-  * PkgBot:  `pkgbot.py`
-  * Celery:  `/usr/local/autopkg/python -m celery -A -tasks.task.celery worker --loglevel=info -Q autopkg`
-  * RabbitMQ:  `rabbitmq-server`
-  * To ensure the required services are always running:
-    * Example LaunchDaemon servers are provided that need to be put in `/Library/LaunchDaemons` and bootstrapped and enabled:
-      * PkgBot:  `com.github.mlbz521.pkgbot.plist`
-      * Celery:  `com.github.mlbz521.pkgbot.celery.plist`
-    * RabbitMQ:  `sudo brew services start rabbitmq`
-      * This will create a service managed by Brew
+    * PkgBot:  `pkgbot.py`
+    * Celery:  `/usr/local/autopkg/python -m celery -A -tasks.task.celery worker --loglevel=info -Q autopkg`
+    * RabbitMQ:  `rabbitmq-server`
+    * To ensure the required services are always running:
+      * Example LaunchDaemon servers are provided that need to be put in `/Library/LaunchDaemons` and bootstrapped and enabled:
+        * PkgBot:  `com.github.mlbz521.pkgbot.plist`
+        * Celery:  `com.github.mlbz521.pkgbot.celery.plist`
+      * RabbitMQ:  `sudo brew services start rabbitmq`
+        * This will create a service managed by Brew
 
 
 ### "_Basic_" Examples
