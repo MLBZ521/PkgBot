@@ -45,7 +45,7 @@ The project has a fully asynchronous code base and utilizes numerous popular Pyt
 
 ## Requirements
 
-PkgBot will be written to support the Python3 framework that is shipped with `AutoPkg`.  It does need numerous additional libraries that will have to be installed separately that are not included with `AutoPkg`'s bundled Python3.  It also requires RabbitMQ.
+PkgBot will be written to support the Python3 framework that is shipped with `AutoPkg` (currently supporting AutoPkg 2.6.0 Beta -- for Python 3.10 support).  It does need numerous additional libraries that will have to be installed separately that are not included with `AutoPkg`'s bundled Python3.  It also requires RabbitMQ.
 
 The major Python libraries are:
   * FastAPI
