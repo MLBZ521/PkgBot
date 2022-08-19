@@ -24,7 +24,7 @@ router = APIRouter(
 	dependencies=[Depends(user.get_current_user)], response_model=dict)
 async def get_recipes(recipe_object: models.Recipe_Filter = Depends(models.Recipe_Filter)):
 
-	if recipe_object:
+	if isinstance(recipe_object, models.Recipe_Filter):
 		recipes = await models.Recipe_Out.from_queryset(
 			models.Recipes.filter(**recipe_object.dict(exclude_unset=True, exclude_none=True)))
 	else:
