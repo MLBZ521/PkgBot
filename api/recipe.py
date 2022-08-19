@@ -22,22 +22,11 @@ router = APIRouter(
 
 @router.get("s/", summary="Get all recipes", description="Get all recipes in the database.",
 	dependencies=[Depends(user.get_current_user)], response_model=dict)
-async def get_recipes(enabled: bool | None = None, manual_only: bool | None = None, pkg_only: bool | None = None, recurring_fail_count: int | None = None, schedule: int | None = None):
+async def get_recipes(recipe_object: models.Recipe_Filter = Depends(models.Recipe_Filter)):
 
-	query_params = {}
-	if enabled:
-		query_params["enabled"] = enabled
-	if manual_only:
-		query_params["manual_only"] = manual_only
-	if pkg_only:
-		query_params["pkg_only"] = pkg_only
-	if recurring_fail_count:
-		query_params["recurring_fail_count"] = recurring_fail_count
-	if schedule:
-		query_params["schedule"] = schedule
-
-	if query_params:
-		recipes = await models.Recipe_Out.from_queryset(models.Recipes.filter(**query_params))
+	if recipe_object:
+		recipes = await models.Recipe_Out.from_queryset(
+			models.Recipes.filter(**recipe_object.dict(exclude_unset=True, exclude_none=True)))
 	else:
 		recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
 

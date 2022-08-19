@@ -45,6 +45,10 @@ class Recipes(Model):
 
 Recipe_Out = pydantic_model_creator(Recipes, name="Recipe_Out")
 Recipe_In = pydantic_model_creator(Recipes, name="Recipe_In", exclude_readonly=True)
+Recipe_Filter = pydantic_model_creator(
+	Recipes, name="Recipe_Filter", exclude_readonly=True, 
+	exclude=('id', "recipe_id", "name", "last_ran", "notes"), 
+	optional=( "enabled", "manual_only", "pkg_only", "recurring_fail_count", "schedule"))
 
 
 class PkgBotAdmins(Model):
