@@ -12,6 +12,7 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from tortoise.contrib.fastapi import register_tortoise
@@ -38,7 +39,7 @@ app = FastAPI(
 )
 
 # app.celery_app = create_celery()
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(views.router)
 app.include_router(auth.router)
 app.include_router(autopkg.router)
