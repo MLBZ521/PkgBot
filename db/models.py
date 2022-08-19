@@ -10,11 +10,11 @@ class Packages(Model):
 	name = fields.CharField(64)
 	version = fields.CharField(64)
 	pkg_name = fields.CharField(256, null=True)
-	# jps_url = fields.CharField(64, null=True)
-	# icon_id = fields.CharField(64, null=True)
-	icon = fields.CharField(1024)
-	# jps_id_dev = fields.IntField(unique=True, null=True)
-	# jps_id_prod = fields.IntField(unique=True, null=True)
+	jps_url = fields.CharField(64, null=True) # DEPRECATED | TO BE REMOVED
+	icon_id = fields.CharField(64, null=True) # DEPRECATED | TO BE REMOVED
+	icon = fields.CharField(1024, null=True)
+	jps_id_dev = fields.IntField(unique=True, null=True) # DEPRECATED | TO BE REMOVED
+	jps_id_prod = fields.IntField(unique=True, null=True) # DEPRECATED | TO BE REMOVED
 	packaged_date = fields.DatetimeField(auto_now_add=True)
 	promoted_date = fields.DatetimeField(null=True, default=None)
 	last_update = fields.DatetimeField(auto_now=True)
