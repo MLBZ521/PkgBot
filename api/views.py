@@ -8,6 +8,7 @@ from typing import Callable
 
 from fastapi import APIRouter, Depends, Request, File, UploadFile
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import config, utilities.common as utility
@@ -41,6 +42,8 @@ router = APIRouter(
 	tags = ["view"],
 	include_in_schema = False
 )
+
+router.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @router.get("/", response_class=HTMLResponse)
