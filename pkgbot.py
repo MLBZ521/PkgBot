@@ -155,6 +155,6 @@ if __name__ == "__main__":
 		log_config = config.pkgbot_config.get("PkgBot.log_config"),
 		log_level = config.pkgbot_config.get("PkgBot.uvicorn_log_level"),
 		# workers = asyncio.run( number_of_workers() ),
-		# ssl_keyfile = config.pkgbot_config.get("PkgBot.ssl_keyfile"),
-		# ssl_certfile = config.pkgbot_config.get("PkgBot.ssl_certfile")
+		ssl_keyfile = config.pkgbot_config.get("PkgBot.ssl_keyfile"),
+		ssl_certfile = config.pkgbot_config.get("PkgBot.ssl_certfile")
 	)
