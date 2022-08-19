@@ -24,8 +24,10 @@ router = APIRouter(
 	dependencies=[Depends(user.get_current_user)], response_model=dict)
 async def get_recipes(recipe_object: models.Recipe_In | None = None):
 
-	# recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
-	recipes = await models.Recipe_Out.from_queryset(models.Recipes.filter(**recipe_object.dict()))
+	if recipe_object:
+		recipes = await models.Recipe_Out.from_queryset(models.Recipes.filter(**recipe_object.dict()))
+	else:
+		recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
 
 	return { "total": len(recipes), "recipes": recipes }
 
