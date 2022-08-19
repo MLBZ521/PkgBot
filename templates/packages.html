@@ -56,7 +56,7 @@
                 {% for app in packages | sort(attribute=sort_on) %}
                 <tr>
                     {% if app["icon"] %}
-                    <td><img src="{{ url_for(name='static/icons/', filename=app.icon) }}" width="30" height="30"/></td>
+                    <td><img src="{{ url_for('static', path='/icons/%s' % app.icon) }}" width="30" height="30"/></td>
                     {% else %}
                     <td><img src="{{ app.jps_url }}/iconservlet/?id={{ app.icon_id }}" width="30" height="30"/></td>
                     {% endif %}
