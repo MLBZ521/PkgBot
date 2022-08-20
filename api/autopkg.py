@@ -198,7 +198,7 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 
 @router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
 	description="Validates a recipes trust info in a background task.")
-async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(), called_by: str = "slack"):
+async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = Depends(models.AutopkgCMD), called_by: str = "slack"):
 	"""Runs the passed recipe id.
 
 	Args:
@@ -209,12 +209,11 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = Bo
 		dict:  Dict describing the results of the ran process
 	"""
 
-	log.info(f"Verify trust in  on recipe:  {recipe_id}")
-
 	a_recipe = await recipe.get_by_recipe_id(recipe_id)
 
-	# queued_task = task.autopkg_verify_trust.delay(a_recipe, switches)
-	queued_task = task.autopkg_verify_trust.apply_async((a_recipe.dict()["recipe_id"], switches.dict()), queue='autopkg', priority=5)
+	queued_task = task.autopkg_verify_trust.apply_async(
+		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True)),
+		queue='autopkg', priority=5)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
