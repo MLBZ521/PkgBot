@@ -2,7 +2,7 @@
 
 PkgBot is a framework to manage the lifecycle of software packaging, testing, and then promotion from development to production environments.  It utilizes the open source project AutoPkg to download and package software and a Slack Bot is utilized to send notifications and receive commands.
 
-<center><img src="extras/examples/New Software Version Available.png" /></center>
+<center><img src="examples/images/New Software Version Available.png" /></center>
 
 
 ## About
@@ -15,7 +15,7 @@ A web view is also provided where all package status and history can be reviewed
 
 PkgBot has been running in my production environment for a little over a year now and working quite well.  I've been ironing out some of the kinks and making improvements to the overall process and workflows as I work to streamline everything.
 
-<center><img src="extras/examples/Approved packages.png" /></center>
+<center><img src="examples/images/Approved packages.png" /></center>
 
 
 ## Backend Design
@@ -24,7 +24,7 @@ This project is built around FastAPI, Celery and several other core libraries.  
 
 The project has a fully asynchronous code base and utilizes numerous popular Python libraries.
 
-<center><img src="extras/examples/Trust Verification Failure.png" /></center>
+<center><img src="examples/images/Trust Verification Failure.png" /></center>
 
 
 ## Planned Features
@@ -40,7 +40,7 @@ The project has a fully asynchronous code base and utilizes numerous popular Pyt
     * Better log loading/usage
   * A "setup/install" script
 
-<center><img src="extras/examples/Encountered and Error.png" /></center>
+<center><img src="examples/images/Encountered and Error.png" /></center>
 
 
 ## Requirements
@@ -119,12 +119,14 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
 
 6. Optionally, create a private/public certificate for use with Uvicorn (_not required when testing with ngrok_)
     * Generate a private key and a CSR:
-      * `openssl req -new -newkey rsa:2048 -nodes -keyout private.key -out pkgbot_csr.csr`
+      * `openssl req -new -newkey rsa:2048 -nodes -keyout private.key -out pkgbot.csr`
     * Obtain a publicly trusted cert using the CSR
     * Update your `pkgbot_config.yaml` with these values
 
 7. Configure your environments' settings:
-    * PkgBot:  Most settings should be specified in:  `/[path/to/PkgBot]/settings/pkgbot_config.yaml`
+    * PkgBot:
+      * Starting template can be found in:  `PkgBot/examples/settings/pkgbot_config.yaml`
+        * Copy file to:  `[/path/to/]PkgBot/settings/pkgbot_config.yaml`
       * Some other settings files can be found in:  `[...]/PkgBot/settings/`
     * Celery:  `[...]/PkgBot/settings/celery.py`
     * RabbitMQ:  (This is just a minimum example of the possible configurations; the RabbitMQ server must be running to execute these commands)
@@ -139,10 +141,10 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
 
 8. Start the required services:
     * PkgBot:  `pkgbot.py`
-    * Celery:  `/usr/local/autopkg/python -m celery -A -tasks.task.celery worker --loglevel=info -Q autopkg`
+    * Celery:  `/usr/local/autopkg/python -m celery -A tasks.task.celery worker --loglevel=info -Q autopkg`
     * RabbitMQ:  `rabbitmq-server`
     * To ensure the required services are always running:
-      * Example LaunchDaemon servers are provided that need to be put in `/Library/LaunchDaemons` and bootstrapped and enabled:
+      * Example LaunchDaemon services are provided (in `PkgBot/examples/launchdaemons`) that can be put in `/Library/LaunchDaemons` then bootstrapped and enabled:
         * PkgBot:  `com.github.mlbz521.pkgbot.plist`
         * Celery:  `com.github.mlbz521.pkgbot.celery.plist`
       * RabbitMQ:  `sudo brew services start rabbitmq`
