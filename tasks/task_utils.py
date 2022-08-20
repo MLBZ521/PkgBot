@@ -65,3 +65,30 @@ def api_url_helper():
 	pkgbot_server = f"http{secure}://{config.pkgbot_config.get('PkgBot.host')}:{config.pkgbot_config.get('PkgBot.port')}"
 	headers = { "Content-Type": "application/json" }
 	return pkgbot_server, headers
+
+
+def generate_autopkg_args(**kwargs):
+
+	final_opts = ""
+
+	# AutoPkg args
+	if kwargs.get("verbose"):
+		final_opts = f"{final_opts} -{kwargs.get('verbose')}"
+
+	if kwargs.get("ignore_parent_trust"):
+		final_opts = f"{final_opts} --ignore-parent-trust-verification-errors"
+
+	if kwargs.get("prefs"):
+		final_opts = f"{final_opts} --prefs={kwargs.get('prefs')}"
+
+	# PkgBot args
+	if kwargs.get("promote_recipe_id"):
+		final_opts = f"{final_opts} --key recipe_id={kwargs.get('promote_recipe_id')}"
+
+	if kwargs.get("match_pkg"):
+		final_opts = f"{final_opts} --key match_pkg={kwargs.get('match_pkg')}"
+
+	if kwargs.get("pkg_only"):
+		final_opts = f"{final_opts} --key PKG_ONLY=True"
+
+	return final_opts.lstrip()

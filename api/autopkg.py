@@ -212,7 +212,7 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = De
 	a_recipe = await recipe.get_by_recipe_id(recipe_id)
 
 	queued_task = task.autopkg_verify_trust.apply_async(
-		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True)),
+		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True), "api_direct"),
 		queue='autopkg', priority=5)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }

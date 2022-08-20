@@ -106,11 +106,10 @@ TrustUpdate_In = pydantic_model_creator(
 class AutopkgCMD(BaseModel):
 	ignore_parent_trust: bool = False
 	match_pkg: str | None = None
+	# overrides: str | None = None # Not yet supported
 	pkg_only: bool = False
-	prefs: str | None = None
 	promote: bool = False
-	# recipe_id: str
-	verbose: str = "v"
+	verbose: str = "vv"
 
 
 class AutoPkgTaskResults(BaseModel):

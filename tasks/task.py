@@ -48,8 +48,8 @@ def send_webhook(self, task_id):
 	)
 
 
-@celery.task(name="git:pull_private_repo")
-def git_pull_private_repo():
+@celery.task(name="git:pull_private_repo", bind=True)
+def git_pull_private_repo(self):
 	"""Perform a `git pull` for the local private repo"""
 
 	log.info("Checking for private repo updates...")
@@ -105,8 +105,8 @@ def git_pull_private_repo():
 	return results_git_pull_command
 
 
-@celery.task(name="autopkg:repo_update")
-def autopkg_repo_update():
+@celery.task(name="autopkg:repo_update", bind=True)
+def autopkg_repo_update(self):
 	"""Performs an `autopkg repo-update all`"""
 
 	log.info("Updating parent recipe repos...")
@@ -127,12 +127,12 @@ def autopkg_repo_update():
 
 
 @celery.task(name="autopkg:run", bind=True)
-def autopkg_run(self, recipes: list, switches: dict):
+def autopkg_run(self, recipes: list, options: dict):
 	"""Creates parent and individual recipe tasks.
 
 	Args:
 		recipe (str): Recipe ID of a recipe
-		switches (str):
+		options (str):
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -141,7 +141,7 @@ def autopkg_run(self, recipes: list, switches: dict):
 	log.debug(f"recipes:  {recipes}")
 	# time.sleep(30) ## Used in testing tasks
 
-	promote = switches.pop("promote", False)
+	promote = options.pop("promote", False)
 
 	if not promote:
 
@@ -188,59 +188,68 @@ def autopkg_run(self, recipes: list, switches: dict):
 
 				# Verify trust info and wait
 ##### Method 1 to run parent task
-				# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, switches), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
+				# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
 				# task_autopkg_verify_trust.wait()
 
 ##### Method 3 to run parent task -- likely final
 				recipe_run = chain(
-					autopkg_verify_trust.signature((recipe_id, switches)) | run_recipe.signature((recipe_id, switches))
+					autopkg_verify_trust.signature((recipe_id, options)) | run_recipe.signature((recipe_id, options))
 				)()
 
 ##### Need to determine which method will be used here
 				# recipe_run.apply_async(queue='autopkg', priority=7, immutable=True)
 ##### Possible alternate method:
-				# autopkg_verify_trust.apply_async((recipe_id, switches), queue='autopkg', priority=7, link=run_recipe.apply_async((recipe_id, switches), queue='autopkg', priority=7))
+				# autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7, link=run_recipe.apply_async((recipe_id, options), queue='autopkg', priority=7))
 
 		else:
-			log.debug(f"Promoting to production: {switches['match_pkg']}")
+			log.debug(f"Promoting to production: {options['match_pkg']}")
 
 ##### Some changes need to be made to the below call for "promoting."
 	# Working on this
 		# Getting close (I think) -- testing my need to be performed
 
-			switches["prefs"] = os.path.abspath(config.pkgbot_config.get("JamfPro_Prod.autopkg_prefs"))
-			switches["promote_recipe_id"] = a_recipe.get("recipe_id")
-			extra_switches = "--ignore-parent-trust-verification-errors"
+			# options["prefs"] = os.path.abspath(config.pkgbot_config.get("JamfPro_Prod.autopkg_prefs"))
+			# options["promote_recipe_id"] = a_recipe.get("recipe_id")
+			# extra_options = "--ignore-parent-trust-verification-errors"
+
+			options |= {
+				"ignore_parent_trust": True,
+				"prefs": os.path.abspath(config.pkgbot_config.get("JamfPro_Prod.autopkg_prefs")),
+				"promote_recipe_id": a_recipe.get("recipe_id"),
+				"verbose": options.get('verbose', 'vv')
+			}
 
 			if a_recipe.get("pkg_only"):
 				# Only upload the .pkg, do not create/update a Policy
 				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template_pkg_only")
-				extra_switches = "{} --key PKG_ONLY=True".format(extra_switches)
+				# extra_options = "{} --key PKG_ONLY=True".format(extra_options)
+				options |= { "pkg_only": True }
 			else:
 				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template")
 
-			if switches["override_keys"]:
-				for override_key in switches["override_keys"]:
-					extra_switches = f"{extra_switches} --key '{override_key}'"
+##### Not yet supported
+			# if options["override_keys"]:
+			# 	for override_key in options["override_keys"]:
+			# 		extra_options = f"{extra_options} --key '{override_key}'"
 
-##### How will the extra_switches be passed?
-			run_recipe.apply_async(({"promote": True}, recipe_id, switches, extra_switches), queue='autopkg', priority=6)
-		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "switches": switches}), queue='autopkg', priority=6)
+##### How will the extra_options be passed?
+			run_recipe.apply_async(({"promote": True}, recipe_id, options), queue='autopkg', priority=6)
+		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=6)
 
 
 @celery.task(name="autopkg:run_recipe", bind=True)
-def run_recipe(self, parent_task_results: dict, recipe_id: str, switches: dict, extra_args: str = None): #, run_type: str = "dev"):
+def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, extra_args: str = None): #, run_type: str = "dev"):
 	"""Runs the passed recipe id against `autopkg run`.
 
 	Args:
 		recipe (str): Recipe ID of a recipe
-		switches (str):
+		options (str):
 
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
 
-	run_type = "recipe_run_prod" if parent_task_results.get("promote", False) else "recipe_run_dev"
+	run_type = "recipe_run_prod" if parent_task_results.get("promote") else "recipe_run_dev"
 
 	# Verify not a promote run, and parent tasks results were success
 	if (
@@ -280,18 +289,13 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, switches: dict, 
 
 		log.info(f"Creating `autopkg run` task for recipe:  {recipe_id}")
 
-		# print(switches)
+		# Generate options
+		options = task_utils.generate_autopkg_args(**options)
 
 		# Build the autopkg command
-		cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} run {recipe_id} -{switches.pop('verbose', 'v')}"
-
-		# print(switches)
-
-		for k, v in switches.items():
-			cmd = f"{cmd} --{k} '{v}'"
+		cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} run {recipe_id} {options}"
 
 		if task_utils.get_user_context():
-			# cmd = f"su - {console_user} -c \"{cmd}\""
 			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
 
 		log.debug(f"Command to execute:  {cmd}")
@@ -311,67 +315,73 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, switches: dict, 
 		}
 
 
-@celery.task(name="autopkg:verify-trust")
-def autopkg_verify_trust(recipe_id: str, switches: dict):
+@celery.task(name="autopkg:verify-trust", bind=True)
+def autopkg_verify_trust(self, recipe_id: str, options: dict, source: str):
 	"""Runs the passed recipe id against `autopkg verify-trust-info`.
 
 	Args:
 		recipe (str): Recipe ID of a recipe
-		switches (str):
+		options (dict):
 
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
 
-	log.info("`autopkg verify-trust-info`")
-	log.info("Verifying trust info...")
+	log.info(f"Verifying trust info for:  {recipe_id}")
 
-#### Only if needed...
-	# autopkg_prefs = os.path.abspath(config.pkgbot_config.get("JamfPro_Dev.autopkg_prefs"))
+	# Not overriding verbose when verifying trust info
+	_ = options.pop('verbose')
 
-	# Build the autopkg command
-	# cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} " + \
-	# 	  f"verify-trust-info {recipe_id} " + \
-	# 	  f"-{switches.pop('verbose', 'vvv')}"
-	cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} verify-trust-info {recipe_id} -{switches.pop('verbose', 'vvv')}"
+	options |= {
+		"prefs": os.path.abspath(config.pkgbot_config.get("JamfPro_Dev.autopkg_prefs")),
+		"verbose": "vvv"
+	}
 
-	for k, v in switches.items():
-		cmd = f"{cmd} --{k} '{v}'"
+	# Generate options
+	options = task_utils.generate_autopkg_args(**options)
+
+	cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} verify-trust-info {recipe_id} {options}"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
 
 	log.debug(f"Command to execute:  {cmd}")
 
+	if source == "api_direct":
+		results = utility.execute_process(cmd)
+
+		send_webhook.apply_async((self.request.id), queue='autopkg', priority=4)
+
+		return {
+			"event": "update_trust_info",
+			"recipe_id": recipe_id,
+			"success": results["success"],
+			"stdout": results["stdout"],
+			"stderr": results["stderr"],
+		}
+
 	return utility.execute_process(cmd)
 
 
 @celery.task(name="autopkg:update-trust", bind=True)
-def autopkg_update_trust(self, recipe_id: str, switches: dict, trust_id: int = None):
+def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = None):
 	"""Runs the passed recipe id against `autopkg update-trust-info`.
 
 	Args:
 		recipe (str): Recipe ID of a recipe
-		switches (str):
+		options (str):
 
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
 
-	log.info("`autopkg update-trust-info`")
-	log.info("Updating trust info...")
+	log.info(f"Updating trust info for:  {recipe_id}")
 
-#### Only if needed...
-	# autopkg_prefs = os.path.abspath(config.pkgbot_config.get("JamfPro_Dev.autopkg_prefs"))
+	# Generate options
+	options = task_utils.generate_autopkg_args(
+		prefs=os.path.abspath(config.pkgbot_config.get("JamfPro_Dev.autopkg_prefs")))
 
-	# Build the autopkg command
-	# cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} " + \
-	# 	  f"update-trust-info {recipe_id} " + \
-	# 	  f"-{switches.pop('verbose', 'vvv')}"
-	cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} update-trust-info {recipe_id}"
-
-	for k, v in switches.items():
-		cmd = f"{cmd} --{k} '{v}'"
+	cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} update-trust-info {recipe_id} {options}"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
