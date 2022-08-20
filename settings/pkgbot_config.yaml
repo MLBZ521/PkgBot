@@ -16,6 +16,7 @@ AutoPkg:
 
 
 Celery:
+  # RabbitMQ credentials and URL
   broker_url: amqp://guest:guest@localhost:5672//
 
 
@@ -71,11 +72,11 @@ Git:
     -----END OPENSSH PRIVATE KEY-----
 
 
-Services:
+# Services:
   # The name of the LaunchDaemon that will ensure that the PkgBot service is running
-  pkgbot_service_LaunchDaemon_label: com.github.mlbz521.pkgbot
+  # pkgbot_service_LaunchDaemon_label: com.github.mlbz521.pkgbot
   # The interval between running configured autopkg recipes
-  autopkg_service_start_interval: 14400
+  # autopkg_service_start_interval: 14400
 
 
 Slack:
