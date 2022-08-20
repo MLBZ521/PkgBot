@@ -138,8 +138,8 @@ async def determine_callback(caller: str):
 
 
 
-
-@repeat_every(seconds=config.pkgbot_config.get('Services.autopkg_service_start_interval'))
+##### Disabled until further testing is performed on all tasks
+# @repeat_every(seconds=config.pkgbot_config.get('Services.autopkg_service_start_interval'))
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
 async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
