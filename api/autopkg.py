@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from fastapi import APIRouter, Body, Depends, Header, Request
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 
 from fastapi_utils.tasks import repeat_every
 
@@ -230,15 +230,18 @@ async def verify_pkgbot_webhook(request: Request):
 		# 	# It could be a replay attack, so let's ignore it.
 		# 	return False
 
-		if hmac.compare_digest(
-				utility.compute_hex_digest(
-					bytes(config.pkgbot_config.get('PkgBot.webhook_secret'), "utf-8"),
-					(await request.body()),#.decode("UTF-8")
-					hashlib.sha512
-				),
-				(request.headers.get("pkgbot_hook_signature")).encode()
-			):
+		body = json.loads(await request.body())
 
+		digest = await utility.compute_hex_digest(
+			config.pkgbot_config.get('PkgBot.webhook_secret').encode("UTF-8"),
+			str(body).encode("UTF-8"),
+			hashlib.sha512
+		)
+
+		if hmac.compare_digest(
+			digest.encode("UTF-8"),
+			(request.headers.get("x-pkgbot-signature")).encode("UTF-8")
+		):
 			log.debug("Valid PkgBot Webhook message")
 			return True
 
@@ -247,7 +250,7 @@ async def verify_pkgbot_webhook(request: Request):
 			return False
 
 	except Exception:
-
+		log.error("Exception attempting to validate PkgBot Webhook!")
 		return False
 
 
@@ -257,7 +260,7 @@ async def verify_pkgbot_webhook(request: Request):
 async def receive(
 	request: Request,
 	# payload: models.AutoPkgTaskResults = Body(),
-	task_id: str = Body(),
+	task_id = Body(),
 	# webhook_input: WebhookData,
 	# response: Response,
 	# content_length: int = Header(...),
@@ -270,14 +273,10 @@ async def receive(
 	# 	response.status_code = 400
 	# 	return {"result": "Content too long"}
 
-
-	# log.debug(f"payload:  {str(json.dumps(payload.dict())).encode('utf-8')}")
-	# log.debug(f"x_hook_signature:  {x_hook_signature}")
-
 	if not await verify_pkgbot_webhook(request):
-		return
+		raise HTTPException(status_code=401, detail="Failed to authenticate webhook.")
 
-	log.debug(f"task_id:  {task_id}")
+	log.debug(f"Receiving notification for task_id:  {task_id}")
 
 	task_results = await utility.get_task_results(task_id)
 

@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import os
@@ -21,9 +22,9 @@ celery = Celery()
 celery.config_from_object(settings.celery.settings)
 
 
-@celery.task(namebind=True)
-def send_webhook(self, task_id):
-	""" Sends webhook after a task is complete """
+@celery.task(name="send_webhook", namebind=True)
+def send_webhook(task_id):
+	""" Sends webhook after a task is complete. """
 
 	pkgbot_server, headers = task_utils.api_url_helper()
 
@@ -36,11 +37,11 @@ def send_webhook(self, task_id):
 		# "stderr": parent_task_results["stderr"],
 	}
 
-	headers["pkgbot-hook-signature"] = utility.compute_hex_digest(
-		bytes(config.pkgbot_config.get('PkgBot.webhook_secret'), "utf-8"),
-		(data),#.decode("UTF-8")  ##### I think `data` is what needs to be put here.
+	headers["x-pkgbot-signature"] = asyncio.run(utility.compute_hex_digest(
+		config.pkgbot_config.get('PkgBot.webhook_secret').encode("UTF-8"),
+		str(data).encode("UTF-8"),
 		hashlib.sha512
-	)
+	))
 
 	requests.post(f"{pkgbot_server}/autopkg/receive",
 		headers=headers,
@@ -169,7 +170,7 @@ def autopkg_run(self, recipes: list, options: dict):
 
 			if not task_result["success"]:
 
-				send_webhook.apply_async((self.request.parent_id), queue='autopkg', priority=2)
+				send_webhook.apply_async((self.request.parent_id,), queue='autopkg', priority=2)
 
 				return task_result
 
@@ -275,7 +276,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 
 		log.error(f"{log_msg} recipe: {recipe_id}")
 
-		send_webhook.apply_async((self.request.parent_id), queue='autopkg', priority=2)
+		send_webhook.apply_async((self.request.parent_id,), queue='autopkg', priority=2)
 		return {
 			"event": event_type,
 			# "event_id": event_id,
@@ -303,7 +304,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 		results = utility.execute_process(cmd)
 
 		# Send task complete notification
-		send_webhook.apply_async((self.request.id), queue='autopkg', priority=4)
+		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
 
 		return {
 			"event": run_type,
@@ -350,7 +351,7 @@ def autopkg_verify_trust(self, recipe_id: str, options: dict, source: str):
 	if source == "api_direct":
 		results = utility.execute_process(cmd)
 
-		send_webhook.apply_async((self.request.id), queue='autopkg', priority=4)
+		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
 
 		return {
 			"event": "update_trust_info",
@@ -390,7 +391,7 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 	results = utility.execute_process(cmd)
 
-	send_webhook.apply_async((self.request.id), queue='autopkg', priority=4)
+	send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
 
 	return {
 		"event": "update_trust_info",
