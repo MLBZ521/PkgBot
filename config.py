@@ -2,62 +2,46 @@ import os
 import sys
 import yaml
 
-
-class PkgBot_Configuration():
-	def __init__(self):
-		self.config = {}
-
-	def add(self, key, value):
-
-		self.config[key] = value
-
-	def get(self, key):
-
-		return self.config.get(key, None)
+from functools import lru_cache
 
 
-def load(args=None, **kwargs):
+class PkgBot_Configuration(dict):
 
-	# print(f"args:  {args}")
-	# print(f"kwargs:  {kwargs}")
-	passed_config_file = kwargs.get('pkgbot_config', None)
-	# env_config_file = os.environ.get('PKGBOT_CONFIG')
-	env_config_file = "./settings/pkgbot_config.yaml"
+	def __init__(self, **kwargs):
 
-	# print(f"passed_config_file:  {passed_config_file}")
+		cwd = os.path.abspath(os.path.dirname(__file__))
 
-	if passed_config_file != None and os.path.exists(passed_config_file):
-		config_file = passed_config_file
+		config_file = (
+			kwargs.get('pkgbot_config') or 
+			os.environ.get('PKGBOT_CONFIG', os.path.join(cwd, "examples/settings/pkgbot_config.yaml"))
+		)
 
-	elif env_config_file != None and os.path.exists(env_config_file):
-		config_file = env_config_file
+		if os.path.exists(config_file):
 
-	else:
-		print("\nError:  Unable to load configuration.\n")
-		sys.exit(1)
+			with open(os.path.abspath(config_file), "rb") as yaml_file:
+				configuration = yaml.safe_load(yaml_file)
 
-	# Read in the configuration file
-	with open(os.path.abspath(config_file), "rb") as yaml_file:
-		configuration = yaml.safe_load(yaml_file)
+		else:
 
-	##################################################
-	# Define variables
+			print("\nError:  Unable to load configuration.\n")
+			sys.exit(1)
 
-	PkgBotConfig = PkgBot_Configuration()
+		for section in configuration:
 
-	for section in configuration:
-		for key in configuration.get(section):
-			PkgBotConfig.add(f"{section}.{key}", configuration[section].get(key))
+			for key in configuration.get(section):
 
-	if configuration.get("AutoPkg").get("binary") is None:
-		PkgBotConfig.add("AutoPkg.binary", "/usr/local/bin/autopkg")
+				value = configuration[section].get(key)
 
-	if configuration.get("Git").get("binary") is None:
-		PkgBotConfig.add("Git.binary", "/usr/bin/git")
+				# Set defaults if not defined
+				if key == "AutoPkg.binary" and value is None:
+					value = "/usr/local/bin/autopkg"
 
-	globals()["pkgbot_config"] = PkgBotConfig.config
+				elif key == "Git.binary" and value is None:
+					value = "/usr/bin/git"
+
+				self[f"{section}.{key}"] = value
 
 
-if __name__ == "__main__":
-	print("Initializing PkgBot Configuration...")
-	load()
+@lru_cache()
+def load(**kwargs):
+	return PkgBot_Configuration(**kwargs)
