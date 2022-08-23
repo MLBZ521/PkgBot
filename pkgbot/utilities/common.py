@@ -233,9 +233,9 @@ async def get_task_results(task_id: str):
 	Session = sessionmaker(db_engine)
 
 	with Session() as session:
-		result = session.execute(f"SELECT result from celery_taskmeta where id = {task_id};").fetchone()
+		result = session.execute(f"SELECT result from celery_taskmeta where task_id = '{task_id}';").fetchone()
 
-	return pickle.loads(result)
+	return pickle.loads(result.result)
 
 
 async def find_receipt_plist(content):

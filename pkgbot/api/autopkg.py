@@ -274,9 +274,13 @@ async def receive(
 	if not await verify_pkgbot_webhook(request):
 		raise HTTPException(status_code=401, detail="Failed to authenticate webhook.")
 
+	task_id = task_id.get("task_id")
+
 	log.debug(f"Receiving notification for task_id:  {task_id}")
 
 	task_results = await utility.get_task_results(task_id)
+
+	log.debug(f"task_results:  {task_results}")
 
 	event = task_results.get("event")
 	event_id = task_results.get("event_id", "")

@@ -352,7 +352,7 @@ def autopkg_verify_trust(self, recipe_id: str, options: dict, source: str):
 		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
 
 		return {
-			"event": "update_trust_info",
+			"event": "verify_trust_info",
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],
