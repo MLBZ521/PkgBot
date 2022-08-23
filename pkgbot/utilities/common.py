@@ -14,10 +14,10 @@ import yaml
 from datetime import datetime, timezone, tzinfo
 from distutils.util import strtobool
 
-import config
+from pkgbot import config
 
 
-config.load()
+config = config.load_config()
 
 
 def log_setup(name="PkgBot"):
@@ -28,7 +28,7 @@ def log_setup(name="PkgBot"):
 		logger.debug("LOGGER HAS NO HANDLERS!")
 
 		# Get the log configuration
-		log_config = yaml.safe_load(f"{config.pkgbot_config.get('PkgBot.log_config')}")
+		log_config = yaml.safe_load(f"{config.PkgBot.get('log_config')}")
 
 		# Load log configuration
 		logging.config.dictConfig(log_config)
@@ -82,7 +82,7 @@ async def run_process_async(command, input=None):
 
 def execute_process(command, input=None):
 	"""
-	A helper function for asyncio's subprocess.
+	A helper function for subprocess.
 
 	Args:
 		command:  The command line level syntax that would be
@@ -181,7 +181,7 @@ async def datetime_to_string(datetime_string: str, format_string: str = None):
 
 async def compute_hex_digest(key: bytes, message: bytes, hash: '_hashlib.HASH' = hashlib.sha256):
 
-	return hmac.new( key, message, hash ).hexdigest()
+	return hmac.new(key, message, hash).hexdigest()
 
 
 async def load_yaml(config_file):
@@ -205,12 +205,16 @@ async def save_yaml(contents, config_file):
 
 async def replace_sensitive_strings(message, sensitive_strings=None):
 
-	default_sensitive_strings = r'{}|{}|{}|{}|{}|{}'.format(
-		config.pkgbot_config.get("JamfPro_Prod.api_password"),
-		config.pkgbot_config.get("JamfPro_Prod.api_user"),
-		config.pkgbot_config.get("JamfPro_Prod.dp1_user"),
-		config.pkgbot_config.get("JamfPro_Prod.dp1_password"),
-		config.pkgbot_config.get("Common.RedactionStrings"),
+	default_sensitive_strings = r'{}|{}|{}|{}|{}|{}|{}|{}|{}|{}'.format(
+		config.JamfPro_Dev.get("api_user"),
+		config.JamfPro_Dev.get("api_password"),
+		config.JamfPro_Dev.get("dp1_user"),
+		config.JamfPro_Dev.get("dp1_password"),
+		config.JamfPro_Prod.get("api_user"),
+		config.JamfPro_Prod.get("api_password"),
+		config.JamfPro_Prod.get("dp1_user"),
+		config.JamfPro_Prod.get("dp1_password"),
+		config.Common.get("RedactionStrings"),
 		r"bearer\s[\w+.-]+"
 	)
 

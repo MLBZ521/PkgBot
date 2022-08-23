@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 
 from celery.result import AsyncResult
 
-import config, utilities.common as utility
+from pkgbot import config, settings
+from pkgbot.utilities import common as utility
 
-
-config.load()
+config = config.load_config()
 
 
 def get_task_info(task_id):
@@ -61,8 +61,8 @@ def check_recipe_schedule(interval, last_ran):
 
 def api_url_helper():
 
-	secure = "s" if config.pkgbot_config.get("PkgBot.enable_ssl") else ""
-	pkgbot_server = f"http{secure}://{config.pkgbot_config.get('PkgBot.host')}:{config.pkgbot_config.get('PkgBot.port')}"
+	secure = "s" if config.PkgBot.get("enable_ssl") else ""
+	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
 	headers = { "Content-Type": "application/json" }
 	return pkgbot_server, headers
 
@@ -90,5 +90,9 @@ def generate_autopkg_args(**kwargs):
 
 	if kwargs.get("pkg_only"):
 		final_opts = f"{final_opts} --key PKG_ONLY=True"
+
+	# if kwargs.get("promote"):
+	# 	promote = kwargs.get("promote")
+	# 	final_opts = f"{final_opts} --key promote=True"
 
 	return final_opts.lstrip()

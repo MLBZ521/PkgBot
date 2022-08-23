@@ -10,14 +10,12 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.webhook.async_client import AsyncWebhookClient
 
-import config, settings, utilities.common as utility
-from api import autopkg, package, recipe, user
-from api.slack import build_msg
-from db import models
-from tasks import task, task_utils
+from pkgbot import api, config, settings
+from pkgbot.db import models
+from pkgbot.utilities import common as utility
+from pkgbot.tasks import task
 
-
-config.load()
+config = config.load_config()
 log = utility.log
 
 SlackBot = None
@@ -161,12 +159,10 @@ class SlackClient(object):
 
 	async def invoke_reaction(self, **kwargs):
 
-		kwargs.update(
-			{
-				"channel": kwargs.get("channel", self.channel),
-				"timestamp": str(kwargs.get("ts"))
-			}
-		)
+		kwargs.update({
+			"channel": kwargs.get("channel", self.channel),
+			"timestamp": str(kwargs.get("ts"))
+		})
 
 		if "ts" in kwargs:
 			del kwargs["ts"]
@@ -249,7 +245,7 @@ async def validate_slack_request(request: Request):
 		signature_basestring = (f"v0:{slack_timestamp}:{slack_body}").encode()
 
 		computed_signature = "v0=" + await utility.compute_hex_digest(
-			bytes(config.pkgbot_config.get("Slack.signing_secret"), "UTF-8"),
+			bytes(config.Slack.get("signing_secret"), "UTF-8"),
 			signature_basestring)
 
 		slack_signature = request.headers.get("X-Slack-Signature")
@@ -273,10 +269,10 @@ async def startup_constructor():
 	global SlackBot
 
 	SlackBot = SlackClient(
-		token = config.pkgbot_config.get("Slack.bot_token"),
-		bot_name = config.pkgbot_config.get("Slack.bot_name"),
-		channel = config.pkgbot_config.get("Slack.channel"),
-		slack_id = config.pkgbot_config.get("Slack.slack_id")
+		token = config.Slack.get("bot_token"),
+		bot_name = config.Slack.get("bot_name"),
+		channel = config.Slack.get("channel"),
+		slack_id = config.Slack.get("slack_id")
 	)
 
 
@@ -314,7 +310,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 			slack_id = user_id
 		)
 
-		user_that_clicked = await user.get_user(slack_user_object)
+		user_that_clicked = await api.user.get_user(slack_user_object)
 
 		# try:
 ##### Disabled for testing
@@ -335,11 +331,11 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 
 				if button_value_type == "Package":
 					log.debug("  --> Promoting Package")
-					await package.update(button_value,
+					await api.package.update(button_value,
 						{ "response_url": response_url, "status_updated_by": username })
 
 					# background_tasks.add_task( autopkg.promote_package, background_tasks, button_value )
-					await package.promote_package(button_value)
+					await api.package.promote_package(button_value)
 ##### Testing this function -- can be removed
 					# await SlackBot.reaction(
 					# 	action = "remove",
@@ -359,7 +355,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 
 					# background_tasks.add_task( recipe.trust_recipe, button_value, background_tasks, user_id=user_id, channel=channel )
 					# task.autopkg_update_trust.apply_async()
-					await recipe.recipe_trust_update(trust_object)
+					await api.recipe.recipe_trust_update(trust_object)
 
 			elif button_text == "Deny":
 				log.debug("  -> DENY")
@@ -367,7 +363,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 				if button_value_type == "Package":
 					log.debug("  --> Denying Package")
 
-					await package.update( button_value,
+					await api.package.update( button_value,
 						{ "response_url": response_url,
 						"status_updated_by": username,
 						"status": "Denied",
@@ -377,7 +373,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 					# background_tasks.add_task( autopkg.deny_package,
 					# 	background_tasks, button_value )
 
-					await package.deny_package(button_value)
+					await api.package.deny_package(button_value)
 
 				if button_value_type == "Trust":
 					log.debug("  --> Disapprove Trust Changes")
@@ -391,7 +387,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 					}
 
 					await models.ErrorMessages.update_or_create(updates, id=error_object.id)
-					await recipe.recipe_trust_deny(button_value)
+					await api.recipe.recipe_trust_deny(button_value)
 
 			await SlackBot.reaction(
 				action = "add",
@@ -402,7 +398,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 		else:
 
 			log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
-			blocks = await build_msg.unauthorized_msg(username)
+			blocks = await api.build_msg.unauthorized_msg(username)
 
 			await SlackBot.post_ephemeral_message(user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
 

@@ -10,20 +10,21 @@ from fastapi.templating import Jinja2Templates
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
-import config, settings, utilities.common as utility
-from db import models
-from api import user
+from pkgbot import config, settings
+from pkgbot.api import user
+from pkgbot.db import models
+from pkgbot.utilities import common as utility
 
 
-config.load()
+config = config.load_config()
 log = utility.log
 LOGIN_SECRET = os.urandom(1024).hex()
 
-jps_url = config.pkgbot_config.get("JamfPro_Prod.jps_url")
+jps_url = config.JamfPro_Prod.get("jps_url")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 login_manager = LoginManager(LOGIN_SECRET, token_url="/auth/login", use_cookie=True)
 login_manager.cookie_name = "PkgBot_Cookie"
-templates = Jinja2Templates(directory=config.pkgbot_config.get("PkgBot.jinja_templates"))
+templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
 
 router = APIRouter(
 	prefix = "/auth",
@@ -109,18 +110,12 @@ async def user_authorizations(token: str = Depends(oauth2_scheme)):
 
 @login_manager.user_loader()
 async def load_user(username: str):
-
-	user_model = models.PkgBotAdmin_In(
-		username = username,
-	)
-
+##### This can be improved ^^^
+	user_model = models.PkgBotAdmin_In(username = username,)
 	user_object = await user.get_user(user_model)
 
-	if user_object:
-		return user_object
-
-	# User not found
-	return None
+	# Return the user object otherwise None if a user was not found
+	return user_object or None
 
 
 @router.post("/login", summary="Login to web views",
@@ -134,7 +129,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 		return templates.TemplateResponse("index.html", { "request": request, "session": session })
 
 	access_token = login_manager.create_access_token(
-		data = { "sub": form_data.username }, expires = timedelta(minutes=config.pkgbot_config.get("PkgBot.token_valid_for")))
+		data = { "sub": form_data.username }, expires = timedelta(minutes=config.PkgBot.get("token_valid_for")))
 
 	response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 	login_manager.set_cookie(response, access_token)

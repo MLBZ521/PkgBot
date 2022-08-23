@@ -1,16 +1,16 @@
-import config
+from pkgbot import config
 
 
-config.load()
+config = config.load_config()
 
 TORTOISE_CONFIG = {
 	"connections": {
 		# "default": "sqlite://:memory:"
-		"default": f"sqlite:/{config.pkgbot_config.get('Database.location')}"
+		"default": f"sqlite:/{config.Database.get('location')}"
 	},
 	"apps": {
 		"app": {
-			"models": [ "db.models" ],
+			"models": [ "pkgbot.db.models" ],
 			"default_connection": "default"
 		}
 	},

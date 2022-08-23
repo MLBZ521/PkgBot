@@ -9,19 +9,17 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 
 from fastapi_utils.tasks import repeat_every
 
-import config, settings, utilities.common as utility
-from db import models
-from api import package, recipe, user, views
-from api.slack import send_msg
-# from execute import recipe_manager, recipe_runner
-from tasks import task, task_utils
+
+from pkgbot import api, config, settings
+from pkgbot.db import models
+from pkgbot.tasks import task, task_utils
+from pkgbot.utilities import common as utility
 
 
-from utilities.celery import get_task_info
+from pkgbot.utilities.celery import get_task_info
 
 
-
-config.load()
+config = config.load_config()
 log = utility.log
 router = APIRouter(
 	prefix = "/autopkg",
@@ -45,8 +43,8 @@ async def workflow_dev(pkg_object: models.Package_In = Body()):
 		[JSON]: Result of the operation
 	"""
 
-	created_pkg = await package.create(pkg_object)
-	results = await send_msg.new_pkg_msg(created_pkg)
+	created_pkg = await api.package.create(pkg_object)
+	results = await api.send_msg.new_pkg_msg(created_pkg)
 	pkg_db_object = await models.Packages.filter(id=created_pkg.id).first()
 	pkg_db_object.slack_ts = results.get("ts")
 	pkg_db_object.slack_channel = results.get("channel")
@@ -73,10 +71,10 @@ async def workflow_prod(pkg_object: models.Package_In = Body()):
 	packages = await models.Package_Out.from_queryset(
 		models.Packages.filter(recipe_id=pkg_object.recipe_id, version=pkg_object.version))
 
-	updated_pkg_object = await package.update(packages[-1].id, pkg_object)
+	updated_pkg_object = await api.package.update(packages[-1].id, pkg_object)
 
 	# try:
-	results = await send_msg.promote_msg(updated_pkg_object)
+	results = await api.send_msg.promote_msg(updated_pkg_object)
 	return { "Result": "Success" }
 
 	# except:
@@ -139,7 +137,7 @@ async def determine_callback(caller: str):
 
 
 ##### Disabled until further testing is performed on all tasks
-# @repeat_every(seconds=config.pkgbot_config.get('Services.autopkg_service_start_interval'))
+# @repeat_every(seconds=config.Services.get("autopkg_service_start_interval'))
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
 async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
@@ -156,7 +154,7 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 
 	# callback = await determine_callback(called_by)
 
-	recipes = (await recipe.get_recipes({ "enable": True, "manual_only": False })).get("recipes")
+	recipes = (await api.recipe.get_recipes({ "enable": True, "manual_only": False })).get("recipes")
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 
@@ -184,7 +182,7 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 
 	log.info(f"Running recipe:  {recipe_id}")
 
-	a_recipe = await recipe.get_by_recipe_id(recipe_id)
+	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	if a_recipe.dict().get("enabled"):
 		# queued_task = task.autopkg_run.delay(a_recipe.dict()["recipe_id"], switches.dict())
@@ -209,7 +207,7 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = De
 		dict:  Dict describing the results of the ran process
 	"""
 
-	a_recipe = await recipe.get_by_recipe_id(recipe_id)
+	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	queued_task = task.autopkg_verify_trust.apply_async(
 		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True), "api_direct"),
@@ -288,20 +286,20 @@ async def receive(
 	stderr = task_results.get("stderr")
 
 	if event == "error":
-		await recipe.error(recipe_id, stdout)
+		await api.recipe.error(recipe_id, stdout)
 
 	elif event == "failed_trust":
 		""" Update Slack message that recipe_id failed verify-trust-info """
-		await recipe.recipe_trust_verify_failed({ "recipe_id": recipe_id, "msg": stderr })
+		await api.recipe.recipe_trust_verify_failed({ "recipe_id": recipe_id, "msg": stderr })
 
 	elif event == "update_trust_info":
 		""" Update Slack message with result of update-trust-info attempt """
 
 		if success:
-			await recipe.recipe_trust_update_success(recipe_id, success, event_id)
+			await api.recipe.recipe_trust_update_success(recipe_id, success, event_id)
 
 		else:
-			await recipe.recipe_trust_update_failed(recipe_id, success, event_id)
+			await api.recipe.recipe_trust_update_failed(recipe_id, success, event_id)
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
@@ -328,7 +326,7 @@ async def receive(
 					log.debug("Posted to dev...")
 
 					# pkg_data["jps_id_dev"] = jps_pkg_id
-					# pkg_data["jps_url"] = config.pkgbot_config.get('JamfPro_Dev.jps_url')
+					# pkg_data["jps_url"] = config.JamfPro_Dev.get("jps_url')
 
 ##### Need to figure out icon logic
 					policy_results = policy_processor.get("Output").get("jamfpolicyuploader_summary_result").get("data")
@@ -386,7 +384,7 @@ async def receive(
 ##### Can we determine more info to relate it to an event id?
 				redacted_error = { "Failed to promote a pkg": redacted_error }
 
-			await recipe.recipe_error(recipe_id, redacted_error)
+			await api.recipe.recipe_error(recipe_id, redacted_error)
 
 
 

@@ -1,7 +1,7 @@
 from fastapi import Depends
 
-import utilities.common as utility
-from db import models
+from pkgbot.utilities import common as utility
+from pkgbot.db import models
 
 
 log = utility.log

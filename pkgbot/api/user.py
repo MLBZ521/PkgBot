@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
-import settings, utilities.common as utility
-from db import models
+from pkgbot import settings
+from pkgbot.db import models
+from pkgbot.utilities import common as utility
 
 
 log = utility.log

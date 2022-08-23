@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Package History{% endblock %}
+{% block title %}List of Recipes{% endblock %}
 {% block content %}
         <style>
             table {
@@ -43,7 +43,7 @@
 
 
 
-        <table id="packages" class="packages">
+        <table id="recipes" class="recipes">
             <thead>
                 <tr>
                     {% for header in table_headers %}
@@ -53,28 +53,16 @@
             </thead>
             <tbody>
                 {% set sort_on = request.sort_on | default("id") %}
-                {% for app in packages | sort(attribute=sort_on) %}
+                {% for recipe in recipes | sort(attribute=sort_on) %}
                 <tr>
-                    {% if app["icon"] %}
-                    <td><img src="{{ url_for('static', path='/icons/%s' % app.icon) }}" width="30" height="30"/></td>
-                    {% elif app["jps_url"] and app["icon_id"] %}
-                    <td><img src="{{ app.jps_url }}/iconservlet/?id={{ app.icon_id }}" width="30" height="30"/></td>
-                    {% else %}
-                    <td><img src="{{ url_for('static', path='/icons/%s.png' % ['package', 'metapackage']|random) }}" width="30" height="30"/></td>
-                    {% endif %}
-                    <td><a href="{{ url_for(name='package', id=app.id) }}"><span class="badge badge-warning">{{ app.id }}</span></a></td>
-                    <!-- <td>{{ app.id }}</td> -->
-                    <td>{{ app.name }}</td>
-                    <td>{{ app.version }}</td>
-                    <td>{{ app.status }}</td>
-                    <td>{{ app.status_updated_by }}</td>
-                    <td>{{ app.packaged_date | strftime }}</td>
-                    <td>{{ app.promoted_date | strftime }}</td>
-                    <!-- <td>{{ app.approved }}</td> -->
-                    <td>{{ app.do_not_delete }}</td>
-                    <!-- <td>{{ app.path }}</td> -->
-                    <td>{{ app.special_flags }}</td>
-                    <td>{{ app.notes }}</td>
+                    <td><a href="{{ url_for(name='get_recipe', id=recipe.id) }}"><span class="badge badge-warning">{{ recipe.id }}</span></a></td>
+                    <td>{{ recipe.recipe_id }}</td>
+                    <td>{{ recipe.name }}</td>
+                    <td>{{ recipe.enabled }}</td>
+                    <td>{{ recipe.pkg_only }}</td>
+                    <td>{{ recipe.last_ran | strftime }}</td>
+                    <td>{{ recipe.schedule }}</td>
+                    <td>{{ recipe.notes }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -82,7 +70,7 @@
         <script type="text/javascript">
             $(document).ready(
                 function() { 
-                $('#packages').DataTable(); 
+                $('#recipes').DataTable(); 
                 } 
             );
         </script>

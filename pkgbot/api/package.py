@@ -3,12 +3,10 @@ from typing import List, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from tortoise.contrib.fastapi import HTTPNotFoundError
 
-import settings, utilities.common as utility
-from db import models
-from api import user
-from api.slack import send_msg
-from tasks import task
-# from tasks.task import autopkg_promote
+from pkgbot import api, settings
+from pkgbot.db import models
+from pkgbot.utilities import common as utility
+from pkgbot.tasks import task
 
 
 log = utility.log
@@ -21,7 +19,7 @@ router = APIRouter(
 
 
 @router.get("/", summary="Get all packages", description="Get all packages in the database.",
-	dependencies=[Depends(user.get_current_user)], response_model=dict)
+	dependencies=[Depends(api.user.get_current_user)], response_model=dict)
 async def get_packages():
 
 	packages = await models.Package_Out.from_queryset(models.Packages.all())
@@ -30,7 +28,7 @@ async def get_packages():
 
 
 @router.get("/id/{id}", summary="Get package by id", description="Get a package by its id.",
-	dependencies=[Depends(user.get_current_user)], response_model=models.Package_Out)
+	dependencies=[Depends(api.user.get_current_user)], response_model=models.Package_Out)
 async def get_package_by_id(id: int):
 
 	pkg_object = await models.Package_Out.from_queryset_single(models.Packages.get(id=id))
@@ -39,7 +37,7 @@ async def get_package_by_id(id: int):
 
 
 @router.post("/", summary="Create a package", description="Create a package.",
-	dependencies=[Depends(user.verify_admin)], response_model=models.Package_Out)
+	dependencies=[Depends(api.user.verify_admin)], response_model=models.Package_Out)
 async def create(pkg_object: models.Package_In = Depends(models.Package_In)):
 
 	created_pkg = await models.Packages.create(**pkg_object.dict(exclude_unset=True, exclude_none=True))
@@ -48,7 +46,7 @@ async def create(pkg_object: models.Package_In = Depends(models.Package_In)):
 
 
 @router.put("/id/{id}", summary="Update package by id", description="Update a package by id.",
-	dependencies=[Depends(user.verify_admin)], response_model=models.Package_Out)
+	dependencies=[Depends(api.user.verify_admin)], response_model=models.Package_Out)
 async def update(id: int, pkg_object: models.Package_In = Depends(models.Package_In)):
 
 	if type(pkg_object) != dict:
@@ -60,7 +58,7 @@ async def update(id: int, pkg_object: models.Package_In = Depends(models.Package
 
 
 @router.delete("/id/{id}", summary="Delete package by id", description="Delete a package by id.",
-	dependencies=[Depends(user.verify_admin)])
+	dependencies=[Depends(api.user.verify_admin)])
 async def delete_package_by_id(id: int):
 
 	delete_object = await models.Packages.filter(id=id).delete()
@@ -73,7 +71,7 @@ async def delete_package_by_id(id: int):
 
 
 @router.post("/promote", summary="Promote package to production",
-description="Promote a package to production by id.", dependencies=[Depends(user.verify_admin)])
+description="Promote a package to production by id.", dependencies=[Depends(api.user.verify_admin)])
 # async def promote_package(background_tasks, id: int = Depends(get_package_by_id)):
 async def promote_package(pkg_object: models.Package_Out = Depends(get_package_by_id)):
 
@@ -106,7 +104,7 @@ async def promote_package(pkg_object: models.Package_Out = Depends(get_package_b
 
 @router.post("/deny", summary="Do not promote package to production",
 	description="Performs the necessary actions when a package is not approved to production use.",
-	dependencies=[Depends(user.verify_admin)])
+	dependencies=[Depends(api.user.verify_admin)])
 async def deny_package(id: int = Depends(get_package_by_id)):
 
 	# pkg_object = await package.get_package_by_id(id)
@@ -125,4 +123,4 @@ async def deny_package(id: int = Depends(get_package_by_id)):
 	pkg_object.status = "Denied"
 	pkg_object.save()
 
-	return await send_msg.deny_pkg_msg(pkg_object)
+	return await api.send_msg.deny_pkg_msg(pkg_object)

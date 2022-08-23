@@ -7,17 +7,15 @@ import requests
 import git
 from celery import Celery, group, chain
 
-import config, utilities.common as utility
-
-from tasks import task_utils
-import settings
+from pkgbot import config, settings
+from pkgbot.utilities import common as utility
+from pkgbot.tasks import task_utils
 
 import time  # Was used for testing tasks
 
 
-config.load()
+config = config.load_config()
 log = utility.log
-
 celery = Celery()
 celery.config_from_object(settings.celery.settings)
 
@@ -38,7 +36,7 @@ def send_webhook(task_id):
 	}
 
 	headers["x-pkgbot-signature"] = asyncio.run(utility.compute_hex_digest(
-		config.pkgbot_config.get('PkgBot.webhook_secret').encode("UTF-8"),
+		config.PkgBot.get("webhook_secret").encode("UTF-8"),
 		str(data).encode("UTF-8"),
 		hashlib.sha512
 	))
@@ -58,7 +56,7 @@ def git_pull_private_repo(self):
 	# console_user = task_utils.get_console_user()
 
 # 	git_pull_command = "{binary} -C \"{path}\" switch main > /dev/null && {binary} -C \"{path}\" pull && $( {binary} -C \"{path}\" rev-parse --verify trust-updates > /dev/null 2>&1 && {binary} -C \"{path}\" switch trust-updates > /dev/null || {binary} -C \"{path}\" switch -c trust-updates > /dev/null )".format(
-# 		binary=config.pkgbot_config.get("Git.binary"),
+# 		binary=config.Git.get("binary"),
 # 		path=f"/Users/{console_user}/Library/AutoPkg/RecipeOverrides/"
 # ##### Set this path in a config file some where?
 # 	)
@@ -70,14 +68,14 @@ def git_pull_private_repo(self):
 
 	try:
 
-		private_repo = git.Repo(os.path.expanduser(config.pkgbot_config.get("Git.local_repo_dir")))
-		private_repo.git.checkout(config.pkgbot_config.get("Git.repo_primary_branch"))
+		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
+		private_repo.git.checkout(config.Git.get("repo_primary_branch"))
 		private_repo.remotes.origin.pull()
 
 		if private_repo.is_dirty():
-			if config.pkgbot_config.get("Git.repo_push_branch") not in private_repo.branches:
-				private_repo.git.branch(config.pkgbot_config.get("Git.repo_push_branch"))
-			private_repo.git.checkout(config.pkgbot_config.get("Git.repo_push_branch"))
+			if config.Git.get("repo_push_branch") not in private_repo.branches:
+				private_repo.git.branch(config.Git.get("repo_push_branch"))
+			private_repo.git.checkout(config.Git.get("repo_push_branch"))
 
 		results_git_pull_command = {
 			"stdout": "Success",
@@ -112,7 +110,7 @@ def autopkg_repo_update(self):
 
 	log.info("Updating parent recipe repos...")
 
-	autopkg_repo_update_command = f"{config.pkgbot_config.get('AutoPkg.binary')} repo-update all --prefs=\"{os.path.abspath(config.pkgbot_config.get('JamfPro_Dev.autopkg_prefs'))}\""
+	autopkg_repo_update_command = f"{config.AutoPkg.get('binary')} repo-update all --prefs=\"{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\""
 
 	if task_utils.get_user_context():
 		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
@@ -209,24 +207,24 @@ def autopkg_run(self, recipes: list, options: dict):
 	# Working on this
 		# Getting close (I think) -- testing my need to be performed
 
-			# options["prefs"] = os.path.abspath(config.pkgbot_config.get("JamfPro_Prod.autopkg_prefs"))
+			# options["prefs"] = os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs"))
 			# options["promote_recipe_id"] = a_recipe.get("recipe_id")
 			# extra_options = "--ignore-parent-trust-verification-errors"
 
 			options |= {
 				"ignore_parent_trust": True,
-				"prefs": os.path.abspath(config.pkgbot_config.get("JamfPro_Prod.autopkg_prefs")),
+				"prefs": os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs")),
 				"promote_recipe_id": a_recipe.get("recipe_id"),
 				"verbose": options.get('verbose', 'vv')
 			}
 
 			if a_recipe.get("pkg_only"):
 				# Only upload the .pkg, do not create/update a Policy
-				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template_pkg_only")
+				recipe_id = config.JamfPro_Prod.get("recipe_template_pkg_only")
 				# extra_options = "{} --key PKG_ONLY=True".format(extra_options)
 				options |= { "pkg_only": True }
 			else:
-				recipe_id = config.pkgbot_config.get("JamfPro_Prod.recipe_template")
+				recipe_id = config.JamfPro_Prod.get("recipe_template")
 
 ##### Not yet supported
 			# if options["override_keys"]:
@@ -294,7 +292,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 		options = task_utils.generate_autopkg_args(**options)
 
 		# Build the autopkg command
-		cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} run {recipe_id} {options}"
+		cmd = f"{config.AutoPkg.get('binary')} run {recipe_id} {options}"
 
 		if task_utils.get_user_context():
 			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -334,14 +332,14 @@ def autopkg_verify_trust(self, recipe_id: str, options: dict, source: str):
 	_ = options.pop('verbose')
 
 	options |= {
-		"prefs": os.path.abspath(config.pkgbot_config.get("JamfPro_Dev.autopkg_prefs")),
+		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),
 		"verbose": "vvv"
 	}
 
 	# Generate options
 	options = task_utils.generate_autopkg_args(**options)
 
-	cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} verify-trust-info {recipe_id} {options}"
+	cmd = f"{config.AutoPkg.get('binary')} verify-trust-info {recipe_id} {options}"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -380,9 +378,9 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 	# Generate options
 	options = task_utils.generate_autopkg_args(
-		prefs=os.path.abspath(config.pkgbot_config.get("JamfPro_Dev.autopkg_prefs")))
+		prefs=os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")))
 
-	cmd = f"{config.pkgbot_config.get('AutoPkg.binary')} update-trust-info {recipe_id} {options}"
+	cmd = f"{config.AutoPkg.get('binary')} update-trust-info {recipe_id} {options}"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""

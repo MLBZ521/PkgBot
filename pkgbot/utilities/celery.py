@@ -1,7 +1,7 @@
 from celery import current_app as current_celery_app
 from celery.result import AsyncResult
 
-import settings
+from pkgbot import settings
 
 
 def create_celery():

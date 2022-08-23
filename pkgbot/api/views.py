@@ -10,15 +10,13 @@ from fastapi import APIRouter, Depends, Request, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-import config, utilities.common as utility
-
-from api import auth
-from api import package as package_api
-from api import recipe as recipe_api
+from pkgbot import config, settings
+from pkgbot.utilities import common as utility
+from pkgbot.api import auth, package, recipe
 
 
 log = utility.log
-config.load()
+config = config.load_config()
 
 
 def template_filter_datetime(date, date_format=None):
@@ -34,7 +32,7 @@ def template_filter_datetime(date, date_format=None):
 
 
 session = { "logged_in": False }
-templates = Jinja2Templates(directory=config.pkgbot_config.get("PkgBot.jinja_templates"))
+templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
 templates.env.filters["strftime"] = template_filter_datetime
 
 router = APIRouter(
@@ -66,7 +64,7 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
 
-	pkgs = await package_api.get_packages()
+	pkgs = await package.get_packages()
 
 	table_headers = [
 		"", "", "Name", "Version", "Status", "Updated By",
@@ -79,11 +77,11 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 
 @router.get("/package/{id}", response_class=HTMLResponse)
-async def package(request: Request, user = Depends(auth.login_manager)):
+async def get_package(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
 
-	pkg = await package_api.get_package_by_id(request.path_params['id'])
+	pkg = await package.get_package_by_id(request.path_params['id'])
 
 	return templates.TemplateResponse("package.html",
 		{ "request": request, "session": session, "package": pkg })
@@ -92,7 +90,7 @@ async def package(request: Request, user = Depends(auth.login_manager)):
 @router.get("/edit/{id}", response_class=HTMLResponse)
 async def edit(request: Request, user = Depends(auth.login_manager)):
 
-	pkg = await package_api.get_package_by_id(request.path_params['id'])
+	pkg = await package.get_package_by_id(request.path_params['id'])
 
 	return templates.TemplateResponse("edit.html",
 		{ "request": request, "session": session, "package": pkg })
@@ -103,7 +101,7 @@ async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
 
-	pkgs = await recipe_api.get_recipes()
+	pkgs = await recipe.get_recipes()
 
 	table_headers = [
 		"ID", "Recipe ID", "Name", "Enable", "Pkg Only", "Last Ran", "Schedule",  "Notes"
@@ -115,11 +113,11 @@ async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 
 
 @router.get("/recipe/{id}", response_class=HTMLResponse)
-async def recipe_page(request: Request, user = Depends(auth.login_manager)):
+async def get_recipe(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
 
-	pkg = await recipe_api.get_by_id(request.path_params['id'])
+	pkg = await recipe.get_by_id(request.path_params['id'])
 
 	return templates.TemplateResponse("recipe.html",
 		{ "request": request, "session": session, "recipe": pkg })

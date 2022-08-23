@@ -1,12 +1,9 @@
 #!/usr/local/autopkg/python
 
-import argparse
 import multiprocessing
 import sys
 
-sys.path.insert(0, "/Library/AutoPkg/PkgBotPackages")
-
-import asyncio
+# import asyncio
 import secure
 import uvicorn
 
@@ -17,18 +14,16 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from tortoise.contrib.fastapi import register_tortoise
 
-# from settings.celery_utils import create_celery
+from pkgbot import config, settings
+config = config.load_config(cli_args=tuple(sys.argv[1:]))
 
-import config, settings, utilities.common as utility
-from db import models
-from api import auth, autopkg, package, recipe, user, views
-from api.slack import bot, build_msg, send_msg
+from pkgbot.utilities import common as utility
+from pkgbot.db import models
+from pkgbot import api
 
 
-config.load()
 log = utility.log
 
-# def create_app() -> FastAPI:
 app = FastAPI(
 	title="PkgBot API",
 	description="A framework to manage software packaging, testing, and promoting from a "
@@ -38,23 +33,16 @@ app = FastAPI(
 	docs_url="/api"
 )
 
-# app.celery_app = create_celery()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.include_router(views.router)
-app.include_router(auth.router)
-app.include_router(autopkg.router)
-app.include_router(package.router)
-app.include_router(recipe.router)
-app.include_router(bot.router)
-app.include_router(build_msg.router)
-app.include_router(send_msg.router)
-app.include_router(user.router)
-
-# return app
-
-
-# app = create_app()
-# celery = app.celery_app
+app.mount("/static", StaticFiles(directory="pkgbot/static"), name="static")
+app.include_router(api.views.router)
+app.include_router(api.auth.router)
+app.include_router(api.autopkg.router)
+app.include_router(api.package.router)
+app.include_router(api.recipe.router)
+app.include_router(api.bot.router)
+app.include_router(api.build_msg.router)
+app.include_router(api.send_msg.router)
+app.include_router(api.user.router)
 
 register_tortoise(
 	app,
@@ -64,59 +52,12 @@ register_tortoise(
 )
 
 
-async def number_of_workers():
-	number_of_threads = (multiprocessing.cpu_count() * 2) - 1
-	log.debug(f"Number of workers:  {number_of_threads}")
-	return number_of_threads
-
-
-##### I think I'm going to remove function.
-# def load_config(cli_args=None):
-
-# 	log.debug(f'PkgBot.Load_Config:\n\tAll calling args:  {cli_args}')
-
-# 	parser = argparse.ArgumentParser(description="PkgBot Main.")
-# 	parser.add_argument(
-# 		'--pkgbot_config', '-pc',
-# 		metavar='./pkgbot.config',
-# 		default=None, type=str, required=False,
-# 		help='A config file with defined environmental configurations.')
-# 	args = parser.parse_known_args(cli_args)
-
-# 	log.debug(f'PkgBot.Load_Config:\n\tArgparse args:  {args}')
-
-# 	if len(sys.argv) != 0:
-
-# 		config.load(args)
-
-# 	else:
-
-# 		parser.print_help()
-# 		sys.exit(0)
-
-
-@app.on_event("startup")
-async def startup_event():
-
-	pkgbot_admins = config.pkgbot_config.get("PkgBot.Admins")
-
-	for admin in pkgbot_admins:
-
-		user_object = models.PkgBotAdmin_In(
-			username = admin,
-			slack_id = pkgbot_admins.get( admin ),
-			full_admin =  True
-		)
-
-		await user.create_or_update_user( user_object )
-
-
 # Add an exception handler to the app instance
 # Used for the login/auth logic for the HTTP views
-app.add_exception_handler(auth.NotAuthenticatedException, auth.exc_handler)
-auth.login_manager.useRequest(app)
+app.add_exception_handler(api.auth.NotAuthenticatedException, api.auth.exc_handler)
+api.auth.login_manager.useRequest(app)
 
-if config.pkgbot_config.get("PkgBot.enable_ssl"):
+if config.PkgBot.get("enable_ssl"):
 
 	# Enforces that all incoming requests must be https.
 	app.add_middleware(HTTPSRedirectMiddleware)
@@ -143,19 +84,38 @@ if config.pkgbot_config.get("PkgBot.enable_ssl"):
 		return response
 
 
+async def number_of_workers():
+	number_of_threads = (multiprocessing.cpu_count() * 2) - 1
+	log.debug(f"Number of workers:  {number_of_threads}")
+	return number_of_threads
+
+
+@app.on_event("startup")
+async def startup_event():
+
+	pkgbot_admins = config.PkgBot.get("Admins")
+
+	for admin in pkgbot_admins:
+
+		user_object = models.PkgBotAdmin_In(
+			username = admin,
+			slack_id = pkgbot_admins.get( admin ),
+			full_admin =  True
+		)
+
+		await api.user.create_or_update_user( user_object )
+
+
 if __name__ == "__main__":
 
-	# Load Configuration
-	# load_config(cli_args=sys.argv)
-
 	uvicorn.run(
-		"pkgbot:app",
-		reload = config.pkgbot_config.get("PkgBot.keep_alive"),
-		host = config.pkgbot_config.get("PkgBot.host"),
-		port = config.pkgbot_config.get("PkgBot.port"),
-		log_config = config.pkgbot_config.get("PkgBot.log_config"),
-		log_level = config.pkgbot_config.get("PkgBot.uvicorn_log_level"),
+		"PkgBot:app",
+		reload = config.PkgBot.get("keep_alive"),
+		host = config.PkgBot.get("host"),
+		port = config.PkgBot.get("port"),
+		log_config = config.PkgBot.get("log_config"),
+		log_level = config.PkgBot.get("uvicorn_log_level"),
 		# workers = asyncio.run( number_of_workers() ),
-		ssl_keyfile = config.pkgbot_config.get("PkgBot.ssl_keyfile"),
-		ssl_certfile = config.pkgbot_config.get("PkgBot.ssl_certfile")
+		ssl_keyfile = config.PkgBot.get("ssl_keyfile"),
+		ssl_certfile = config.PkgBot.get("ssl_certfile")
 	)
