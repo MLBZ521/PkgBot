@@ -104,7 +104,7 @@ async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 	pkgs = await recipe.get_recipes()
 
 	table_headers = [
-		"ID", "Recipe ID", "Name", "Enable", "Pkg Only", "Last Ran", "Schedule",  "Notes"
+		"ID", "Recipe ID", "Name", "Enable", "Manual Only", "Pkg Only", "Last Ran", "Schedule",  "Notes"
 	]
 
 	return templates.TemplateResponse("recipes.html",
