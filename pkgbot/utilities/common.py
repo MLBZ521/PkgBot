@@ -7,12 +7,14 @@ import pickle
 import plistlib
 import re
 import shlex
-import sqlalchemy
 import subprocess
 import yaml
 
 from datetime import datetime, timezone, tzinfo
 from distutils.util import strtobool
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from pkgbot import config
 
@@ -227,11 +229,10 @@ async def replace_sensitive_strings(message, sensitive_strings=None):
 
 async def get_task_results(task_id: str):
 
-	db_engine=sqlalchemy.create_engine('sqlite:///db/db.sqlite3')
-
+	db_engine = create_engine(f"sqlite://{config.Database.get('location')}")
 	Session = sessionmaker(db_engine)
 
-	with Session.begin() as session:
+	with Session as session:
 		result = session.execute(f"SELECT result from celery_taskmeta where id = {task_id};").fetchone()
 
 	return pickle.loads(result)
