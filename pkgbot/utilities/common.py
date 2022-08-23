@@ -232,7 +232,7 @@ async def get_task_results(task_id: str):
 	db_engine = create_engine(f"sqlite://{config.Database.get('location')}")
 	Session = sessionmaker(db_engine)
 
-	with Session as session:
+	with Session() as session:
 		result = session.execute(f"SELECT result from celery_taskmeta where id = {task_id};").fetchone()
 
 	return pickle.loads(result)
