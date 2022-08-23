@@ -68,5 +68,12 @@ def load_config(cli_args=None):
 	os.environ["PKGBOT_CONFIG"] = config_file
 
 	PkgBot_Configuration = instantiate_config()
+	config = PkgBot_Configuration()
 
-	return PkgBot_Configuration()
+	if config.AutoPkg.get('binary') is None:
+		config.AutoPkg["binary"] = "/usr/local/bin/autopkg"
+
+	if config.Git.get('binary') is None:
+		config.Git["binary"] = "/usr/bin/git"
+
+	return config
