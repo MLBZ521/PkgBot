@@ -21,11 +21,11 @@ Celery:
 
 
 Database:
-  location: "/db/db.sqlite"
+  location: "/Database/db.sqlite3"
 
 
 JamfPro_Dev:
-  autopkg_prefs: /Library/AutoPkg/PkgBot/settings/dev_autopkg_prefs.plist
+  autopkg_prefs: /Library/AutoPkg/PkgBot/Settings/dev_autopkg_prefs.plist
   jps_url: https://dev.server.org:8443
   verify_ssl: True
   api_user: 
@@ -37,7 +37,7 @@ JamfPro_Dev:
 
 
 JamfPro_Prod:
-  autopkg_prefs: /Library/AutoPkg/PkgBot/settings/prod_autopkg_prefs.plist
+  autopkg_prefs: /Library/AutoPkg/PkgBot/Settings/prod_autopkg_prefs.plist
   jps_url: https://prod.server.org:8443
   verify_ssl: True
   api_user: 
@@ -94,8 +94,8 @@ PkgBot:
   # port: 443
   host: localhost
   port: 8000
-  # ssl_keyfile: /Library/AutoPkg/PkgBot/settings/private2022.key
-  # ssl_certfile: /Library/AutoPkg/PkgBot/settings/certificate_chain2022.pem
+  # ssl_keyfile: /Library/AutoPkg/PkgBot/Settings/private2022.key
+  # ssl_certfile: /Library/AutoPkg/PkgBot/Settings/certificate_chain2022.pem
   # Reload the server when changes are made
   keep_alive: True
   Admins:
@@ -170,4 +170,4 @@ Common:
   # Strings that you do not want to be be printed "publicly" in notifications
   # Any/all passwords/secrets/keys above are already included in the redaction logic
   # This value will be parsed as *REGEX*
-  # RedactionStrings: <some_internal_string>|\b<username>\b
+  RedactionStrings: <some_internal_string>|\b<username>\b
