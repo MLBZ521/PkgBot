@@ -8,6 +8,7 @@ from celery.result import AsyncResult
 from pkgbot import config, settings
 from pkgbot.utilities import common as utility
 
+
 config = config.load_config()
 
 
@@ -74,12 +75,16 @@ def generate_autopkg_args(**kwargs):
 	# AutoPkg args
 	if kwargs.get("verbose"):
 		final_opts = f"{final_opts} -{kwargs.get('verbose')}"
+	# else:
+	# 	final_opts = f"{final_opts} -vv"
 
 	if kwargs.get("ignore_parent_trust"):
 		final_opts = f"{final_opts} --ignore-parent-trust-verification-errors"
 
 	if kwargs.get("prefs"):
 		final_opts = f"{final_opts} --prefs={kwargs.get('prefs')}"
+	else:
+		final_opts = f"{final_opts} --prefs={os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}"
 
 	# PkgBot args
 	if kwargs.get("promote_recipe_id"):

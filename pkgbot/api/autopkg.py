@@ -187,9 +187,11 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 	if a_recipe.dict().get("enabled"):
 		# queued_task = task.autopkg_run.delay(a_recipe.dict()["recipe_id"], switches.dict())
 		# queued_task = task.autopkg_run.delay((a_recipe.dict()["recipe_id"]), switches.dict(), priority=6)
-		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict()), queue='autopkg', priority=6)
+		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict(), called_by), queue='autopkg', priority=6)
 
 		return { "Result": "Queued background task..." , "task_id": queued_task.id }
+
+	log.info(f"Recipe '{recipe_id}' is disabled.")
 
 	return { "Result": "Recipe is disabled" }
 

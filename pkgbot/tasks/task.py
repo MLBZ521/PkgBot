@@ -126,7 +126,7 @@ def autopkg_repo_update(self):
 
 
 @celery.task(name="autopkg:run", bind=True)
-def autopkg_run(self, recipes: list, options: dict):
+def autopkg_run(self, recipes: list, options: dict, called_by: str):
 	"""Creates parent and individual recipe tasks.
 
 	Args:
@@ -181,18 +181,21 @@ def autopkg_run(self, recipes: list, options: dict):
 			log.debug("Not a promote run...")
 
 			if (
-				a_recipe.get("enabled") and 
+### Shouldn't be needed (but verify)				# a_recipe.get("enabled") and 
 				task_utils.check_recipe_schedule(a_recipe.get("schedule"), a_recipe.get("last_ran"))
 			):
+
+				_ = options.pop("match_pkg", None)
+				_ = options.pop("pkg_only", None)
 
 				# Verify trust info and wait
 ##### Method 1 to run parent task
 				# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
 				# task_autopkg_verify_trust.wait()
 
-##### Method 3 to run parent task -- likely final
+##### Method 2 to run parent task -- likely final
 				recipe_run = chain(
-					autopkg_verify_trust.signature((recipe_id, options)) | run_recipe.signature((recipe_id, options))
+					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=5) | run_recipe.signature((recipe_id, options), queue='autopkg', priority=7)
 				)()
 
 ##### Need to determine which method will be used here
