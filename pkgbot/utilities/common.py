@@ -50,8 +50,8 @@ async def run_process_async(command, input=None):
 	A helper function for asyncio's subprocess.
 
 	Args:
-		command:  The command line level syntax that would be
-			written in shell or a terminal window.  (str)
+		command (str):  The command line level syntax that would be
+			written in shell or a terminal window.
 	Returns:
 		Results in a dictionary.
 	"""
@@ -87,8 +87,8 @@ def execute_process(command, input=None):
 	A helper function for subprocess.
 
 	Args:
-		command:  The command line level syntax that would be
-			written in shell or a terminal window.  (str)
+		command (str):  The command line level syntax that would be
+			written in shell or a terminal window.
 	Returns:
 		Results in a dictionary.
 	"""
@@ -155,7 +155,7 @@ async def plist_reader(plistFile):
 
 			plist_contents = plistlib.load(plist)
 
-		return plist_Contents
+		return plist_contents
 
 
 async def utc_to_local(utc_dt):
@@ -181,7 +181,7 @@ async def datetime_to_string(datetime_string: str, format_string: str = None):
 	return converted.strftime(format_string)
 
 
-async def compute_hex_digest(key: bytes, message: bytes, hash: '_hashlib.HASH' = hashlib.sha256):
+async def compute_hex_digest(key: bytes, message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
 
 	return hmac.new(key, message, hash).hexdigest()
 
