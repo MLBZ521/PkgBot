@@ -142,7 +142,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 	promote = options.pop("promote", False)
 
-	if not promote:
+	if not promote and not options.get("ignore_parent_trust"):
 
 		# Run checks if we're not promoting the recipe
 ##### Method 1 to run parent tasks
