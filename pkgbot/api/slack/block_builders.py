@@ -1,10 +1,12 @@
 from fastapi import Depends
 
+from pkgbot import config
 from pkgbot.utilities import common as utility
 from pkgbot.db import models
 
 
 log = utility.log
+config = config.load_config()
 
 
 async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In)):
@@ -28,7 +30,7 @@ async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In))
 		},
 		"accessory": {
 			"type": "image",
-			"image_url": f"{pkg_object.dict().get('jps_url')}/iconservlet/?id={pkg_object.dict().get('icon_id')}",
+			"image_url": f"{config.PkgBot.get('host')}/static/icons/{pkg_object.dict().get('icon')}",
 			"alt_text": "computer thumbnail"
 		}
 	}
