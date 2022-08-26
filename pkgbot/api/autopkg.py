@@ -323,7 +323,7 @@ async def receive(
 				"pkg_name": pkg_name,
 				"recipe_id": recipe_id,
 				"version": pkg_processor.get("Input").get("version"),
-				"pkg_notes": pkg_processor.get("Input").get("pkg_notes")
+				"notes": pkg_processor.get("Input").get("pkg_notes")
 			}
 
 			if event == "recipe_run_dev":
@@ -351,7 +351,7 @@ async def receive(
 					icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
 					await api.views.upload_icon(icon)
 
-					await workflow_dev(pkg_data)
+					await workflow_dev(models.Package_In(pkg_data))
 
 				# Update the "Last Ran" attribute for this recipe
 				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
