@@ -250,6 +250,5 @@ async def find_receipt_plist(content):
 async def parse_recipe_receipt(content, processor):
 
 	for step in reversed(content):
-		if step.get(processor):
-		# if re.search(processor, step.get("Processor"), re.IGNORECASE):
-			return step.get(processor)
+		if re.search(processor, step.get("Processor"), re.IGNORECASE):
+			return step
