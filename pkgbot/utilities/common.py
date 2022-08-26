@@ -207,7 +207,8 @@ async def save_yaml(contents, config_file):
 
 async def replace_sensitive_strings(message, sensitive_strings=None):
 
-	default_sensitive_strings = r'{}|{}|{}|{}|{}|{}|{}|{}|{}|{}'.format(
+	default_sensitive_strings = str
+	for string in [ 
 		config.JamfPro_Dev.get("api_user"),
 		config.JamfPro_Dev.get("api_password"),
 		config.JamfPro_Dev.get("dp1_user"),
@@ -218,13 +219,15 @@ async def replace_sensitive_strings(message, sensitive_strings=None):
 		config.JamfPro_Prod.get("dp1_password"),
 		config.Common.get("RedactionStrings"),
 		r"bearer\s[\w+.-]+"
-	)
+	]:
+		if string:
+			default_sensitive_strings = rf"{default_sensitive_strings} | {string}"
 
 	if sensitive_strings:
 
-		default_sensitive_strings = f"{default_sensitive_strings}|{sensitive_strings}"
+		default_sensitive_strings = rf"{default_sensitive_strings}|{sensitive_strings}"
 
-	return re.sub(default_sensitive_strings, '<redacted>', message)
+	return re.sub(rf"{default_sensitive_strings}", '<redacted>', message)
 
 
 async def get_task_results(task_id: str):
@@ -247,5 +250,6 @@ async def find_receipt_plist(content):
 async def parse_recipe_receipt(content, processor):
 
 	for step in reversed(content):
-		if re.search(processor, step.get("Processor"), re.IGNORECASE):
-			return step
+		if step.get(processor):
+		# if re.search(processor, step.get("Processor"), re.IGNORECASE):
+			return step.get(processor)
