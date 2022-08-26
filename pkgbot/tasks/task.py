@@ -181,27 +181,37 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			log.debug("Not a promote run...")
 
 			if (
+				called_by == "scheduled" and
 ### Shouldn't be needed (but verify)				# a_recipe.get("enabled") and 
-				task_utils.check_recipe_schedule(a_recipe.get("schedule"), a_recipe.get("last_ran"))
+				not task_utils.check_recipe_schedule(a_recipe.get("schedule"), a_recipe.get("last_ran"))
 			):
+				log.debut(f"Recipe {recipe_id} is out of schedule")
+				continue
 
-				_ = options.pop("match_pkg", None)
-				_ = options.pop("pkg_only", None)
+			_ = options.pop("match_pkg", None)
+			_ = options.pop("pkg_only", None)
 
-				# Verify trust info and wait
+			# If ignore parent trust, don't run autopkg_verify_trust
+			if options.get("ignore_parent_trust"):
+
+				run_recipe.apply_async(({"success": True}, recipe_id, options), queue='autopkg', priority=6)
+
+			else:
+
+			# Verify trust info and wait
 ##### Method 1 to run parent task
-				# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
-				# task_autopkg_verify_trust.wait()
+			# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
+			# task_autopkg_verify_trust.wait()
 
 ##### Method 2 to run parent task -- likely final
-				recipe_run = chain(
+				chain(
 					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=5) | run_recipe.signature((recipe_id, options), queue='autopkg', priority=7)
 				)()
 
 ##### Need to determine which method will be used here
-				# recipe_run.apply_async(queue='autopkg', priority=7, immutable=True)
+			# recipe_run.apply_async(queue='autopkg', priority=7, immutable=True)
 ##### Possible alternate method:
-				# autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7, link=run_recipe.apply_async((recipe_id, options), queue='autopkg', priority=7))
+			# autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7, link=run_recipe.apply_async((recipe_id, options), queue='autopkg', priority=7))
 
 		else:
 			log.debug(f"Promoting to production: {options['match_pkg']}")
@@ -235,7 +245,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# 		extra_options = f"{extra_options} --key '{override_key}'"
 
 ##### How will the extra_options be passed?
-			run_recipe.apply_async(({"promote": True}, recipe_id, options), queue='autopkg', priority=6)
+			run_recipe.apply_async(({"event": "promote"}, recipe_id, options), queue='autopkg', priority=6)
 		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=6)
 
 
@@ -251,7 +261,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 		dict:  Dict describing the results of the ran process
 	"""
 
-	run_type = "recipe_run_prod" if parent_task_results.get("promote") else "recipe_run_dev"
+	run_type = "recipe_run_prod" if parent_task_results.get("event") == "promote" else "recipe_run_dev"
 
 	# Verify not a promote run, and parent tasks results were success
 	if (
