@@ -328,9 +328,13 @@ async def receive(
 
 			if event == "recipe_run_dev":
 
-				if pkg_processor.get("Output").get("pkg_uploaded"):
+				# No, don't use this....instead see if it's already in the data base
+				# if pkg_processor.get("Output").get("pkg_uploaded"):
 
-					log.debug("Posted to dev...")
+				# Check if the package has already been created in the database
+				pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
+
+				if not pkg_db_object:
 					log.debug("New software title posted to dev...")
 
 					# pkg_data["jps_id_dev"] = jps_pkg_id
