@@ -133,6 +133,6 @@ async def upload_icon(icon: UploadFile, user = Depends(auth.login_manager)):
 		with open(f"{pkg_dir}/static/icons/{icon.filename}", "wb") as icon_obj:
 			shutil.copyfileobj(icon.file, icon_obj)
 	finally:
-		icon.close()
+		await icon.close()
 
 	return { "results":  200, "icon": icon.filename }
