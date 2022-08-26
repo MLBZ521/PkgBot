@@ -4,8 +4,9 @@ import json
 import os
 
 from datetime import datetime
+from tempfile import SpooledTemporaryFile
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, UploadFile
 
 from fastapi_utils.tasks import repeat_every
 
@@ -282,7 +283,7 @@ async def receive(
 
 	task_results = await utility.get_task_results(task_id)
 
-	log.debug(f"task_results:  {task_results}")
+	# log.debug(f"task_results:  {task_results}")
 
 	event = task_results.get("event")
 	event_id = task_results.get("event_id", "")
@@ -313,15 +314,15 @@ async def receive(
 
 		if task_results.get("success"):
 
+			# Get the log info for PackageUploader
 			pkg_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
-			policy_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
-##### Do we care about Policy updates at all?  (I don't think so...)
-	# Need the icon from it?
+
+			pkg_name = pkg_processor.get("Output").get("pkg_name")
 			pkg_data = {
-				"name": pkg_processor.get("Input").get("pkg_name").rsplit("-", 1)[0],
-				"pkg_name": pkg_processor.get("Output").get("pkg_name"),
+				"name": (pkg_name).rsplit("-", 1)[0],
+				"pkg_name": pkg_name,
 				"recipe_id": recipe_id,
-				"version": pkg_processor.get("Output").get("data").get("version"),
+				"version": pkg_processor.get("Input").get("version"),
 				"pkg_notes": pkg_processor.get("Input").get("pkg_notes")
 			}
 
@@ -330,18 +331,27 @@ async def receive(
 				if pkg_processor.get("Output").get("pkg_uploaded"):
 
 					log.debug("Posted to dev...")
+					log.debug("New software title posted to dev...")
 
 					# pkg_data["jps_id_dev"] = jps_pkg_id
 					# pkg_data["jps_url"] = config.JamfPro_Dev.get("jps_url')
 
-##### Need to figure out icon logic
+					# Get the log info for PolicyUploader
+					policy_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
 					policy_results = policy_processor.get("Output").get("jamfpolicyuploader_summary_result").get("data")
 					pkg_data["icon"] = policy_results.get("icon")
-					await views.upload_icon(policy_results.get("policy_icon_path"))
-					await workflow_dev(pkg_data)
 
-				# else:
-					# No new pkg
+					# Create a temporary file to hold the icon data and upload it.
+					# This is required since we're not actually using an 
+					# HTTP client to interface with the API endpoint.
+					icon_data = SpooledTemporaryFile()
+					with open(policy_results.get("icon_path"), "rb") as icon_path:
+						icon_data.write(icon_path.read())
+					_ = icon_data.seek(0)
+					icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
+					await api.views.upload_icon(icon)
+
+					await workflow_dev(pkg_data)
 
 				# Update the "Last Ran" attribute for this recipe
 				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()

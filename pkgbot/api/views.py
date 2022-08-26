@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import os
 import shutil
 import time
 
@@ -124,12 +125,14 @@ async def get_recipe(request: Request, user = Depends(auth.login_manager)):
 
 
 @router.post("/icons")
-async def upload_icon(icon: UploadFile = File(), user = Depends(auth.login_manager)):
+async def upload_icon(icon: UploadFile, user = Depends(auth.login_manager)):
+
+	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
 
 	try:
-		with open(f"/static/icons/{icon.filename}", "wb") as icon_obj:
+		with open(f"{pkg_dir}/static/icons/{icon.filename}", "wb") as icon_obj:
 			shutil.copyfileobj(icon.file, icon_obj)
 	finally:
-		icon.file.close()
+		icon.close()
 
 	return { "results":  200, "icon": icon.filename }
