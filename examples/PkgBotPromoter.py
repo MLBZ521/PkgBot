@@ -127,14 +127,12 @@ class PkgBotPromoter(Processor):
 
 
     def main(self):
-        """Find the latest receipt that contains all 
-            the information we're looking for.
+        """Find the latest receipt that contains all the information we're looking for.
 
         Raises:
             ProcessorError: Proper input variables must be supplied.
             ProcessorError: Package does not exist at the path found.
-            ProcessorError: Unable to locate a receipt 
-                            with the desired information.
+            ProcessorError: Unable to locate a receipt with the desired information.
         """
 
         name = self.env.get("name")
@@ -146,7 +144,6 @@ class PkgBotPromoter(Processor):
         found_parent_recipes = False
 
         ignore_keys = [ "API_PASSWORD", "API_USERNAME", "JSS_REPOS", "JSS_URL", "JSS_VERIFY_SSL" ]
-
 
         if name:
             name = f"local.jamf.{name}"
@@ -172,90 +169,76 @@ class PkgBotPromoter(Processor):
                     self.output("  -> Skipping as this receipt had an error...")
                     continue
 
-                list_parent_recipes = []
+                # list_parent_recipes = []
                 for step in plist:
 
                     if step.get("Recipe input"):
-
                         recipe_input = step.get("Recipe input")
-                        parent_recipes = recipe_input.get("PARENT_RECIPES")
 
-                        if parent_recipes:
+                        if parent_recipes := recipe_input.get("PARENT_RECIPES"):
                             found_parent_recipes = True
-                            list_parent_recipes.extend(parent_recipes)
-                            list_parent_recipes.extend(
-                                (recipe_input.get("RECIPE_DIR"), recipe_input.get("RECIPE_PATH"))
-                            )
-                            # self.env["PARENT_RECIPES"].extend(parent_recipes)
-                            # self.env["PARENT_RECIPES"].append(recipe_input.get("RECIPE_DIR"))
-                            # self.env["PARENT_RECIPES"].append(recipe_input.get("RECIPE_PATH"))
-                            self.output(f'Parent Recipes:  {self.env["PARENT_RECIPES"]}', verbose_level=2)
+                            # list_parent_recipes.extend(parent_recipes)
+                            # list_parent_recipes.extend(
+                            #     (recipe_input.get("RECIPE_DIR"), recipe_input.get("RECIPE_PATH"))
+                            # )
+                            self.env["PARENT_RECIPES"].extend(parent_recipes)
+                            self.env["PARENT_RECIPES"].append(recipe_input.get("RECIPE_DIR"))
+                            self.env["PARENT_RECIPES"].append(recipe_input.get("RECIPE_PATH"))
+                            self.output(f'Parent Recipes:  {self.env["PARENT_RECIPES"]}', verbose_level=3)
 
                         for key in custom_variables:
                             self.env[key] = recipe_input.get(key)
-                            self.output(f"{key}:  {self.env[key]}", verbose_level=2)
+                            self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
                         self.env["NAME"] = recipe_input.get("NAME")
                         self.output(f'NAME:  {self.env["NAME"]}', verbose_level=2)
 
-                        continue
+                    elif re.search("InputVariableTextSubstituter", step.get("Processor"), re.IGNORECASE):
+                        processor_output = step.get("Output")
+                        key = processor_output.get("return_variable")
+                        value = processor_output.get("return_variable_value")
+                        self.output(f"{key}:  {value}", verbose_level=3)
+                        self.env[key] = value
 
-                    elif step.get("Processor"):
 
-                        if re.search("InputVariableTextSubstituter", step.get("Processor"), re.IGNORECASE):
-                            processor_output = step.get("Output")
-                            key = processor_output.get("return_variable")
-                            value = processor_output.get("return_variable_value")
-                            self.output(f"{key}:  {value}", verbose_level=2)
-                            self.env[key] = value
-                            continue
+                    elif re.search("JamfPackageUploader", step.get("Processor"), re.IGNORECASE):
+                        processor_input = step.get("Input")
 
-                        elif re.search("JamfPackageUploader", step.get("Processor"), re.IGNORECASE):
-                            processor_input = step.get("Input")
+                        for key, value in processor_input.items():
 
-                            for key, value in processor_input.items():
+                            # Do not pull these values incase they're different
+                            if key not in ignore_keys:
 
-                                # We don't want to pull these values, incase they're different
-                                if key not in ignore_keys:
+                                # Set the proper CASE for these variables
+                                var_name = ( key if key in { "pkg_notes", "package_priority",
+                                    "pkg_path", "version" } else key.upper() )
 
-                                    # Set the proper CASE for these variables
-                                    var_name = ( key if key in { "pkg_notes", "package_priority", "pkg_path", "version" } 
-                                        else key.upper() )
+                                self.env[var_name] = value
+                                self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=3)
 
-                                    self.env[var_name] = value
-                                    self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=2)
+                        if self.env["version"] and os.path.basename(self.env["pkg_path"]) == match_pkg:
+                            version_found = True
 
-                            if self.env["version"] and os.path.basename(self.env["pkg_path"]) == match_pkg:
-                                version_found = True
+                    elif re.search("JamfPolicyUploader", step.get("Processor"), re.IGNORECASE):
+                        processor_input = step.get("Input")
 
-                            continue
+                        for key, value in processor_input.items():
 
-                        elif re.search("JamfPolicyUploader", step.get("Processor"), re.IGNORECASE):
-                            processor_input = step.get("Input")
+                            # Do not pull these values incase they're different
+                            if key not in ignore_keys:
 
-                            for key, value in processor_input.items():
+                                # Set the proper CASE for these variables
+                                var_name = ( key if key in { "replace_policy" } else key.upper() )
 
-                                # We don't want to pull these values, incase they're different
-                                if key not in ignore_keys:
-
-                                    # Set the proper CASE for these variables
-                                    var_name = ( key if key in { "replace_policy" } 
-                                        else key.upper() )
-
-                                    self.env[var_name] = value
-                                    self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=2)
-
-                            continue
-
-                if found_parent_recipes and version_found:
-                    break
-
-                else:
-                    continue
+                                self.env[var_name] = value
+                                self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=3)
 
             except Exception:
                 self.output("Missing required information...")
                 continue
+
+            if found_parent_recipes and version_found:
+                break
 
         if not version_found:
             raise ProcessorError("Unable to locate a receipt with a matching version!")
