@@ -166,11 +166,3 @@ async def deny_trust_msg(
 		)
 
 	return response
-
-
-@router.delete("/ts/{ts}", summary="Delete message by TS",
-	description="Delete a Slack message by its TS.",
-	dependencies=[Depends(api.user.verify_admin)])
-async def delete_by_ts(ts: int):
-
-	return await api.bot.SlackBot.delete_message(ts)

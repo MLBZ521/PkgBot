@@ -4,7 +4,7 @@ import ssl
 import time
 import certifi
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
@@ -274,6 +274,26 @@ async def startup_constructor():
 		channel = config.Slack.get("channel"),
 		slack_id = config.Slack.get("slack_id")
 	)
+
+
+@router.delete("/ts/{ts}", summary="Delete Slack message by timestamp", 
+	description="Delete a Slack message by its timestamp.", dependencies=[Depends(api.user.verify_admin)])
+async def delete_slack_message(timestamps: str | list):
+
+	if isinstance(timestamps, str):
+		timestamps = [timestamps]
+
+	results = {}
+
+	for ts in timestamps:
+		result = await SlackBot.delete_message(str(ts))
+
+		try:
+			results[ts] = result.response['error']
+		except Exception:
+			results[ts] = "Successfully deleted message"
+
+	return results
 
 
 @router.post("/receive", summary="Handles incoming messages from Slack",
