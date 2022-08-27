@@ -82,19 +82,19 @@ def generate_autopkg_args(**kwargs):
 		final_opts = f"{final_opts} --ignore-parent-trust-verification-errors"
 
 	if kwargs.get("prefs"):
-		final_opts = f"{final_opts} --prefs={kwargs.get('prefs')}"
+		final_opts = f"{final_opts} --prefs=\'{kwargs.get('prefs')}\'"
 	else:
-		final_opts = f"{final_opts} --prefs={os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}"
+		final_opts = f"{final_opts} --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
 
 	# PkgBot args
 	if kwargs.get("promote_recipe_id"):
-		final_opts = f"{final_opts} --key recipe_id={kwargs.get('promote_recipe_id')}"
+		final_opts = f"{final_opts} --key \'RECIPE_ID={kwargs.get('promote_recipe_id')}\'"
 
 	if kwargs.get("match_pkg"):
-		final_opts = f"{final_opts} --key match_pkg={kwargs.get('match_pkg')}"
+		final_opts = f"{final_opts} --key \'MATCH_PKG={kwargs.get('match_pkg')}\'"
 
 	if kwargs.get("pkg_only"):
-		final_opts = f"{final_opts} --key PKG_ONLY=True"
+		final_opts = f"{final_opts} --key \'PKG_ONLY=True\'"
 
 	# if kwargs.get("promote"):
 	# 	promote = kwargs.get("promote")
