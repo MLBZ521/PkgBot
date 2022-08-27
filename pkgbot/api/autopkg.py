@@ -310,9 +310,9 @@ async def receive(
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
-		plist_contents = await utility.find_receipt_plist(stdout)
-
 		if task_results.get("success"):
+
+			plist_contents = await utility.find_receipt_plist(stdout)
 
 			# Get the log info for PackageUploader
 			pkg_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPackageUploader")
@@ -326,6 +326,25 @@ async def receive(
 				"notes": pkg_processor.get("Input").get("pkg_notes")
 			}
 
+			try:
+				# Get the log info for PolicyUploader
+				policy_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
+				policy_results = policy_processor.get("Output").get("jamfpolicyuploader_summary_result").get("data")
+				pkg_data["icon"] = policy_results.get("icon")
+
+				# Create a temporary file to hold the icon data and upload it.
+				# This is required since we're not actually using an 
+				# HTTP client to interface with the API endpoint.
+				icon_data = SpooledTemporaryFile()
+				with open(policy_results.get("icon_path"), "rb") as icon_path:
+					icon_data.write(icon_path.read())
+				_ = icon_data.seek(0)
+				icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
+				await api.views.upload_icon(icon)
+
+			except:
+				log.info("An icon was not identified, therefore it was not uploaded into PkgBot.")
+
 			if event == "recipe_run_dev":
 
 				# No, don't use this....instead see if it's already in the data base
@@ -338,22 +357,7 @@ async def receive(
 					log.debug("New software title posted to dev...")
 
 					# pkg_data["jps_id_dev"] = jps_pkg_id
-					# pkg_data["jps_url"] = config.JamfPro_Dev.get("jps_url')
-
-					# Get the log info for PolicyUploader
-					policy_processor = await utility.parse_recipe_receipt(plist_contents, "JamfPolicyUploader")
-					policy_results = policy_processor.get("Output").get("jamfpolicyuploader_summary_result").get("data")
-					pkg_data["icon"] = policy_results.get("icon")
-
-					# Create a temporary file to hold the icon data and upload it.
-					# This is required since we're not actually using an 
-					# HTTP client to interface with the API endpoint.
-					icon_data = SpooledTemporaryFile()
-					with open(policy_results.get("icon_path"), "rb") as icon_path:
-						icon_data.write(icon_path.read())
-					_ = icon_data.seek(0)
-					icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
-					await api.views.upload_icon(icon)
+					# pkg_data["jps_url"] = config.JamfPro_Dev.get("jps_url")
 
 					await workflow_dev(models.Package_In(pkg_data))
 
@@ -389,6 +393,7 @@ async def receive(
 			# log.error(f"stderr:  {stderr}")
 
 			try:
+				plist_contents = await utility.find_receipt_plist(stdout)
 				run_error = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
 			except Exception:
 				run_error = stderr
