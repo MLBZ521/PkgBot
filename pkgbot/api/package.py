@@ -72,32 +72,16 @@ async def delete_package_by_id(id: int):
 
 @router.post("/promote", summary="Promote package to production",
 description="Promote a package to production by id.", dependencies=[Depends(api.user.verify_admin)])
-# async def promote_package(background_tasks, id: int = Depends(get_package_by_id)):
-async def promote_package(pkg_object: models.Package_Out = Depends(get_package_by_id)):
+async def promote_package(id: int):
 
-	# log.debug(f"pkg_object:  {pkg_object.recipe_id}")
+	pkg_object = await get_package_by_id(id)
 
-	# pkg_object = await get_package_by_id(id)
-
-	# background_tasks.add_task(
-	# 	recipe_runner.main,
-	# 	[
-	# 		"run",
-	# 		"--action", "promote",
-	# 		"--environment", "prod",
-	# 		"--recipe-identifier", pkg_object.dict().get("recipe_id"),
-	# 		"--pkg-name", "{}".format(pkg_object.dict().get("pkg_name"))
-	# 	]
-	# )
-
-	recipe = [ pkg_object.dict().get("recipe_id") ]
 	switches = {
 		"promote": True,
-		"--pkg-name": pkg_object.dict().get("pkg_name")
+		"match_pkg": pkg_object.dict().get("pkg_name")
 	}
 
-	# queued_task = task.autopkg_run.delay(recipe, switches)
-	queued_task = task.autopkg_run.apply_async((recipe, switches), queue='autopkg', priority=6)#, link=None, link_error=None)
+	queued_task = task.autopkg_run.apply_async(([pkg_object.dict()], switches, "slack"), queue='autopkg', priority=6)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
