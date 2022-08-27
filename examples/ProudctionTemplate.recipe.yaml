@@ -3,7 +3,10 @@ Description: This is a recipe template that is used to pull details from a "dev"
 
   The matched .pkg will be uploaded into Jamf Pro and optionally, a Policy created or updated.
 Identifier: com.github.mlbz521.ProductionTemplate
-Input:
+Input: 
+  match_pkg: "%MATCH_PKG%"
+  recipe_id: "%RECIPE_ID%"
+  cache_dir: "%CACHE_DIR%"
 Process:
 - Processor: PkgBotPromoter
   Arguments:
