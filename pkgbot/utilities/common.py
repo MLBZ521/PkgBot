@@ -241,14 +241,16 @@ async def get_task_results(task_id: str):
 	return pickle.loads(result.result)
 
 
-async def find_receipt_plist(content):
+async def find_receipt_plist(content: str):
 
 	run_receipt = re.search(r'Receipt written to (.*)', content)[1]
 	return await plist_reader(run_receipt)
 
 
-async def parse_recipe_receipt(content, processor):
+async def parse_recipe_receipt(content: dict, key: str):
 
 	for step in reversed(content):
-		if re.search(processor, step.get("Processor"), re.IGNORECASE):
+		if step.get(key):
+			return step.get(key)
+		elif re.search(key, step.get("Processor"), re.IGNORECASE):
 			return step
