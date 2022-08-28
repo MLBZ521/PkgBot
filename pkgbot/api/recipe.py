@@ -244,14 +244,14 @@ async def recipe_trust_update_failed(recipe_id: str, msg: str):
 	description="Performs the necessary actions after parent recipe trust info has changed.",
 	dependencies=[Depends(api.user.verify_admin)])
 # async def trust_error(payload: dict = Body(...)):
-async def recipe_trust_verify_failed(payload: dict = Body(...)):
+async def recipe_trust_verify_failed(recipe_id: str, diff_msg: str = Body()):
 # async def recipe_trust_verify_failed(recipe_id: str, msg: str):
 	""" When `autopkg verify-trust-info <recipe_id>` fails """
 
-	recipe_id = payload.get("recipe_id")
+	# recipe_id = payload.get("recipe_id")
 	log.debug(f"recipe_id:  {recipe_id}")
 	log.debug(f"recipe_id.type:  {type(recipe_id)}")
-	diff_msg = payload.get("msg")
+	# diff_msg = payload.get("msg")
 	log.debug(f"diff_msg:  {diff_msg}")
 
 	# Create DB entry in TrustUpdates table

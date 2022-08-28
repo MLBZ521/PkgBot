@@ -288,7 +288,9 @@ async def receive(
 
 	if event == "failed_trust":
 		""" Update Slack message that recipe_id failed verify-trust-info """
-		await api.recipe.recipe_trust_verify_failed({ "recipe_id": recipe_id, "msg": stderr })
+		redacted_error = await utility.replace_sensitive_strings(stderr)
+		# await api.recipe.recipe_trust_verify_failed({"recipe_id": recipe_id, "msg": redacted_error})
+		await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
 
 	elif event == "update_trust_info":
 		""" Update Slack message with result of update-trust-info attempt """
