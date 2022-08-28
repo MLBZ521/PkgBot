@@ -11,6 +11,7 @@ Process:
 - Processor: PkgBotPromoter
   Arguments:
     custom_variables:
+    - CATEGORY
     - CUSTOM_TRIGGER
     - EXCLUSION
     - EXCLUSION2
@@ -25,21 +26,16 @@ Process:
     - SCRIPT_PARAMETER_7
     - SCRIPT_PARAMETER_8
     - SCRIPT_PRIORITY
+    - SELF_SERVICE_DESCRIPTION
+    - SELF_SERVICE_DISPLAY_NAME
     match_pkg: '%match_pkg%'
     recipe_id: '%recipe_id%'
 - Processor: com.github.grahampugh.jamf-upload.processors/JamfCategoryUploader
-  Arguments:
-    category_name: "%CATEGORY%"
 - Processor: com.github.grahampugh.jamf-upload.processors/JamfPackageUploader
-  Arguments:
-    pkg_category: "%CATEGORY%"
 - Processor: StopProcessingIf
   Arguments:
     predicate: PKG_ONLY == TRUE
 - Processor: com.github.grahampugh.jamf-upload.processors/JamfPolicyUploader
   Arguments:
-    icon: "%SELF_SERVICE_ICON%"
-    policy_name: "%POLICY_NAME%"
-    policy_template: "%POLICY_TEMPLATE%"
     replace_policy: "True"
   Comment: Self Service install policy

@@ -80,20 +80,8 @@ class PkgBotPromoter(Processor):
         "version": {
             "description": "The current package version."
         },
-        "CATEGORY": {
-            "description": "The package category."
-        },
-        "SELF_SERVICE_DESCRIPTION": {
-            "description": "The self service description."
-        },
         "pkg_path": {
             "description": "The package path."
-        },
-        "SELF_SERVICE_ICON": {
-            "description": "The self service icon."
-        },
-        "pkg_notes": {
-            "description": "The package notes."
         },
         "PARENT_RECIPES": {
             "description": "The parent recipes, used to locate the self service icon."
@@ -169,22 +157,16 @@ class PkgBotPromoter(Processor):
                     self.output("  -> Skipping as this receipt had an error...")
                     continue
 
-                # list_parent_recipes = []
                 for step in plist:
 
                     if step.get("Recipe input"):
                         recipe_input = step.get("Recipe input")
+                        self.output("Checking the  Recipe input section...", verbose_level=3)
 
                         if parent_recipes := recipe_input.get("PARENT_RECIPES"):
                             found_parent_recipes = True
-                            # list_parent_recipes.extend(parent_recipes)
-                            # list_parent_recipes.extend(
-                            #     (recipe_input.get("RECIPE_DIR"), recipe_input.get("RECIPE_PATH"))
-                            # )
-                            self.env["PARENT_RECIPES"].extend(parent_recipes)
-                            self.env["PARENT_RECIPES"].append(recipe_input.get("RECIPE_DIR"))
-                            self.env["PARENT_RECIPES"].append(recipe_input.get("RECIPE_PATH"))
-                            self.output(f'Parent Recipes:  {self.env["PARENT_RECIPES"]}', verbose_level=3)
+                            parent_recipes.extend(
+                                [recipe_input.get("RECIPE_DIR"), recipe_input.get("RECIPE_PATH")])
 
                         for key in custom_variables:
                             self.env[key] = recipe_input.get(key)
@@ -194,14 +176,26 @@ class PkgBotPromoter(Processor):
                         self.output(f'NAME:  {self.env["NAME"]}', verbose_level=2)
 
                     elif re.search("InputVariableTextSubstituter", step.get("Processor"), re.IGNORECASE):
+                        self.output(f"Checking the {step.get('Processor')} section...", verbose_level=2)
                         processor_output = step.get("Output")
                         key = processor_output.get("return_variable")
                         value = processor_output.get("return_variable_value")
                         self.output(f"{key}:  {value}", verbose_level=3)
                         self.env[key] = value
 
+                    elif re.search("JamfCategoryUploader", step.get("Processor"), re.IGNORECASE):
+                        self.output(f"Checking the {step.get('Processor')} section...", verbose_level=2)
+                        processor_input = step.get("Input")
+
+                        for key, value in processor_input.items():
+
+                            # Do not pull these values incase they're different
+                            if key not in ignore_keys:
+                                self.env[key] = value
+                                self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
                     elif re.search("JamfPackageUploader", step.get("Processor"), re.IGNORECASE):
+                        self.output(f"Checking the {step.get('Processor')} section...", verbose_level=2)
                         processor_input = step.get("Input")
 
                         for key, value in processor_input.items():
@@ -209,17 +203,14 @@ class PkgBotPromoter(Processor):
                             # Do not pull these values incase they're different
                             if key not in ignore_keys:
 
-                                # Set the proper CASE for these variables
-                                var_name = ( key if key in { "pkg_notes", "package_priority",
-                                    "pkg_path", "version" } else key.upper() )
-
-                                self.env[var_name] = value
-                                self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=3)
+                                self.env[key] = value
+                                self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
                         if self.env["version"] and os.path.basename(self.env["pkg_path"]) == match_pkg:
                             version_found = True
 
                     elif re.search("JamfPolicyUploader", step.get("Processor"), re.IGNORECASE):
+                        self.output(f"Checking the {step.get('Processor')} section...", verbose_level=2)
                         processor_input = step.get("Input")
 
                         for key, value in processor_input.items():
@@ -227,11 +218,8 @@ class PkgBotPromoter(Processor):
                             # Do not pull these values incase they're different
                             if key not in ignore_keys:
 
-                                # Set the proper CASE for these variables
-                                var_name = ( key if key in { "replace_policy" } else key.upper() )
-
-                                self.env[var_name] = value
-                                self.output(f"{var_name}:  {self.env[var_name]}", verbose_level=3)
+                                self.env[key] = value
+                                self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
             except Exception:
                 self.output("Missing required information...")
@@ -239,6 +227,8 @@ class PkgBotPromoter(Processor):
 
             if found_parent_recipes and version_found:
                 break
+
+        self.env["PARENT_RECIPES"].extend(parent_recipes)
 
         if not version_found:
             raise ProcessorError("Unable to locate a receipt with a matching version!")
