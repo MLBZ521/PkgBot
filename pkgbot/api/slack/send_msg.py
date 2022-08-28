@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, Response
 
 from pkgbot import api, settings
@@ -33,11 +35,19 @@ async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	"after a .pkg has been approved for the production environment.")
 async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)):
 
-	await api.bot.SlackBot.update_message_with_response_url(
+	result = await api.bot.SlackBot.update_message_with_response_url(
 		pkg_object.dict().get("response_url"),
 		await api.build_msg.promote_msg(pkg_object),
 		text=f"{pkg_object.pkg_name} was promoted to production"
 	)
+
+	# If the first method fails, try the alternate
+	if json.loads(result.body).get("error") == "expired_url":
+		await api.bot.SlackBot.update_message(
+			await api.build_msg.promote_msg(pkg_object),
+			pkg_object.slack_ts,
+			text=f"{pkg_object.pkg_name} was promoted to production"
+		)
 
 	return await api.bot.SlackBot.reaction(
 		action = "remove",

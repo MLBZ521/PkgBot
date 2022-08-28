@@ -59,20 +59,16 @@ class SlackClient(object):
 	async def update_message(self, blocks, ts, text="Updated message..."):
 
 		try:
-			response = await self.client.chat_update(
+			return await self.client.chat_update(
 				channel = self.channel,
 				text = text,
 				blocks = await utility.replace_sensitive_strings(blocks),
 				ts = str(ts)
-				# username = self.bot_name,
-				# icon_emoji = ":x:"
 			)
 
 		except SlackApiError as error:
 			log.error(f"Slack encountered an error:  {error.response['error']}")
-			raise error from error
-
-		return response
+			return error
 
 
 	async def delete_message(self, ts):
@@ -334,6 +330,7 @@ async def receive(request: Request, background_tasks: BackgroundTasks):
 
 		# try:
 ##### Disabled for testing
+##### Actually don't think this is needed........
 		# 	if user_that_clicked.full_admin:
 		# 		full_admin = True
 
