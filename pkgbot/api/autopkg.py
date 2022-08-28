@@ -57,29 +57,22 @@ async def workflow_dev(pkg_object: models.Package_In = Body()):
 @router.post("/workflow/prod", summary="Production Workflow",
 	description="Workflow to move a package into production and update the Slack message.")
 # async def prod(pkg_object: models.Package_In = Body(..., pkg_object=Depends(models.Package_In))):
-async def workflow_prod(pkg_object: models.Package_In = Body()):
+async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body()):
 
 	if pkg_object.promoted_date is None:
 		date_to_convert = datetime.now()
-
 	else:
 		date_to_convert = pkg_object.promoted_date
 
-	pkg_object.promoted_date = await utility.utc_to_local(date_to_convert)
+	pkg_db_object = await models.Packages.filter(id=promoted_id).first()
 
+	pkg_object.promoted_date = await utility.utc_to_local(date_to_convert)
+	pkg_object.recipe_id = pkg_db_object.recipe_id
 	pkg_object.status = "prod"
 
-	packages = await models.Package_Out.from_queryset(
-		models.Packages.filter(recipe_id=pkg_object.recipe_id, version=pkg_object.version))
+	updated_pkg_object = await api.package.update(promoted_id, pkg_object)
 
-	updated_pkg_object = await api.package.update(packages[-1].id, pkg_object)
-
-	# try:
-	results = await api.send_msg.promote_msg(updated_pkg_object)
-	return { "Result": "Success" }
-
-	# except:
-	#     return { "statuscode": 400, "Result": "Failed to post message" }
+	return await api.send_msg.promote_msg(updated_pkg_object)
 
 
 # @router.post("/workflow/promote", summary="Promote package to production",
@@ -380,7 +373,7 @@ async def receive(
 				# 	pkg_data["icon_id"] = jps_icon_id
 				# 	pkg_data["jps_url"] = jps_url
 
-				await workflow_prod(pkg_data)
+				await workflow_prod(event_id, models.Package_In(**pkg_data))
 
 
 		else:

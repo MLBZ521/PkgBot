@@ -190,6 +190,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 			_ = options.pop("match_pkg", None)
 			_ = options.pop("pkg_only", None)
+			_ = options.pop("pkg_id", None)
 
 			# If ignore parent trust, don't run autopkg_verify_trust
 			if options.get("ignore_parent_trust"):
@@ -245,7 +246,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# 		extra_options = f"{extra_options} --key '{override_key}'"
 
 ##### How will the extra_options be passed?
-			run_recipe.apply_async(({"event": "promote"}, recipe_id, options), queue='autopkg', priority=6)
+			run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options), queue='autopkg', priority=6)
 		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=6)
 
 
@@ -319,7 +320,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 
 		return {
 			"event": run_type,
-			# "event_id": trust_id,
+			"event_id": parent_task_results.get("id"),
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],
