@@ -22,6 +22,9 @@ async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In
 
 async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In)):
 
+	secure = "s" if config.PkgBot.get("enable_ssl") else ""
+	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
+
 	return {
 		"type": "section",
 		"text": {
@@ -30,7 +33,7 @@ async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In))
 		},
 		"accessory": {
 			"type": "image",
-			"image_url": f"{config.PkgBot.get('host')}/static/icons/{pkg_object.dict().get('icon')}",
+			"image_url": f"{pkgbot_server}/static/icons/{pkg_object.dict().get('icon')}",
 			"alt_text": "computer thumbnail"
 		}
 	}
