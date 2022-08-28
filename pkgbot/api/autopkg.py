@@ -285,10 +285,8 @@ async def receive(
 	stdout = task_results.get("stdout")
 	stderr = task_results.get("stderr")
 
-	if event == "error":
-		await api.recipe.error(recipe_id, stdout)
 
-	elif event == "failed_trust":
+	if event == "failed_trust":
 		""" Update Slack message that recipe_id failed verify-trust-info """
 		await api.recipe.recipe_trust_verify_failed({ "recipe_id": recipe_id, "msg": stderr })
 
@@ -300,6 +298,41 @@ async def receive(
 
 		else:
 			await api.recipe.recipe_trust_update_failed(recipe_id, success, event_id)
+
+	elif event == "error" or not task_results.get("success"):
+
+##### Failed running recipe
+		# Post Slack Message with results
+		log.error(f"Failed running:  {recipe_id}")
+		# log.error(f"return code status:  {results_autopkg_run['status']}")
+		# log.error(f"stdout:  {stdout}")
+		# log.error(f"stderr:  {stderr}")
+
+		try:
+			plist_contents = await utility.find_receipt_plist(stdout)
+			run_error = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
+		except Exception:
+			run_error = stderr
+
+		redacted_error = await utility.replace_sensitive_strings(run_error)
+
+		if event == "recipe_run_prod":
+			# Promotion Failed
+##### Idea:  thread the error message with the original message?  Post Ephemeral Message to PkgBot Admin?
+
+			# Get the recipe that failed to be promoted
+			pkg_db_object = await models.Packages.filter(id=event_id).first()
+			recipe_id = pkg_db_object.recipe_id
+			software_title = pkg_db_object.name
+			software_version = pkg_db_object.version
+
+			redacted_error = { 
+				"Failed to promote:": f"{software_title} v{software_version}",
+				"Error:": redacted_error
+			}
+			log.error(f"Failed to promote:  {pkg_db_object.pkg_name}")
+
+		await api.recipe.recipe_error(recipe_id, redacted_error)
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
@@ -374,37 +407,6 @@ async def receive(
 				# 	pkg_data["jps_url"] = jps_url
 
 				await workflow_prod(event_id, models.Package_In(**pkg_data))
-
-
-		else:
-
-##### Failed running recipe
-			# Post Slack Message with results
-			log.error(f"Failed running:  {recipe_id}")
-			# log.error(f"return code status:  {results_autopkg_run['status']}")
-			# log.error(f"stdout:  {stdout}")
-			# log.error(f"stderr:  {stderr}")
-
-			try:
-				plist_contents = await utility.find_receipt_plist(stdout)
-				run_error = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
-			except Exception:
-				run_error = stderr
-
-			redacted_error = await utility.replace_sensitive_strings(run_error)
-
-
-			if event == "recipe_run_prod":
-				# Promotion Failed
-				log.error("Failed to promote pkg!")
-##### Need the promotion event_id here!  Or....?
-				# event_id = ""
-##### Can we determine more info to relate it to an event id?
-				redacted_error = { "Failed to promote a pkg": redacted_error }
-
-			await api.recipe.recipe_error(recipe_id, redacted_error)
-
-
 
 
 
