@@ -152,7 +152,7 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 
-	queued_task = task.autopkg_run.apply_async((recipes, switches.dict()), queue='autopkg', priority=6, link=None, link_error=None)
+	queued_task = task.autopkg_run.apply_async((recipes, switches.dict(), called_by), queue='autopkg', priority=6, link=None, link_error=None)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
