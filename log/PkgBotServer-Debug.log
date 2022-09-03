@@ -1,4 +1,0 @@
-2022-06-13 17:55:57,586 | PkgBot | DEBUG | pkgbot.py:62 -          load_config() | PkgBot.Load_Config:
-	All calling args:  ['./pkgbot.py']
-2022-06-13 17:55:57,586 | PkgBot | DEBUG | pkgbot.py:72 -          load_config() | PkgBot.Load_Config:
-	Argparse args:  (Namespace(pkgbot_config=None), ['./pkgbot.py'])
