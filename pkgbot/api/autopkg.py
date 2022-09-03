@@ -148,7 +148,9 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 
 	# callback = await determine_callback(called_by)
 
-	recipes = (await api.recipe.get_recipes({ "enable": True, "manual_only": False })).get("recipes")
+	recipe_filter = models.Recipe_Filter(**{"enabled": True, "manual_only": False})
+
+	recipes = (await api.recipe.get_recipes(recipe_filter)).get("recipes")
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 
