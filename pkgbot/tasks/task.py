@@ -329,7 +329,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 
 
 @celery.task(name="autopkg:verify-trust", bind=True)
-def autopkg_verify_trust(self, recipe_id: str, options: dict, source: str):
+def autopkg_verify_trust(self, recipe_id: str, options: dict, called_by: str):
 	"""Runs the passed recipe id against `autopkg verify-trust-info`.
 
 	Args:
@@ -360,13 +360,14 @@ def autopkg_verify_trust(self, recipe_id: str, options: dict, source: str):
 
 	log.debug(f"Command to execute:  {cmd}")
 
-	if source == "api_direct":
+	if called_by in {"api", "ephemeral"}:
 		results = utility.execute_process(cmd)
 
 		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
 
 		return {
 			"event": "verify_trust_info",
+			"caller":  called_by,
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],

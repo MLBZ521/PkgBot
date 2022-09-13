@@ -41,7 +41,7 @@ class SlackClient(object):
 	async def post_message(self, blocks, text="Pkg status incoming..."):
 
 		try:
-			response = await self.client.chat_postMessage(
+			return await self.client.chat_postMessage(
 				channel = self.channel,
 				text = text,
 				blocks = await utility.replace_sensitive_strings(blocks),
@@ -51,9 +51,7 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Slack encountered an error:  {error.response['error']}")
-			raise error from error
-
-		return response
+			return error
 
 
 	async def update_message(self, blocks, ts, text="Updated message..."):
@@ -114,7 +112,7 @@ class SlackClient(object):
 	async def post_ephemeral_message(self, user, blocks, channel, text="Private Note"):
 
 		try:
-			response = await self.client.chat_postEphemeral(
+			return await self.client.chat_postEphemeral(
 				channel = self.channel,
 				user = user,
 				text = text,
@@ -125,16 +123,14 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Slack encountered an error:  {error.response['error']}")
-			raise error from error
-
-		return response
+			return error
 
 
 	async def file_upload(self, content=None, file=None, filename=None, filetype=None,
 		title=None, text=None, thread_ts=None):
 
 		try:
-			response = await self.client.files_upload(
+			return await self.client.files_upload(
 				channels = self.channel,
 				content = content,
 				file = file,
@@ -148,17 +144,15 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Slack encountered an error:  {error.response['error']}")
-			raise error from error
-
-		return response
+			return error
 
 
 	async def invoke_reaction(self, **kwargs):
 
-		kwargs.update({
-			"channel": kwargs.get("channel", self.channel),
+		kwargs |= {
+			"channel": kwargs.get("channel", self.channel), 
 			"timestamp": str(kwargs.get("ts"))
-		})
+		}
 
 		if "ts" in kwargs:
 			del kwargs["ts"]
@@ -295,7 +289,7 @@ async def delete_slack_message(timestamps: str | list):
 @router.post("/receive", summary="Handles incoming messages from Slack",
 	description="This endpoint receives incoming messages from Slack and calls the required "
 		"actions based on the message after verifying the authenticity of the source.")
-async def receive(request: Request, background_tasks: BackgroundTasks):
+async def receive(request: Request): #, background_tasks: BackgroundTasks):
 
 	# valid_request = await validate_slack_request(request)
 

@@ -126,12 +126,14 @@ async def determine_callback(caller: str):
 	if caller == "slack":
 		return "ephemeral"
 
+	if caller == "api":
+		return "api"
 
 
 
 
 ##### Disabled until further testing is performed on all tasks
-# @repeat_every(seconds=config.Services.get("autopkg_service_start_interval'))
+# @repeat_every(seconds=config.Services.get("autopkg_service_start_interval"))
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
 async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
@@ -154,7 +156,7 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 
-	queued_task = task.autopkg_run.apply_async((recipes, switches.dict(), called_by), queue='autopkg', priority=6, link=None, link_error=None)
+	queued_task = task.autopkg_run.apply_async((recipes, switches.dict(), called_by), queue="autopkg", priority=6)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -183,7 +185,7 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 	if a_recipe.dict().get("enabled"):
 		# queued_task = task.autopkg_run.delay(a_recipe.dict()["recipe_id"], switches.dict())
 		# queued_task = task.autopkg_run.delay((a_recipe.dict()["recipe_id"]), switches.dict(), priority=6)
-		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict(), called_by), queue='autopkg', priority=6)
+		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict(), called_by), queue="autopkg", priority=6)
 
 		return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -208,8 +210,8 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = De
 	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	queued_task = task.autopkg_verify_trust.apply_async(
-		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True), "api_direct"),
-		queue='autopkg', priority=5)
+		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True), called_by),
+		queue="autopkg", priority=5)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -229,7 +231,7 @@ async def verify_pkgbot_webhook(request: Request):
 		body = json.loads(await request.body())
 
 		digest = await utility.compute_hex_digest(
-			config.PkgBot.get('webhook_secret').encode("UTF-8"),
+			config.PkgBot.get("webhook_secret").encode("UTF-8"),
 			str(body).encode("UTF-8"),
 			hashlib.sha512
 		)
@@ -372,7 +374,7 @@ async def receive(
 				icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
 				await api.views.upload_icon(icon)
 
-			except:
+			except Exception:
 				log.info("An icon was not identified, therefore it was not uploaded into PkgBot.")
 
 			if event == "recipe_run_dev":

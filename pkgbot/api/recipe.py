@@ -19,11 +19,11 @@ router = APIRouter(
 
 @router.get("s/", summary="Get all recipes", description="Get all recipes in the database.",
 	dependencies=[Depends(api.user.get_current_user)], response_model=dict)
-async def get_recipes(recipe_object: models.Recipe_Filter = Depends(models.Recipe_Filter)):
+async def get_recipes(recipe_filter: models.Recipe_Filter = Depends(models.Recipe_Filter)):
 
-	if isinstance(recipe_object, models.Recipe_Filter):
+	if isinstance(recipe_filter, models.Recipe_Filter):
 		recipes = await models.Recipe_Out.from_queryset(
-			models.Recipes.filter(**recipe_object.dict(exclude_unset=True, exclude_none=True)))
+			models.Recipes.filter(**recipe_filter.dict(exclude_unset=True, exclude_none=True)))
 	else:
 		recipes = await models.Recipe_Out.from_queryset(models.Recipes.all())
 

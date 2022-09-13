@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from celery.result import AsyncResult
 
-from pkgbot import config, settings
+from pkgbot import config
 from pkgbot.utilities import common as utility
 
 

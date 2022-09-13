@@ -31,9 +31,7 @@ async def get_packages():
 	dependencies=[Depends(api.user.get_current_user)], response_model=models.Package_Out)
 async def get_package_by_id(id: int):
 
-	pkg_object = await models.Package_Out.from_queryset_single(models.Packages.get(id=id))
-
-	return pkg_object
+	return await models.Package_Out.from_queryset_single(models.Packages.get(id=id))
 
 
 @router.post("/", summary="Create a package", description="Create a package.",
