@@ -6,7 +6,7 @@ config = config.load_config()
 TORTOISE_CONFIG = {
 	"connections": {
 		# "default": "sqlite://:memory:"
-		"default": f"sqlite:/{config.Database.get('location')}"
+		"default": f"sqlite:{config.Database.get('location')}"
 	},
 	"apps": {
 		"app": {

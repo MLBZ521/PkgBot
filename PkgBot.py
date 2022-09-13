@@ -33,7 +33,7 @@ app = FastAPI(
 	docs_url="/api"
 )
 
-app.mount("/static", StaticFiles(directory="pkgbot/static"), name="static")
+app.mount("/static", StaticFiles(directory="/Library/AutoPkg/PkgBot/pkgbot/static"), name="static")
 app.include_router(api.views.router)
 app.include_router(api.auth.router)
 app.include_router(api.autopkg.router)
