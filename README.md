@@ -1,6 +1,6 @@
 # PkgBot
 
-PkgBot is a framework to manage the lifecycle of software packaging, testing, and then promotion from development to production environments.  It utilizes the open source project AutoPkg to download and package software and a Slack Bot is utilized to send notifications and receive commands.
+PkgBot is a framework to manage the lifecycle of software packaging, testing, and then promotion from development to production environments.  It utilizes the open source project [AutoPkg](https://www.github.com/autopkg) to download and package software and a Slack Bot is utilized to send notifications and receive commands.
 
 <center><img src="examples/images/New Software Version Available.png" /></center>
 
@@ -31,13 +31,13 @@ The project has a fully asynchronous code base and utilizes numerous popular Pyt
 
   * ~~Moving to a proper "backend" system for executing tasks~~
   * (More) Streamlining (of) workflows
-  * "Hosting" the icons within PkgBot instead of Jamf Pro
+  * ~~"Hosting" the icons within PkgBot instead of Jamf Pro~~
   * Slack slash commands for executing recipes
   * Support for "cleaning up" old notifications
     * e.g. when an app version has been "retired"
   * Code Improvements
-    * Better config loading
-    * Better log loading/usage
+    * ~~Better config loading~~
+    * ~~Better log loading/usage~~
   * A "setup/install" script
 
 <center><img src="examples/images/Encountered and Error.png" /></center>
@@ -68,13 +68,18 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
     * Git
     * AutoPkg
     * JSSImporter
-    * RabbitMQ
-      * Using the [brew instructions](https://www.rabbitmq.com/install-homebrew.html) or the [standalone binary instructions](https://www.rabbitmq.com/install-standalone-mac.html)
     * ngrok
-      * only required if setting up for testing/development work
+      * _Only required if setting up for testing/development work_
+    * RabbitMQ
+      * Using the [homebrew instructions](https://www.rabbitmq.com/install-homebrew.html) or the [standalone binary instructions](https://www.rabbitmq.com/install-standalone-mac.html)
+    * Ngnix
+      * _Only required if you want run the PkgBot app on port 80/443 (any port below 1024)_
+      * Install from source or via homebrew -- numerous guides exist on the interwebs
 
 2. Clone this repo and store it on your AutoPkg Runner.
-    * `sudo git clone https://github.com/mlbz521/PkgBot.git "/Library/AutoPkg/PkgBot"`
+    * `cd /Library/AutoPkg && sudo mkdir PkgBot`
+    * `sudo chgrp -R staff PkgBot && sudo chmod -R g+wxs PkgBot`
+    * `git clone https://github.com/mlbz521/PkgBot.git PkgBot`
 
 3. Install the requirements
     * e.g. `/usr/local/autopkg/python -m pip install -r /Library/AutoPkg/PkgBot/requirements.txt`
@@ -126,7 +131,7 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
 7. Configure your environments' settings:
     * PkgBot:
       * Starting template can be found in:  `PkgBot/examples/settings/pkgbot_config.yaml`
-        * Copy file to:  `[/path/to/]PkgBot/settings/pkgbot_config.yaml`
+        * Copy file to:  `[/path/to/]PkgBot/Settings/pkgbot_config.yaml`
       * Some other settings files can be found in:  `[...]/PkgBot/settings/`
     * Celery:  `[...]/PkgBot/settings/celery.py`
     * RabbitMQ:  (This is just a minimum example of the possible configurations; the RabbitMQ server must be running to execute these commands)
@@ -138,16 +143,23 @@ Below will be the basics to get PkgBot setup and working.  Everything could easi
         * `rabbitmqctl delete_user "guest"`
       * Optionally, set the desired [level of access](https://www.rabbitmq.com/management.html#permissions) for the user:
         * `rabbitmqctl set_user_tags <username> <access_level_tag>`
+    * Ngnix
+      * Run the following command to locate the ngnix configuration file path and open it:
+        * `nginx -t`
+        * Update the config file with the contents in `PkgBot/examples/settings/nginx.conf`
 
 8. Start the required services:
     * PkgBot:  `pkgbot.py`
     * Celery:  `/usr/local/autopkg/python -m celery -A tasks.task.celery worker --loglevel=info -Q autopkg`
     * RabbitMQ:  `rabbitmq-server`
+    * nginx
     * To ensure the required services are always running:
       * Example LaunchDaemon services are provided (in `PkgBot/examples/launchdaemons`) that can be put in `/Library/LaunchDaemons` then bootstrapped and enabled:
         * PkgBot:  `com.github.mlbz521.pkgbot.plist`
         * Celery:  `com.github.mlbz521.pkgbot.celery.plist`
       * RabbitMQ:  `sudo brew services start rabbitmq`
+        * This will create a service managed by Brew
+      * Nginx:  `sudo brew services start nginx`
         * This will create a service managed by Brew
 
 
