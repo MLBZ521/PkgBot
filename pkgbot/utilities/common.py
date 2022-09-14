@@ -232,7 +232,8 @@ async def replace_sensitive_strings(message, sensitive_strings=None):
 
 async def get_task_results(task_id: str):
 
-	db_engine = create_engine(f"sqlite://{config.Database.get('location')}")
+	# https://docs.sqlalchemy.org/en/14/core/engines.html#sqlite
+	db_engine = create_engine(f"sqlite:///{config.Database.get('location')}")
 	Session = sessionmaker(db_engine)
 
 	with Session() as session:
