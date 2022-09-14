@@ -391,7 +391,7 @@ async def receive(
 					# pkg_data["jps_id_dev"] = jps_pkg_id
 					# pkg_data["jps_url"] = config.JamfPro_Dev.get("jps_url")
 
-					await workflow_dev(models.Package_In(pkg_data))
+					await workflow_dev(models.Package_In(**pkg_data))
 
 				# Update the "Last Ran" attribute for this recipe
 				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
