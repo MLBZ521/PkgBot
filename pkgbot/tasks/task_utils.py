@@ -12,7 +12,7 @@ from pkgbot.utilities import common as utility
 config = config.load_config()
 
 
-def get_task_info(task_id):
+def get_task_results(task_id):
 	""" Return task info for the given task_id """
 
 	return AsyncResult(task_id)
