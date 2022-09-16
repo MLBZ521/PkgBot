@@ -20,7 +20,7 @@ celery = Celery()
 celery.config_from_object(settings.celery.settings)
 
 
-@celery.task(name="send_webhook", namebind=True)
+@celery.task(name="pkgbot:send_webhook", namebind=True)
 def send_webhook(task_id):
 	""" Sends webhook after a task is complete. """
 
@@ -146,8 +146,8 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 		# Run checks if we're not promoting the recipe
 ##### Method 1 to run parent tasks
-		# task_autopkg_repo_update = autopkg_repo_update.apply_async(queue='autopkg', priority=3).get(disable_sync_subtasks=False)
-		# task_private_repo_update = git_pull_private_repo.apply_async(queue='autopkg', priority=3).get(disable_sync_subtasks=False)
+		# task_autopkg_repo_update = autopkg_repo_update.apply_async(queue='autopkg', priority=7).get(disable_sync_subtasks=False)
+		# task_private_repo_update = git_pull_private_repo.apply_async(queue='autopkg', priority=7).get(disable_sync_subtasks=False)
 ##### Method 2 to run parent tasks -- likely final
 		tasks = [
 			autopkg_repo_update.signature(),
@@ -156,7 +156,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 		]
 
 		task_group = group(tasks)
-		task_group_results = task_group.apply_async(queue='autopkg', priority=3)
+		task_group_results = task_group.apply_async(queue='autopkg', priority=7)
 		task_results = task_group_results.get(disable_sync_subtasks=False)
 
 		# log.debug(f"task_results:  {task_results}")
@@ -168,7 +168,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 			if not task_result["success"]:
 
-				send_webhook.apply_async((self.request.parent_id,), queue='autopkg', priority=2)
+				send_webhook.apply_async((self.request.parent_id,), queue='autopkg', priority=9)
 
 				return task_result
 
@@ -195,24 +195,24 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# If ignore parent trust, don't run autopkg_verify_trust
 			if options.get("ignore_parent_trust"):
 
-				run_recipe.apply_async(({"success": True}, recipe_id, options), queue='autopkg', priority=6)
+				run_recipe.apply_async(({"success": True}, recipe_id, options), queue='autopkg', priority=4)
 
 			else:
 
 			# Verify trust info and wait
 ##### Method 1 to run parent task
-			# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7).get(disable_sync_subtasks=False)
+			# task_autopkg_verify_trust = autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=6).get(disable_sync_subtasks=False)
 			# task_autopkg_verify_trust.wait()
 
 ##### Method 2 to run parent task -- likely final
 				chain(
-					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=5) | run_recipe.signature((recipe_id, options), queue='autopkg', priority=7)
+					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=2) | run_recipe.signature((recipe_id, options), queue='autopkg', priority=3)
 				)()
 
 ##### Need to determine which method will be used here
-			# recipe_run.apply_async(queue='autopkg', priority=7, immutable=True)
+			# recipe_run.apply_async(queue='autopkg', priority=3, immutable=True)
 ##### Possible alternate method:
-			# autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=7, link=run_recipe.apply_async((recipe_id, options), queue='autopkg', priority=7))
+			# autopkg_verify_trust.apply_async((recipe_id, options), queue='autopkg', priority=6, link=run_recipe.apply_async((recipe_id, options), queue='autopkg', priority=7))
 
 		else:
 			log.debug(f"Promoting to production: {options['match_pkg']}")
@@ -246,8 +246,8 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# 		extra_options = f"{extra_options} --key '{override_key}'"
 
 ##### How will the extra_options be passed?
-			run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options), queue='autopkg', priority=6)
-		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=6)
+			run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options), queue='autopkg', priority=4)
+		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=4)
 
 
 @celery.task(name="autopkg:run_recipe", bind=True)
@@ -288,7 +288,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 
 		log.error(f"{log_msg} recipe: {recipe_id}")
 
-		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=2)
+		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 		return {
 			"event": event_type,
 			# "event_id": event_id,
@@ -316,7 +316,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 		results = utility.execute_process(cmd)
 
 		# Send task complete notification
-		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
+		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
 		return {
 			"event": run_type,
@@ -364,7 +364,7 @@ def autopkg_verify_trust(self, recipe_id: str, options: dict, called_by: str):
 
 	if called_by in {"api", "slack"} and not self.request.parent_id:
 
-		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
+		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
 		return {
 			"event": "verify_trust_info",
@@ -405,7 +405,7 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 	results = utility.execute_process(cmd)
 
-	send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
+	send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
 	return {
 		"event": "update_trust_info",
