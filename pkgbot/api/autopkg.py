@@ -303,7 +303,7 @@ async def receive(
 		else:
 			await api.recipe.recipe_trust_update_failed(recipe_id, success, event_id)
 
-	elif event == "error" or not task_results.get("success"):
+	elif event == "error" or not success:
 
 ##### Failed running recipe
 		# Post Slack Message with results
@@ -340,7 +340,7 @@ async def receive(
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
-		if task_results.get("success"):
+		if success:
 
 			plist_contents = await utility.find_receipt_plist(stdout)
 
