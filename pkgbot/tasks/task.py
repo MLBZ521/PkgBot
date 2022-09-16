@@ -288,7 +288,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 
 		log.error(f"{log_msg} recipe: {recipe_id}")
 
-		send_webhook.apply_async((self.request.parent_id,), queue='autopkg', priority=2)
+		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=2)
 		return {
 			"event": event_type,
 			# "event_id": event_id,
@@ -360,21 +360,22 @@ def autopkg_verify_trust(self, recipe_id: str, options: dict, called_by: str):
 
 	log.debug(f"Command to execute:  {cmd}")
 
-	if called_by in {"api", "ephemeral"}:
-		results = utility.execute_process(cmd)
+	results = utility.execute_process(cmd)
+
+	if called_by in {"api", "slack"} and not self.request.parent_id:
 
 		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=4)
 
 		return {
 			"event": "verify_trust_info",
-			"caller":  called_by,
+			"called_by":  called_by,
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
 		}
 
-	return utility.execute_process(cmd)
+	return results
 
 
 @celery.task(name="autopkg:update-trust", bind=True)

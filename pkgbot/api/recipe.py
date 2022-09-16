@@ -248,12 +248,6 @@ async def recipe_trust_verify_failed(recipe_id: str, diff_msg: str = Body()):
 # async def recipe_trust_verify_failed(recipe_id: str, msg: str):
 	""" When `autopkg verify-trust-info <recipe_id>` fails """
 
-	# recipe_id = payload.get("recipe_id")
-	log.debug(f"recipe_id:  {recipe_id}")
-	log.debug(f"recipe_id.type:  {type(recipe_id)}")
-	# diff_msg = payload.get("msg")
-	log.debug(f"diff_msg:  {diff_msg}")
-
 	# Create DB entry in TrustUpdates table
 	trust_object = await models.TrustUpdates.create(recipe_id=recipe_id)
 
