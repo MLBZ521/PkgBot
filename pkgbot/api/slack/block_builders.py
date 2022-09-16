@@ -46,7 +46,7 @@ async def brick_footer_dev(pkg_object: models.Package_In = Depends(models.Packag
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Dev*:  {pkg_object.dict().get('packaged_date')}\t*Uploaded by*:  @PkgBot"
+					"text": f"*Dev*:  {pkg_object.dict().get('packaged_date')}\t*Uploaded by*:  @{config.Slack.get('bot_name')}"
 				}
 			]
 		}
