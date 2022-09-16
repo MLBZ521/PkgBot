@@ -337,6 +337,12 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 			# Perform action only if from a PkgBotAdmin
 			log.debug("PkgBotAdmin clicked button:")
 
+			await SlackBot.reaction(
+				action = "add",
+				emoji = "gear",
+				ts = message_ts
+			)
+
 			if button_text == "Approve":
 				log.debug("  -> APPROVE")
 
@@ -399,12 +405,6 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 
 					await models.ErrorMessages.update_or_create(updates, id=error_object.id)
 					await api.recipe.recipe_trust_deny(button_value)
-
-			await SlackBot.reaction(
-				action = "add",
-				emoji = "gear",
-				ts = message_ts
-			)
 
 		else:
 
