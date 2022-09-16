@@ -108,4 +108,4 @@ async def deny_package(id: int = Depends(get_package_by_id)):
 	pkg_object.status = "Denied"
 	pkg_object.save()
 
-	return await api.send_msg.deny_pkg_msg(pkg_object)
+	return await api.send_msg.deny_pkg_msg(await models.Package_Out.from_tortoise_orm(pkg_object))
