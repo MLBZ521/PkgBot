@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import logging.config
 import os
-import pickle
+# import pickle
 import plistlib
 import re
 import shlex
@@ -13,8 +13,8 @@ import yaml
 from datetime import datetime, timezone, tzinfo
 from distutils.util import strtobool
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+# from sqlalchemy import create_engine
+# from sqlalchemy.orm import sessionmaker
 
 from pkgbot import config
 
@@ -230,16 +230,16 @@ async def replace_sensitive_strings(message, sensitive_strings=None):
 	return re.sub(rf"{default_sensitive_strings}", '<redacted>', message)
 
 
-async def get_task_results(task_id: str):
+# async def get_task_results(task_id: str):
 
-	# https://docs.sqlalchemy.org/en/14/core/engines.html#sqlite
-	db_engine = create_engine(f"sqlite:///{config.Database.get('location')}")
-	Session = sessionmaker(db_engine)
+# 	# https://docs.sqlalchemy.org/en/14/core/engines.html#sqlite
+# 	db_engine = create_engine(f"sqlite:///{config.Database.get('location')}")
+# 	Session = sessionmaker(db_engine)
 
-	with Session() as session:
-		result = session.execute(f"SELECT result from celery_taskmeta where task_id = '{task_id}';").fetchone()
+# 	with Session() as session:
+# 		result = session.execute(f"SELECT result from celery_taskmeta where task_id = '{task_id}';").fetchone()
 
-	return pickle.loads(result.result)
+# 	return pickle.loads(result.result)
 
 
 async def find_receipt_plist(content: str):

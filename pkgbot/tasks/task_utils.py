@@ -15,13 +15,7 @@ config = config.load_config()
 def get_task_info(task_id):
 	""" Return task info for the given task_id """
 
-	task_result = AsyncResult(task_id)
-	result = {
-		"task_id": task_id,
-		"task_status": task_result.status,
-		"task_result": task_result.result
-	}
-	return result
+	return AsyncResult(task_id)
 
 
 def get_user_context():

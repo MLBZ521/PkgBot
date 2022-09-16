@@ -1,5 +1,4 @@
 from celery import current_app as current_celery_app
-from celery.result import AsyncResult
 
 from pkgbot import settings
 
@@ -17,19 +16,6 @@ def create_celery():
 	celery_app.conf.update(worker_prefetch_multiplier=1)
 
 	return celery_app
-
-
-def get_task_info(task_id):
-	"""
-	return task info for the given task_id
-	"""
-	task_result = AsyncResult(task_id)
-	result = {
-		"task_id": task_id,
-		"task_status": task_result.status,
-		"task_result": task_result.result
-	}
-	return result
 
 
 ##### This file currently isn't used

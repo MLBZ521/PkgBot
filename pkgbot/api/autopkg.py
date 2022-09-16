@@ -282,12 +282,13 @@ async def receive(
 
 	# log.debug(f"task_results:  {task_results}")
 
-	event = task_results.get("event")
-	event_id = task_results.get("event_id", "")
-	recipe_id = task_results.get("recipe_id")
-	success = task_results.get("success")
-	stdout = task_results.get("stdout")
-	stderr = task_results.get("stderr")
+	event = task_results.result.get("event")
+	event_id = task_results.result.get("event_id", "")
+	called_by = task_results.result.get("called_by")
+	recipe_id = task_results.result.get("recipe_id")
+	success = task_results.result.get("success")
+	stdout = task_results.result.get("stdout")
+	stderr = task_results.result.get("stderr")
 
 
 	if event == "failed_trust":
