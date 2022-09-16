@@ -275,7 +275,7 @@ async def receive(
 
 	log.debug(f"Receiving notification for task_id:  {task_id}")
 
-	task_results = await utility.get_task_results(task_id)
+	task_results = task_utils.get_task_results(task_id)
 
 	# log.debug(f"task_results:  {task_results}")
 
