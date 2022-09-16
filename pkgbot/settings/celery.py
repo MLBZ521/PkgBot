@@ -24,11 +24,9 @@ class CeleryConfig:
 	result_backend: str = os.environ.get("result_backend", f"db+sqlite:///{config.Database.get('location')}")
 
 	task_queues: list = (
-		# default queue
+		Queue("pkgbot", queue_arguments={"x-max-priority": 10}),
 		Queue("autopkg", queue_arguments={"x-max-priority": 10}),
-		# custom queue
-		# Queue("run"),
-		# Queue("trust"),
+		Queue("git", queue_arguments={"x-max-priority": 10}),
 	)
 
 	task_routes = (route_task,)
