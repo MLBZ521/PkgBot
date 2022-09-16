@@ -17,9 +17,6 @@ from pkgbot.tasks import task, task_utils
 from pkgbot.utilities import common as utility
 
 
-from pkgbot.utilities.celery import get_task_info
-
-
 config = config.load_config()
 log = utility.log
 router = APIRouter(
