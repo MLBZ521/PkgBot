@@ -85,7 +85,7 @@ async def trust_diff_msg(
 	)
 
 	error_object.slack_ts = response.get('ts')
-	error_object.save()
+	await error_object.save()
 
 	if len(error_msg) > max_content_size:
 
