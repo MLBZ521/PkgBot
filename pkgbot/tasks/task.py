@@ -275,7 +275,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 
 		if f"{recipe_id}: FAILED" in parent_task_results["stderr"]:
 			log_msg = "Failed to verify trust info for"
-			event_type = "failed_trust"
+			event_type = "verify_trust_info"
 
 		elif "Didn't find a recipe for" in parent_task_results["stdout"]:
 			log_msg = "Failed to locate"

@@ -294,15 +294,40 @@ async def receive(
 	stdout = task_results.result.get("stdout")
 	stderr = task_results.result.get("stderr")
 
+	if event == "verify_trust_info":
+		
+		callback = await determine_callback(called_by)
 
-	if event == "failed_trust":
-		""" Update Slack message that recipe_id failed verify-trust-info """
-		redacted_error = await utility.replace_sensitive_strings(stderr)
-		# await api.recipe.recipe_trust_verify_failed({"recipe_id": recipe_id, "msg": redacted_error})
-		await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
+		if callback == "PkgBot":
+
+			if success:
+				log.info(f"Trust info verified for:  {recipe_id}")
+				# This shouldn't ever be called?
+			else:
+				# Send message that recipe_id failed verify-trust-info
+				redacted_error = await utility.replace_sensitive_strings(stderr)
+				await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
+
+		elif callback == "ephemeral":
+##### TO DO:
+			log.debug("Recipe trust info was checked via Slack command.")
+			# Post ephemeral msg to Slack user
+
+			if success:
+				# trust info verified msg
+				pass
+			else:
+				# trust info invalid msg
+				pass
+
+	# elif event == "failed_trust":
+	# 	""" Update Slack message that recipe_id failed verify-trust-info """
+	# 	redacted_error = await utility.replace_sensitive_strings(stderr)
+	# 	# await api.recipe.recipe_trust_verify_failed({"recipe_id": recipe_id, "msg": redacted_error})
+	# 	await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
 
 	elif event == "update_trust_info":
-		""" Update Slack message with result of update-trust-info attempt """
+		""" Update message with result of update-trust-info attempt """
 
 		if success:
 			await api.recipe.recipe_trust_update_success(recipe_id, success, event_id)
@@ -313,7 +338,7 @@ async def receive(
 	elif event == "error" or not success:
 
 ##### Failed running recipe
-		# Post Slack Message with results
+		# Post message with results
 		log.error(f"Failed running:  {recipe_id}")
 		# log.error(f"return code status:  {results_autopkg_run['status']}")
 		# log.error(f"stdout:  {stdout}")
