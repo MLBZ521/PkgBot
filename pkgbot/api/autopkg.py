@@ -177,6 +177,13 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 
 	log.info(f"Running recipe:  {recipe_id}")
 
+	if switches.dict().get("promote"):
+
+		pkg_object = await models.Package_Out.from_queryset_single(
+			models.Packages.get(recipe_id=recipe_id, pkg_name=switches.dict().get("match_pkg")))
+
+		return await api.package.promote_package(id=pkg_object.dict().get("id"))
+
 	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	if a_recipe.dict().get("enabled"):
