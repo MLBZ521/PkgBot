@@ -82,7 +82,7 @@ async def promote_package(id: int):
 		"pkg_id": pkg_object.dict().get("id")
 	}
 
-	queued_task = task.autopkg_run.apply_async(([recipe.dict()], switches, "slack"), queue='autopkg', priority=6)
+	queued_task = task.autopkg_run.apply_async(([recipe.dict()], switches, "slack"), queue='autopkg', priority=4)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 

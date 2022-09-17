@@ -153,7 +153,7 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 
-	queued_task = task.autopkg_run.apply_async((recipes, switches.dict(), called_by), queue="autopkg", priority=6)
+	queued_task = task.autopkg_run.apply_async((recipes, switches.dict(), called_by), queue="autopkg", priority=3)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -182,7 +182,7 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 	if a_recipe.dict().get("enabled"):
 		# queued_task = task.autopkg_run.delay(a_recipe.dict()["recipe_id"], switches.dict())
 		# queued_task = task.autopkg_run.delay((a_recipe.dict()["recipe_id"]), switches.dict(), priority=6)
-		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict(), called_by), queue="autopkg", priority=6)
+		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict(), called_by), queue="autopkg", priority=3)
 
 		return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -208,7 +208,7 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = De
 
 	queued_task = task.autopkg_verify_trust.apply_async(
 		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True), called_by),
-		queue="autopkg", priority=5)
+		queue="autopkg", priority=6)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
