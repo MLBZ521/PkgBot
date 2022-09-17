@@ -398,6 +398,7 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 		prefs=os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")))
 
 	repo_push_branch = config.Git.get("repo_push_branch")
+	stashed = False
 
 	try:
 
@@ -408,6 +409,7 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 		if private_repo.is_dirty():
 			_ = private_repo.git.stash()
+			stashed = True
 
 		_ = private_repo.git.checkout(repo_push_branch)
 
@@ -441,8 +443,9 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 			"stdout": error,
 			"stderr": error
 		}
-
-	private_repo.git.stash("pop")
+	
+	if stashed:
+		private_repo.git.stash("pop")
 
 	send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
