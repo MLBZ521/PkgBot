@@ -397,14 +397,49 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 	options = task_utils.generate_autopkg_args(
 		prefs=os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")))
 
-	cmd = f"{config.AutoPkg.get('binary')} update-trust-info {recipe_id} {options}"
+	repo_push_branch = config.Git.get("repo_push_branch")
 
-	if task_utils.get_user_context():
-		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
+	try:
 
-	log.debug(f"Command to execute:  {cmd}")
+		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
 
-	results = utility.execute_process(cmd)
+		if repo_push_branch not in private_repo.branches:
+			_ = private_repo.git.branch(repo_push_branch)
+
+		if private_repo.is_dirty():
+			_ = private_repo.git.stash()
+
+		_ = private_repo.git.checkout(repo_push_branch)
+
+		cmd = f"{config.AutoPkg.get('binary')} update-trust-info {recipe_id} {options}"
+
+		if task_utils.get_user_context():
+			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
+
+		log.debug(f"Command to execute:  {cmd}")
+
+		results = utility.execute_process(cmd)
+
+		if results["success"] and private_repo.git.diff():
+
+			log.info(f"Successfully updated trust for:  {recipe_id}")
+			recipe_file_path = results["stdout"].split("Wrote updated ")[-1]
+			log.debug(f"Updated recipe filename:  {recipe_file_path}")
+
+			# Stage recipe_file_path
+			_ = private_repo.index.add([recipe_file_path])
+
+			_ = private_repo.git.commit("--message", "Updated Trust Info", "--message", f"By:  {config.Slack.get('bot_name')}")
+			_ = private_repo.git.push("--set-upstream", "origin", repo_push_branch)
+
+			log.info("Successfully updated private repo")
+
+	except BaseException as error:
+		log.error(f"Failed to updated private repo due to:\n{error}")
+		results["success"] = False
+		results["stderr"] = error
+
+	private_repo.git.stash("pop")
 
 	send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
