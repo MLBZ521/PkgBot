@@ -149,7 +149,8 @@ async def brick_update_trust_success_msg(error_object):
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"Trust info was updated for:  `{error_object.dict().get('recipe_id')}`"
+			"text": f"Trust info was updated for:  `{error_object.dict().get('recipe_id')}`",
+			"verbatim": True
 		}
 	}
 
@@ -208,7 +209,8 @@ async def brick_deny_trust(error_object):
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"Denied update to trust info for `{error_object.dict().get('recipe_id')}`"
+			"text": f"Denied update to trust info for `{error_object.dict().get('recipe_id')}`",
+			"verbatim": True
 		},
 		# "accessory": {
 		# 	"type": "image",
@@ -235,7 +237,8 @@ async def brick_trust_diff_main(recipe):
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"*Recipe:*  `{recipe}`\n\n_Trust diff review required._\n\n"
+			"text": f"*Recipe:*  `{recipe}`\n\n_Trust diff review required._\n\n",
+			"verbatim": True
 		},
 		# "accessory": {
 		# 	"type": "image",
@@ -319,7 +322,8 @@ async def missing_recipe_msg(recipe_id, text):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"Failed to {text} `{recipe_id}`"
+				"text": f"Failed to {text} `{recipe_id}`",
+				"verbatim": True
 			},
 			"accessory": {
 				"type": "image",
