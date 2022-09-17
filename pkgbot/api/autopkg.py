@@ -337,7 +337,7 @@ async def receive(
 			software_title = pkg_db_object.name
 			software_version = pkg_db_object.version
 
-			redacted_error = { 
+			redacted_error = {
 				"Failed to promote:": f"{software_title} v{software_version}",
 				"Error:": redacted_error
 			}
@@ -347,7 +347,11 @@ async def receive(
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
-		if success:
+		if not success:
+
+			log.error("Uncaught error in autopkg > receive")
+
+		else:
 
 			plist_contents = await utility.find_receipt_plist(stdout)
 
@@ -370,7 +374,7 @@ async def receive(
 				pkg_data["icon"] = policy_results.get("icon")
 
 				# Create a temporary file to hold the icon data and upload it.
-				# This is required since we're not actually using an 
+				# This is required since we're not actually using an
 				# HTTP client to interface with the API endpoint.
 				icon_data = SpooledTemporaryFile()
 				with open(policy_results.get("icon_path"), "rb") as icon_path:
