@@ -161,7 +161,7 @@ async def recipe_trust_update(trust_object: models.TrustUpdate_In, switches: dic
 
 	if recipe_object:
 
-		queued_task = task.autopkg_update_trust.apply_async(trust_object.recipe_id, switches, trust_object.id)
+		queued_task = task.autopkg_update_trust.apply_async((trust_object.recipe_id, switches, trust_object.id), queue='autopkg', priority=6)
 
 		return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
