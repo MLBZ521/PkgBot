@@ -195,7 +195,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# If ignore parent trust, don't run autopkg_verify_trust
 			if options.get("ignore_parent_trust"):
 
-				run_recipe.apply_async(({"success": True}, recipe_id, options), queue='autopkg', priority=4)
+				run_recipe.apply_async(({"success": True}, recipe_id, options, called_by), queue='autopkg', priority=4)
 
 			else:
 
@@ -206,7 +206,7 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 ##### Method 2 to run parent task -- likely final
 				chain(
-					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=2) | run_recipe.signature((recipe_id, options), queue='autopkg', priority=3)
+					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=2) | run_recipe.signature((recipe_id, options, called_by), queue='autopkg', priority=3)
 				)()
 
 ##### Need to determine which method will be used here
@@ -246,12 +246,12 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# 		extra_options = f"{extra_options} --key '{override_key}'"
 
 ##### How will the extra_options be passed?
-			run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options), queue='autopkg', priority=4)
+			run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options, called_by), queue='autopkg', priority=4)
 		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=4)
 
 
 @celery.task(name="autopkg:run_recipe", bind=True)
-def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, extra_args: str = None): #, run_type: str = "dev"):
+def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, called_by: str):
 	"""Runs the passed recipe id against `autopkg run`.
 
 	Args:
@@ -292,6 +292,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, options: dict, e
 		return {
 			"event": event_type,
 			# "event_id": event_id,
+			"called_by":  called_by,
 			"recipe_id": recipe_id,
 			"success": parent_task_results["success"],
 			"stdout": parent_task_results["stdout"],
