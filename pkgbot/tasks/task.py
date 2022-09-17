@@ -436,8 +436,11 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 	except BaseException as error:
 		log.error(f"Failed to updated private repo due to:\n{error}")
-		results["success"] = False
-		results["stderr"] = error
+		results = { 
+			"success": False,
+			"stdout": error,
+			"stderr": error
+		}
 
 	private_repo.git.stash("pop")
 
