@@ -53,29 +53,39 @@ def git_pull_private_repo(self):
 
 	log.info("Checking for private repo updates...")
 
-	# console_user = task_utils.get_console_user()
-
-# 	git_pull_command = "{binary} -C \"{path}\" switch main > /dev/null && {binary} -C \"{path}\" pull && $( {binary} -C \"{path}\" rev-parse --verify trust-updates > /dev/null 2>&1 && {binary} -C \"{path}\" switch trust-updates > /dev/null || {binary} -C \"{path}\" switch -c trust-updates > /dev/null )".format(
-# 		binary=config.Git.get("binary"),
-# 		path=f"/Users/{console_user}/Library/AutoPkg/RecipeOverrides/"
-# ##### Set this path in a config file some where?
-# 	)
-
-	# if task_utils.get_user_context():
-	# 	git_pull_command = f"su - {console_user} -c \"{git_pull_command}\""
-
-	# results_git_pull_command = utility.execute_process(git_pull_command)
+	repo_primary_branch = config.Git.get("repo_primary_branch")
+	repo_push_branch = config.Git.get("repo_push_branch")
+	stashed = False
 
 	try:
 
 		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
-		private_repo.git.checkout(config.Git.get("repo_primary_branch"))
-		private_repo.remotes.origin.pull()
 
-		if private_repo.is_dirty():
-			if config.Git.get("repo_push_branch") not in private_repo.branches:
-				private_repo.git.branch(config.Git.get("repo_push_branch"))
-			private_repo.git.checkout(config.Git.get("repo_push_branch"))
+		active_branch = private_repo.active_branch
+		local_branches = [ branch.name for branch in private_repo.branches ]
+		# remote_branches = [ ref.name.split("/")[1] for ref in private_repo.remote().refs ]
+
+		if active_branch != repo_primary_branch:
+
+			if repo_push_branch in local_branches:
+				use_remote_push = True
+
+			if private_repo.is_dirty():
+				_ = private_repo.git.stash()
+				stashed = True
+
+		commits_diff = private_repo.git.rev_list("--left-right", "--count", f"{repo_primary_branch}...{repo_primary_branch}@{{u}}")
+		commits_ahead, commits_behind = commits_diff.split('\t')
+		
+		if (int(commits_ahead) and int(commits_behind)) == 0:
+			_ = private_repo.git.checkout(repo_primary_branch)
+			_ = private_repo.remotes.origin.pull()
+
+		if use_remote_push:
+			_ = private_repo.git.checkout(repo_push_branch)
+
+		if stashed:
+			private_repo.git.stash("pop")
 
 		results_git_pull_command = {
 			"stdout": "Success",
@@ -151,8 +161,8 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 ##### Method 2 to run parent tasks -- likely final
 		tasks = [
 			autopkg_repo_update.signature(),
-##### Disabled for testing
-			# git_pull_private_repo.signature()
+##### !~~Disabled for testing~~
+			git_pull_private_repo.signature()
 		]
 
 		task_group = group(tasks)
