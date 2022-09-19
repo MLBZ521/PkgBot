@@ -74,18 +74,16 @@ def git_pull_private_repo(self):
 				_ = private_repo.git.stash()
 				stashed = True
 
+		_ = private_repo.remotes.origin.fetch()
 		commits_diff = private_repo.git.rev_list("--left-right", "--count", f"{repo_primary_branch}...{repo_primary_branch}@{{u}}")
 		commits_ahead, commits_behind = commits_diff.split('\t')
-		
-		if (int(commits_ahead) and int(commits_behind)) == 0:
-			_ = private_repo.git.checkout(repo_primary_branch)
-			_ = private_repo.remotes.origin.pull()
 
-		if use_remote_push:
-			_ = private_repo.git.checkout(repo_push_branch)
+		if int(commits_ahead) != 0:
+			log.error("Local primary branch is ahead of remote primary branch.")
+			raise
 
-		if stashed:
-			private_repo.git.stash("pop")
+		_ = private_repo.git.checkout(repo_primary_branch)
+		_ = private_repo.remotes.origin.pull()
 
 		results_git_pull_command = {
 			"stdout": "Success",
@@ -104,6 +102,14 @@ def git_pull_private_repo(self):
 			"status": 1,
 			"success": False
 		}
+
+	finally:
+
+		if use_remote_push:
+			_ = private_repo.git.checkout(repo_push_branch)
+
+		if stashed:
+			private_repo.git.stash("pop")
 
 ##### This if statement could likely be removed...
 	if not results_git_pull_command["success"]:
@@ -414,14 +420,18 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
 
-		if repo_push_branch not in private_repo.branches:
-			_ = private_repo.git.branch(repo_push_branch)
-
 		if private_repo.is_dirty():
 			_ = private_repo.git.stash()
 			stashed = True
 
-		_ = private_repo.git.checkout(repo_push_branch)
+		active_branch = private_repo.active_branch
+		local_branches = [ branch.name for branch in private_repo.branches ]
+
+		if repo_push_branch not in local_branches:
+			_ = private_repo.git.branch(repo_push_branch)
+
+		if repo_push_branch != active_branch:
+			_ = private_repo.git.checkout(repo_push_branch)
 
 		cmd = f"{config.AutoPkg.get('binary')} update-trust-info {recipe_id} {options}"
 
@@ -446,7 +456,7 @@ def autopkg_update_trust(self, recipe_id: str, options: dict, trust_id: int = No
 
 			log.info("Successfully updated private repo")
 
-	except BaseException as error:
+	except Exception as error:
 		log.error(f"Failed to updated private repo due to:\n{error}")
 		results = { 
 			"success": False,
