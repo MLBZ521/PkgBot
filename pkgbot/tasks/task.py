@@ -4,6 +4,8 @@ import json
 import os
 import requests
 
+from datetime import datetime
+
 import git
 from celery import Celery, group, chain
 
@@ -56,33 +58,44 @@ def git_pull_private_repo(self):
 	repo_primary_branch = config.Git.get("repo_primary_branch")
 	repo_push_branch = config.Git.get("repo_push_branch")
 	stashed = False
+	use_remote_push = False
 
 	try:
 
 		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
 
+		if private_repo.is_dirty():
+			_ = private_repo.git.stash()
+			stashed = True
+
 		active_branch = private_repo.active_branch
 		local_branches = [ branch.name for branch in private_repo.branches ]
+
+		_ = private_repo.remotes.origin.fetch()
 		# remote_branches = [ ref.name.split("/")[1] for ref in private_repo.remote().refs ]
 
 		if active_branch != repo_primary_branch:
+			_ = private_repo.git.checkout(repo_primary_branch)
 
 			if repo_push_branch in local_branches:
-				use_remote_push = True
+				push_branch_commits_ahead, push_branch_commits_behind = task_utils.compare_branch_heads(private_repo, repo_push_branch, repo_primary_branch)
 
-			if private_repo.is_dirty():
-				_ = private_repo.git.stash()
-				stashed = True
+				if push_branch_commits_ahead == 0 and push_branch_commits_behind > 0:
+					# private_repo.delete_head(repo_push_branch)
+					# For safety, just renaming the branch for now and after a bit of real world 
+					# testing, switch to deleting the branch
+					timestamp = asyncio.run(utility.datetime_to_string(str(datetime.now()), "%Y-%m-%d_%I-%M-%S"))
+					private_repo.branches[repo_push_branch].rename(f"{repo_push_branch}_{timestamp}")
 
-		_ = private_repo.remotes.origin.fetch()
-		commits_diff = private_repo.git.rev_list("--left-right", "--count", f"{repo_primary_branch}...{repo_primary_branch}@{{u}}")
-		commits_ahead, commits_behind = commits_diff.split('\t')
+				elif push_branch_commits_ahead > 0:
+					use_remote_push = True
 
-		if int(commits_ahead) != 0:
+		primary_branch_commits_ahead, primary_branch_commits_behind = task_utils.compare_branch_heads(private_repo, repo_primary_branch, repo_primary_branch)
+
+		if primary_branch_commits_ahead != 0 and repo_primary_branch != repo_push_branch:
 			log.error("Local primary branch is ahead of remote primary branch.")
 			raise
 
-		_ = private_repo.git.checkout(repo_primary_branch)
 		_ = private_repo.remotes.origin.pull()
 
 		results_git_pull_command = {

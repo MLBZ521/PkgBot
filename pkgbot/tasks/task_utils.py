@@ -95,3 +95,15 @@ def generate_autopkg_args(**kwargs):
 	# 	final_opts = f"{final_opts} --key promote=True"
 
 	return final_opts.lstrip()
+
+
+def compare_branch_heads(repo, local_branch, remote_branch):
+
+	return [
+		int(x) for x in (
+			repo.git.rev_list(
+				"--left-right", 
+				"--count", 
+				f"{local_branch}...{remote_branch}@{{u}}"
+			)).split('\t')
+	]
