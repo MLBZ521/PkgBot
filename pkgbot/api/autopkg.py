@@ -129,11 +129,11 @@ async def determine_callback(caller: str):
 
 
 
-##### Disabled until further testing is performed on all tasks
-# @repeat_every(seconds=config.Services.get("autopkg_service_start_interval"))
+@router.on_event("startup")
+@repeat_every(seconds=config.Services.get("autopkg_service_start_interval"), wait_first=True)
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
-async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
+async def autopkg_run_recipes(switches: models.AutopkgCMD = Depends(models.AutopkgCMD), called_by: str = "schedule"):
 	"""Run all recipes in the database.
 
 	Args:
@@ -144,6 +144,9 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Body(), called_by: s
 	"""
 
 	log.info("Running all recipes")
+
+	if type(switches) != "pkgbot.db.models.AutopkgCMD":
+		switches = models.AutopkgCMD()
 
 	# callback = await determine_callback(called_by)
 
