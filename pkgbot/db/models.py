@@ -103,7 +103,7 @@ TrustUpdate_In = pydantic_model_creator(
 
 
 ##### May make this a Tortoise Model, to support tracking who/what generated each command
-class AutopkgCMD(BaseModel):
+class AutoPkgCMD(BaseModel):
 	ignore_parent_trust: bool = False
 	match_pkg: str | None = None
 	# overrides: str | None = None # Not yet supported

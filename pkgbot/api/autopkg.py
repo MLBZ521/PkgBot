@@ -133,7 +133,7 @@ async def determine_callback(caller: str):
 @repeat_every(seconds=config.Services.get("autopkg_service_start_interval"), wait_first=True)
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.")
-async def autopkg_run_recipes(switches: models.AutopkgCMD = Depends(models.AutopkgCMD), called_by: str = "schedule"):
+async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "schedule"):
 	"""Run all recipes in the database.
 
 	Args:
@@ -145,8 +145,8 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Depends(models.Autop
 
 	log.info("Running all recipes")
 
-	if type(switches) != "pkgbot.db.models.AutopkgCMD":
-		switches = models.AutopkgCMD()
+	if type(switches) != "pkgbot.db.models.AutoPkgCMD":
+		switches = models.AutoPkgCMD()
 
 	# callback = await determine_callback(called_by)
 
@@ -167,7 +167,7 @@ async def autopkg_run_recipes(switches: models.AutopkgCMD = Depends(models.Autop
 
 @router.post("/run/recipe/{recipe_id}", summary="Executes a recipes",
 	description="Executes a recipe in a background task.")
-async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(), called_by: str = "schedule"):
+async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(), called_by: str = "schedule"):
 	"""Runs the passed recipe id.
 
 	Args:
@@ -203,7 +203,7 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutopkgCMD = Body(
 
 @router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
 	description="Validates a recipes trust info in a background task.")
-async def autopkg_verify_recipe(recipe_id: str, switches: models.AutopkgCMD = Depends(models.AutopkgCMD), called_by: str = "slack"):
+async def autopkg_verify_recipe(recipe_id: str, switches: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "slack"):
 	"""Runs the passed recipe id.
 
 	Args:
