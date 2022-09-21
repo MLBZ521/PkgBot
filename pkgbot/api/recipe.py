@@ -200,6 +200,8 @@ async def recipe_trust_update_success(recipe_id: str, msg: str, trust_id: int):
 	# Get DB Entry
 	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_id))
 
+	# Re-enable the recipe
+	await update_by_recipe_id(trust_object.recipe_id, {"enabled": True})
 	if trust_object:
 		return await api.send_msg.update_trust_success_msg(trust_object)
 
