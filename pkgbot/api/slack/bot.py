@@ -395,7 +395,7 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 				if button_value_type == "Trust":
 					log.debug("  --> Disapprove Trust Changes")
 
-					error_object = await models.ErrorMessages.filter(id=button_value).first()
+					trust_object = await models.TrustUpdates.filter(id=button_value).first()
 
 					updates = {
 						"response_url": response_url,
@@ -403,7 +403,7 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 						"status": "Denied"
 					}
 
-					await models.ErrorMessages.update_or_create(updates, id=error_object.id)
+					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
 					await api.recipe.recipe_trust_deny(button_value)
 
 		else:
