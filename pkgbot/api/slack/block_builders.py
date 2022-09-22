@@ -254,7 +254,8 @@ async def brick_trust_diff_content(error):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"*Diff Output:*```{error}```"
+				"text": f"*Diff Output:*```{error}```",
+				"verbatim": True
 			}
 		}
 
