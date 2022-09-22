@@ -64,7 +64,7 @@ async def brick_footer_denied(pkg_object: models.Package_In = Depends(models.Pac
 
 	return {
 			"type": "mrkdwn",
-			"text": f"*Denied by*: @{pkg_object.dict().get('status_updated_by')}\t*On*:  @{pkg_object.dict().get('last_update')}"
+			"text": f"*Denied by*: @{pkg_object.dict().get('status_updated_by')}\t*On*:  {pkg_object.dict().get('last_update')}"
 		}
 
 
