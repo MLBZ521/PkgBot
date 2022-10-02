@@ -8,6 +8,9 @@ from pkgbot.db import models
 log = utility.log
 config = config.load_config()
 
+secure = "s" if config.PkgBot.get("enable_ssl") else ""
+pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
+
 
 async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In)):
 
@@ -21,9 +24,6 @@ async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In
 
 
 async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In)):
-
-	secure = "s" if config.PkgBot.get("enable_ssl") else ""
-	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
 
 	return {
 		"type": "section",
