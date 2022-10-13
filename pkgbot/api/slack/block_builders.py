@@ -34,7 +34,7 @@ async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In))
 		"accessory": {
 			"type": "image",
 			"image_url": f"{pkgbot_server}/static/icons/{pkg_object.dict().get('icon')}",
-			"alt_text": "computer thumbnail"
+			"alt_text": ":new:"
 		}
 	}
 
@@ -133,11 +133,12 @@ async def brick_error(recipe_id, error):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"```{error}```"
+				"text": f"```{error}```",
+				"verbatim": True
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": "computer thumbnail",
+				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
 				"alt_text": ":x:"
 			}
 		}]
@@ -186,7 +187,7 @@ async def brick_update_trust_error_msg(error_object, msg):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": "computer thumbnail",
+				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
 				"alt_text": ":x:"
 			}
 		}]
@@ -212,11 +213,11 @@ async def brick_deny_trust(error_object):
 			"text": f"Denied update to trust info for `{error_object.dict().get('recipe_id')}`",
 			"verbatim": True
 		},
-		# "accessory": {
-		# 	"type": "image",
-		# 	"image_url": "computer thumbnail",
-		# 	"alt_text": ":x:"
-		# }
+		"accessory": {
+			"type": "image",
+			"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_denied')}",
+			"alt_text": ":denied:"
+		}
 	}
 
 
@@ -240,11 +241,11 @@ async def brick_trust_diff_main(recipe):
 			"text": f"*Recipe:*  `{recipe}`\n\n_Trust diff review required._\n\n",
 			"verbatim": True
 		},
-		# "accessory": {
-		# 	"type": "image",
-		# 	"image_url": "computer thumbnail",
-		# 	"alt_text": ":x:"
-		# }
+		"accessory": {
+			"type": "image",
+			"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_warning')}",
+			"alt_text": ":warning:"
+		}
 	}
 
 
@@ -309,8 +310,8 @@ async def unauthorized(user):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": "https://as1.ftcdn.net/jpg/01/81/82/24/500_F_181822453_iQYjSxsW1AXa8FHOA6ecgdZEmrBdfInD.jpg",
-				"alt_text": ":x:"
+				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_permission_denied')}",
+				"alt_text": ":denied:"
 			}
 		}
 	]
@@ -328,7 +329,7 @@ async def missing_recipe_msg(recipe_id, text):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": "error",
+				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
 				"alt_text": ":x:"
 			}
 		}
