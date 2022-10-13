@@ -113,7 +113,7 @@ async def delete_by_recipe_id(recipe_id: str):
 @router.post("/error", summary="Handle recipe errors",
 	description="This endpoint is called when a recipe errors out during an autopkg run.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def recipe_error(recipe_id: str, error: str):
+async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 
 	# Create DB entry in errors table
 	error_message = await models.ErrorMessages.create( recipe_id=recipe_id )
@@ -125,6 +125,9 @@ async def recipe_error(recipe_id: str, error: str):
 
 	except Exception:
 		error_dict = { recipe_id: error }
+
+	# Add task_id to error message for easier lookup
+	error_dict["Task ID"] = task_id
 
 	results = await api.send_msg.recipe_error_msg(recipe_id, error_message.id, error_dict)
 

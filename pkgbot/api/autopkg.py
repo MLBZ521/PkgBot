@@ -28,6 +28,15 @@ router = APIRouter(
 )
 
 
+@router.get("/results/{task_id}", summary="Get the results of an autopkg task",
+	description="Check if a task has completed and it's results.")
+async def results(task_id:  str):
+
+	log.debug(f"Checking for task_id:  {task_id}")
+	task_results = task_utils.get_task_results(task_id)
+	return { "task_results": task_results.result }
+
+
 @router.post("/workflow/dev", summary="Dev Workflow",
 	description="The Dev workflow will create a new package and post to chat.")
 # async def dev(pkg_object: models.Package_In = Body(..., pkg_object=Depends(models.Package_In))):
@@ -371,7 +380,7 @@ async def receive(
 			}
 			log.error(f"Failed to promote:  {pkg_db_object.pkg_name}")
 
-		await api.recipe.recipe_error(recipe_id, redacted_error)
+		await api.recipe.recipe_error(recipe_id, redacted_error, task_id)
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
