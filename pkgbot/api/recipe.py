@@ -184,11 +184,11 @@ async def recipe_trust_update(trust_object: models.TrustUpdate_In, switches: dic
 	description="This endpoint will update that database to show that the "
 		"changes to parent recipe(s) were not approved.",
 	dependencies=[Depends(api.user.verify_admin)])
-# async def disapprove_changes(id: int):
-async def recipe_trust_deny(trust_object: models.TrustUpdate_Out = Depends(get_by_recipe_id)):
+async def recipe_trust_deny(trust_object_id: int):
+# async def recipe_trust_deny(trust_object: models.TrustUpdate_Out = Depends(get_by_recipe_id)):
 
 	# Get TrustUpdates ID
-	# trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=id))
+	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_object_id))
 
 	await api.send_msg.deny_trust_msg(trust_object)
 
