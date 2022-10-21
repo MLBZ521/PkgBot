@@ -29,7 +29,9 @@ router = APIRouter(
 
 
 @router.get("/results/{task_id}", summary="Get the results of an autopkg task",
-	description="Check if a task has completed and it's results.")
+	description="Check if a task has completed and it's results.",
+	dependencies=[Depends(api.user.verify_admin)])
+	##### May change this to `api.user.get_current_user` if/after cleaning up results so secrets are not included
 async def results(task_id:  str):
 
 	log.debug(f"Checking for task_id:  {task_id}")
@@ -38,7 +40,8 @@ async def results(task_id:  str):
 
 
 @router.post("/workflow/dev", summary="Dev Workflow",
-	description="The Dev workflow will create a new package and post to chat.")
+	description="The Dev workflow will create a new package and post to chat.",
+	dependencies=[Depends(api.user.verify_admin)])
 # async def dev(pkg_object: models.Package_In = Body(..., pkg_object=Depends(models.Package_In))):
 async def workflow_dev(pkg_object: models.Package_In = Body()):
 	"""Workflow to create a new package in the database and then post a message to chat.
@@ -61,7 +64,8 @@ async def workflow_dev(pkg_object: models.Package_In = Body()):
 
 
 @router.post("/workflow/prod", summary="Production Workflow",
-	description="Workflow to move a package into production and update the Slack message.")
+	description="Workflow to move a package into production and update the Slack message.",
+	dependencies=[Depends(api.user.verify_admin)])
 # async def prod(pkg_object: models.Package_In = Body(..., pkg_object=Depends(models.Package_In))):
 async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body()):
 
@@ -141,7 +145,8 @@ async def determine_callback(caller: str):
 @router.on_event("startup")
 @repeat_every(seconds=config.Services.get("autopkg_service_start_interval"), wait_first=True)
 @router.post("/run/recipes", summary="Run all recipes",
-	description="Runs all recipes in a background task.")
+	description="Runs all recipes in a background task.",
+	dependencies=[Depends(api.user.verify_admin)])
 async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "schedule"):
 	"""Run all recipes in the database.
 
@@ -175,7 +180,8 @@ async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoP
 
 
 @router.post("/run/recipe/{recipe_id}", summary="Executes a recipes",
-	description="Executes a recipe in a background task.")
+	description="Executes a recipe in a background task.",
+	dependencies=[Depends(api.user.get_current_user)])
 async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(), called_by: str = "schedule"):
 	"""Runs the passed recipe id.
 
@@ -211,7 +217,8 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(
 
 
 @router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
-	description="Validates a recipes trust info in a background task.")
+	description="Validates a recipes trust info in a background task.",
+	dependencies=[Depends(api.user.get_current_user)])
 async def autopkg_verify_recipe(recipe_id: str, switches: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "slack"):
 	"""Runs the passed recipe id.
 
