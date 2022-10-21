@@ -141,6 +141,21 @@ async def brick_error(recipe_id, error):
 				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
 				"alt_text": ":x:"
 			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": True,
+						"text": "Acknowledge"
+					},
+					"style": "danger",
+					"value": "Error:ack"
+				}
+			]
 		}]
 
 

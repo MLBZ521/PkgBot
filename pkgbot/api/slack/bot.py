@@ -406,6 +406,14 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
 					await api.recipe.recipe_trust_deny(button_value)
 
+			elif button_text == "Acknowledge":
+				log.debug("  -> Acknowledge")
+
+				if button_value_type == "Error":
+					log.debug("  --> Acknowledged Error")
+
+					return await SlackBot.delete_message(str(message_ts))
+
 		else:
 
 			log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
