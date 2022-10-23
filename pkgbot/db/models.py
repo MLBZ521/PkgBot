@@ -39,7 +39,7 @@ class Recipes(Model):
 	manual_only = fields.BooleanField(default=False)
 	pkg_only = fields.BooleanField(default=False)
 	last_ran = fields.DatetimeField(null=True, default=None)
-	recurring_fail_count = fields.IntField(null=True)
+	recurring_fail_count = fields.IntField(null=True, default=0)
 	schedule = fields.IntField(default=0)
 	notes = fields.CharField(4096, null=True)
 
