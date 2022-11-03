@@ -72,33 +72,33 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 	description="Sends a message with the trust diff contents to "
 	"Slack after a recipe's parent trust info has changed.")
 async def trust_diff_msg(
-	error_msg: str, error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	error_msg: str, trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
 	if len(error_msg) > max_content_size:
 
-		blocks = await api.build_msg.trust_diff_msg(error_object.id, error_object.recipe_id)
+		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id)
 
 	else:
 
-		blocks = await api.build_msg.trust_diff_msg(error_object.id, error_object.recipe_id, error_msg)
+		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id, error_msg)
 
 	response = await api.bot.SlackBot.post_message(
 		blocks,
-		text=f"Trust verification failed for `{error_object.recipe_id}`"
+		text=f"Trust verification failed for `{trust_object.recipe_id}`"
 	)
 
-	error_object.slack_ts = response.get('ts')
-	await error_object.save()
+	trust_object.slack_ts = response.get('ts')
+	await trust_object.save()
 
 	if len(error_msg) > max_content_size:
 
 		response = await api.bot.SlackBot.file_upload(
 			content = error_msg,
-			filename = f"{error_object.recipe_id}.diff",
+			filename = f"{trust_object.recipe_id}.diff",
 			filetype = "diff",
-			title = error_object.recipe_id,
-			text = f"Diff Output for {error_object.recipe_id}",
-			thread_ts = error_object.slack_ts
+			title = trust_object.recipe_id,
+			text = f"Diff Output for {trust_object.recipe_id}",
+			thread_ts = trust_object.slack_ts
 		)
 
 	return response
@@ -108,19 +108,19 @@ async def trust_diff_msg(
 	description="Sends a 'success' message to Slack when "
 	"a recipe's trust info is updated successfully.")
 async def update_trust_success_msg(
-	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	blocks = await api.build_msg.update_trust_success_msg(error_object)
+	blocks = await api.build_msg.update_trust_success_msg(trust_object)
 
 	response = await api.bot.SlackBot.update_message_with_response_url(
-		error_object.dict().get("response_url"), blocks,
-		text=f"Successfully updated trust info for {error_object.recipe_id}")
+		trust_object.dict().get("response_url"), blocks,
+		text=f"Successfully updated trust info for {trust_object.recipe_id}")
 
 	if response.status_code == 200:
 		await api.bot.SlackBot.reaction(
 			action = "remove",
 			emoji = "gear",
-			ts = error_object.slack_ts
+			ts = trust_object.slack_ts
 		)
 
 	return response
@@ -129,13 +129,13 @@ async def update_trust_success_msg(
 @router.put("/update-trust-error-msg", summary="Send trust update error message",
 	description="Sends an 'error' message to Slack when a recipe's trust info fails to update.")
 async def update_trust_error_msg(msg: str,
-	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	blocks = await api.build_msg.update_trust_error_msg(error_object, msg)
+	blocks = await api.build_msg.update_trust_error_msg(msg, trust_object)
 
 	return await api.bot.SlackBot.update_message_with_response_url(
-		error_object.dict().get("response_url"), blocks,
-		text=f"Failed to update trust info for {error_object.recipe_id}")
+		trust_object.dict().get("response_url"), blocks,
+		text=f"Failed to update trust info for {trust_object.recipe_id}")
 
 
 @router.put("/deny-pkg-msg", summary="Send deny package message",
@@ -163,19 +163,19 @@ async def deny_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In
 	description="Send an message to Slack stating a recipe's "
 	"parent trust info changes were not approved.")
 async def deny_trust_msg(
-	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	blocks = await api.build_msg.deny_trust_msg(error_object)
+	blocks = await api.build_msg.deny_trust_msg(trust_object)
 
 	response = await api.bot.SlackBot.update_message_with_response_url(
-		error_object.dict().get("response_url"), blocks,
-		text=f"Trust info for {error_object.recipe_id} was not approved")
+		trust_object.dict().get("response_url"), blocks,
+		text=f"Trust info for {trust_object.recipe_id} was not approved")
 
 	if response.status_code == 200:
 		await api.bot.SlackBot.reaction(
 			action = "remove",
 			emoji = "gear",
-			ts = error_object.slack_ts
+			ts = trust_object.slack_ts
 		)
 
 	return response

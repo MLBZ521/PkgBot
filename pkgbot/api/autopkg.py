@@ -349,10 +349,10 @@ async def receive(
 		""" Update message with result of update-trust-info attempt """
 
 		if success:
-			await api.recipe.recipe_trust_update_success(recipe_id, success, event_id)
+			await api.recipe.recipe_trust_update_success(event_id)
 
 		else:
-			await api.recipe.recipe_trust_update_failed(recipe_id, success, event_id)
+			await api.recipe.recipe_trust_update_failed(event_id, str(stderr))
 
 	elif event == "error" or not success:
 

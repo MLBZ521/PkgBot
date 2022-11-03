@@ -86,11 +86,11 @@ async def deny_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In
 	description="Builds an message for Slack stating a recipe's "
 	"parent trust info changes were not approved.")
 async def deny_trust_msg(
-	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
 	blocks = [
-		await api.block_builders.brick_deny_trust(error_object),
-		await api.block_builders.brick_footer_denied_trust(error_object)
+		await api.block_builders.brick_deny_trust(trust_object),
+		await api.block_builders.brick_footer_denied_trust(trust_object)
 	]
 
 	return json.dumps(blocks, indent=4)
@@ -118,11 +118,11 @@ async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	description="Builds a 'success' message for Slack when a "
 	"recipe's trust info is updated successfully.")
 async def update_trust_success_msg(
-	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
 	blocks = [
-		await api.block_builders.brick_update_trust_success_msg(error_object),
-		await api.block_builders.brick_footer_update_trust_success_msg(error_object)
+		await api.block_builders.brick_update_trust_success_msg(trust_object),
+		await api.block_builders.brick_footer_update_trust_success_msg(trust_object)
 	]
 
 	return json.dumps(blocks, indent=4)
@@ -131,10 +131,10 @@ async def update_trust_success_msg(
 @router.get("/update-trust-error-msg", summary="Build trust update error message",
 	description="Builds an 'error' message for Slack when a recipe's trust info fails to update.")
 async def update_trust_error_msg(msg: str,
-	error_object: models.ErrorMessage_In = Depends(models.ErrorMessage_In)):
+	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
 	return json.dumps(
-		[ await api.block_builders.brick_update_trust_error_msg(error_object, msg) ],
+		[ await api.block_builders.brick_update_trust_error_msg(trust_object, msg) ],
 		indent=4
 	)
 

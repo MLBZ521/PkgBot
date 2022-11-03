@@ -198,13 +198,14 @@ async def recipe_trust_deny(trust_object_id: int):
 	description="Performs the necessary actions after trust info was successfully updated.",
 	dependencies=[Depends(api.user.verify_admin)])
 # async def trust_update_success(recipe_id: str, msg: str):
-async def recipe_trust_update_success(recipe_id: str, msg: str, trust_id: int):
+async def recipe_trust_update_success(trust_id: int):
 
 	# Get DB Entry
 	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_id))
 
 	# Re-enable the recipe
 	await update_by_recipe_id(trust_object.recipe_id, {"enabled": True})
+
 	if trust_object:
 		return await api.send_msg.update_trust_success_msg(trust_object)
 
@@ -222,19 +223,20 @@ async def recipe_trust_update_success(recipe_id: str, msg: str, trust_id: int):
 	description="Performs the necessary actions after trust info failed to update.",
 	dependencies=[Depends(api.user.verify_admin)])
 # async def trust_update_error(recipe_id: str, msg: str): #,
-async def recipe_trust_update_failed(recipe_id: str, msg: str):
+async def recipe_trust_update_failed(trust_id: int, msg: str):
 
 	# Get DB entry
-	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(recipe_id=recipe_id))
+	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_id))
 
 	results = await api.send_msg.update_trust_error_msg(msg, trust_object)
 
-	updates = {
-		"slack_ts": results.get('ts'),
-		"slack_channel": results.get('channel')
-	}
-
-	await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
+##### We do not want to update the trust_object with this second error message...this would 
+##### overwrite the actual interaction message in Slack
+	# updates = {
+	# 	"slack_ts": results.get('ts'),
+	# 	"slack_channel": results.get('channel')
+	# }
+	# await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
 
 	# Mark the recipe disabled
 	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()

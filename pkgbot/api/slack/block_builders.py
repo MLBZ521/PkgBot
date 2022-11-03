@@ -68,14 +68,14 @@ async def brick_footer_denied(pkg_object: models.Package_In = Depends(models.Pac
 		}
 
 
-async def brick_footer_denied_trust(error_object):
+async def brick_footer_denied_trust(trust_object):
 
 	return {
 			"type": "context",
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Denied by*:  @{error_object.dict().get('status_updated_by')}\t*On*:  {error_object.dict().get('last_update')}"
+					"text": f"*Denied by*:  @{trust_object.dict().get('status_updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
 				}
 			]
 		}
@@ -159,38 +159,38 @@ async def brick_error(recipe_id, error):
 		}]
 
 
-async def brick_update_trust_success_msg(error_object):
+async def brick_update_trust_success_msg(trust_object):
 
 	return {
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"Trust info was updated for:  `{error_object.dict().get('recipe_id')}`",
+			"text": f"Trust info was updated for:  `{trust_object.dict().get('recipe_id')}`",
 			"verbatim": True
 		}
 	}
 
 
-async def brick_footer_update_trust_success_msg(error_object):
+async def brick_footer_update_trust_success_msg(trust_object):
 
 	return {
 			"type": "context",
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Updated by*:  @{error_object.dict().get('status_updated_by')}\t*On*:  {error_object.dict().get('last_update')}"
+					"text": f"*Updated by*:  @{trust_object.dict().get('status_updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
 				}
 			]
 		}
 
 
-async def brick_update_trust_error_msg(error_object, msg):
+async def brick_update_trust_error_msg(trust_object, msg):
 
 	return [{
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": f"Failed to update trust info for `{error_object.dict().get('recipe_id')}`",
+				"text": f"Failed to update trust info for `{trust_object.dict().get('recipe_id')}`",
 				"emoji": True
 			}
 		},
@@ -219,13 +219,13 @@ async def brick_deny_pkg(pkg_object: models.Package_In = Depends(models.Package_
 	}
 
 
-async def brick_deny_trust(error_object):
+async def brick_deny_trust(trust_object):
 
 	return {
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"Denied update to trust info for `{error_object.dict().get('recipe_id')}`",
+			"text": f"Denied update to trust info for `{trust_object.dict().get('recipe_id')}`",
 			"verbatim": True
 		},
 		"accessory": {
