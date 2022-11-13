@@ -159,7 +159,7 @@ async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoP
 
 	log.info("Running all recipes")
 
-	if type(switches) != "pkgbot.db.models.AutoPkgCMD":
+	if not isinstance(switches, models.AutoPkgCMD):
 		switches = models.AutoPkgCMD()
 
 	# callback = await determine_callback(called_by)
