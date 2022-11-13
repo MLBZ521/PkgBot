@@ -129,7 +129,11 @@ def git_pull_private_repo(self):
 		log.error(f"stdout:\n{results_git_pull_command['stdout']}")
 		log.error(f"stderr:\n{results_git_pull_command['stderr']}")
 
-	results_git_pull_command["event"] = "private_git_pull"
+	results_git_pull_command |= {
+		"event": "private_git_pull",
+		"task_id": self.request.id
+	}
+
 	return results_git_pull_command
 
 
@@ -145,11 +149,16 @@ def autopkg_repo_update(self):
 		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
 
 	results_autopkg_repo_update = utility.execute_process(autopkg_repo_update_command)
-	results_autopkg_repo_update["event"] = "autopkg_repo_update"
 
+##### This if statement could likely be removed...
 	if not results_autopkg_repo_update["success"]:
 		log.error("Failed to update parent recipe repos")
 		log.error(results_autopkg_repo_update['stderr'])
+
+	results_autopkg_repo_update |= {
+		"event": "autopkg_repo_update",
+		"task_id": self.request.id
+	}
 
 	return results_autopkg_repo_update
 
@@ -171,6 +180,8 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 	promote = options.pop("promote", False)
 
+	queued_tasks = []
+
 	if not promote and not options.get("ignore_parent_trust"):
 
 		# Run checks if we're not promoting the recipe
@@ -185,8 +196,9 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 		]
 
 		task_group = group(tasks)
-		task_group_results = task_group.apply_async(queue='autopkg', priority=7)
-		task_results = task_group_results.get(disable_sync_subtasks=False)
+		# task_group_results = task_group.apply_async(queue='autopkg', priority=7)
+		# task_results = task_group_results.get(disable_sync_subtasks=False)
+		task_results = (task_group.apply_async(queue='autopkg', priority=7)).get(disable_sync_subtasks=False)
 
 		# log.debug(f"task_results:  {task_results}")
 		# log.debug(f"task_results.type:  {type(task_results)}")
@@ -197,9 +209,10 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 
 			if not task_result["success"]:
 
-				send_webhook.apply_async((self.request.parent_id,), queue='autopkg', priority=9)
+				send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
-				return task_result
+			queued_tasks.append(task_result["task_id"])
+				# return task_result
 
 	for a_recipe in recipes:
 
@@ -224,7 +237,9 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# If ignore parent trust, don't run autopkg_verify_trust
 			if options.get("ignore_parent_trust"):
 
-				run_recipe.apply_async(({"success": True}, recipe_id, options, called_by), queue='autopkg', priority=4)
+				queued_task = run_recipe.apply_async(({"success": True}, recipe_id, options, called_by), queue='autopkg', priority=4)
+
+				queued_tasks.append(queued_task.id)
 
 			else:
 
@@ -234,9 +249,10 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# task_autopkg_verify_trust.wait()
 
 ##### Method 2 to run parent task -- likely final
-				chain(
+				chain_results = chain(
 					autopkg_verify_trust.signature((recipe_id, options, called_by), queue='autopkg', priority=2) | run_recipe.signature((recipe_id, options, called_by), queue='autopkg', priority=3)
 				)()
+				queued_tasks.append([chain_results.parent, chain_results.task_id])
 
 ##### Need to determine which method will be used here
 			# recipe_run.apply_async(queue='autopkg', priority=3, immutable=True)
@@ -275,8 +291,14 @@ def autopkg_run(self, recipes: list, options: dict, called_by: str):
 			# 		extra_options = f"{extra_options} --key '{override_key}'"
 
 ##### How will the extra_options be passed?
-			run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options, called_by), queue='autopkg', priority=4)
+			queued_task = run_recipe.apply_async(({"event": "promote", "id": options.pop("pkg_id")}, recipe_id, options, called_by), queue='autopkg', priority=4)
 		# run_recipe.apply_async((None, {"recipe_id": recipe_id, "options": options}), queue='autopkg', priority=4)
+			
+			queued_tasks.append(queued_task.id)
+
+	# log.debug(f"Parent task:  {self.request.id}\nQueued background tasks:\n{queued_tasks}")
+
+	return { "Queued background tasks": queued_tasks }
 
 
 @celery.task(name="autopkg:run_recipe", bind=True)

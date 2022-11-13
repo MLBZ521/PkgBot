@@ -36,7 +36,32 @@ async def results(task_id:  str):
 
 	log.debug(f"Checking for task_id:  {task_id}")
 	task_results = task_utils.get_task_results(task_id)
-	return { "task_results": task_results.result }
+
+	if task_results.status != "SUCCESS":
+		return { "Current status":  task_results.status }
+
+	elif task_results.result != None:
+
+		if sub_task_ids := (task_results.result).get("Queued background tasks", None):
+			sub_tasks = []
+
+			for sub_task in sub_task_ids:
+
+				if isinstance(sub_task, AsyncResult):
+					sub_task_result = task_utils.get_task_results(sub_task.task_id)
+				
+				if isinstance(sub_task, str):
+					sub_task_result = task_utils.get_task_results(sub_task)
+
+				sub_tasks.append({sub_task_result.task_id: sub_task_result.status})
+
+			return { "Sub Task Results": sub_tasks }
+
+		elif isinstance(task_results.result, dict):
+			return { "task_results": task_results.result }
+
+	else:
+		return { "Task completion status":  task_results.status }
 
 
 @router.post("/workflow/dev", summary="Dev Workflow",
