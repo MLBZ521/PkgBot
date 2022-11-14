@@ -174,11 +174,11 @@ async def determine_callback(caller: str):
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "schedule"):
+async def autopkg_run_recipes(autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "schedule"):
 	"""Run all recipes in the database.
 
 	Args:
-		switches (dict): A dictionary that will be used as switches to the `autopkg` binary
+		autopkg_options (dict): A dictionary that will be used as autopkg_options to the `autopkg` binary
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -186,8 +186,8 @@ async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoP
 
 	log.info("Running all recipes")
 
-	if not isinstance(switches, models.AutoPkgCMD):
-		switches = models.AutoPkgCMD()
+	if not isinstance(autopkg_options, models.AutoPkgCMD):
+		autopkg_options = models.AutoPkgCMD()
 
 	# callback = await determine_callback(called_by)
 
@@ -197,7 +197,7 @@ async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoP
 
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 
-	queued_task = task.autopkg_run.apply_async((recipes, switches.dict(), called_by), queue="autopkg", priority=3)
+	queued_task = task.autopkg_run.apply_async((recipes, autopkg_options.dict(), called_by), queue="autopkg", priority=3)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -209,12 +209,12 @@ async def autopkg_run_recipes(switches: models.AutoPkgCMD = Depends(models.AutoP
 @router.post("/run/recipe/{recipe_id}", summary="Executes a recipes",
 	description="Executes a recipe in a background task.",
 	dependencies=[Depends(api.user.get_current_user)])
-async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(), called_by: str = "schedule"):
+async def autopkg_run_recipe(recipe_id: str, autopkg_options: models.AutoPkgCMD = Body(), called_by: str = "schedule"):
 	"""Runs the passed recipe id.
 
 	Args:
 		recipe (str): Recipe ID of a recipe
-		switches (str):
+		autopkg_options (str):
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -222,10 +222,10 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(
 
 	log.info(f"Running recipe:  {recipe_id}")
 
-	if switches.dict().get("promote"):
+	if autopkg_options.dict().get("promote"):
 
 		pkg_object = await models.Package_Out.from_queryset_single(
-			models.Packages.get(recipe_id=recipe_id, pkg_name=switches.dict().get("match_pkg")))
+			models.Packages.get(recipe_id=recipe_id, pkg_name=autopkg_options.dict().get("match_pkg")))
 
 		return await api.package.promote_package(id=pkg_object.dict().get("id"))
 
@@ -234,7 +234,7 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(
 	if a_recipe.dict().get("enabled"):
 		# queued_task = task.autopkg_run.delay(a_recipe.dict()["recipe_id"], switches.dict())
 		# queued_task = task.autopkg_run.delay((a_recipe.dict()["recipe_id"]), switches.dict(), priority=6)
-		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], switches.dict(), called_by), queue="autopkg", priority=3)
+		queued_task = task.autopkg_run.apply_async(([ a_recipe.dict() ], autopkg_options.dict(), called_by), queue="autopkg", priority=3)
 
 		return { "Result": "Queued background task..." , "task_id": queued_task.id }
 
@@ -246,12 +246,12 @@ async def autopkg_run_recipe(recipe_id: str, switches: models.AutoPkgCMD = Body(
 @router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
 	description="Validates a recipes trust info in a background task.",
 	dependencies=[Depends(api.user.get_current_user)])
-async def autopkg_verify_recipe(recipe_id: str, switches: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "slack"):
+async def autopkg_verify_recipe(recipe_id: str, autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "slack"):
 	"""Runs the passed recipe id.
 
 	Args:
 		recipe (str): Recipe ID of a recipe
-		switches (str):
+		autopkg_options (str):
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -260,7 +260,7 @@ async def autopkg_verify_recipe(recipe_id: str, switches: models.AutoPkgCMD = De
 	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	queued_task = task.autopkg_verify_trust.apply_async(
-		(a_recipe.dict().get("recipe_id"), switches.dict(exclude_unset=True, exclude_none=True), called_by),
+		(a_recipe.dict().get("recipe_id"), autopkg_options.dict(exclude_unset=True, exclude_none=True), called_by),
 		queue="autopkg", priority=6)
 
 	return { "Result": "Queued background task..." , "task_id": queued_task.id }
