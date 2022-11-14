@@ -254,7 +254,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 				chain_results = chain(
 					autopkg_verify_trust.signature((recipe_id, autopkg_options, called_by), queue='autopkg', priority=2) | run_recipe.signature((recipe_id, autopkg_options, called_by), queue='autopkg', priority=3)
 				)()
-				queued_tasks.append([chain_results.parent, chain_results.task_id])
+				queued_tasks.extend([chain_results.parent, chain_results.task_id])
 
 ##### Need to determine which method will be used here
 			# recipe_run.apply_async(queue='autopkg', priority=3, immutable=True)
