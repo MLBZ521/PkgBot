@@ -10,6 +10,8 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, Up
 
 from fastapi_utils.tasks import repeat_every
 
+from celery.result import AsyncResult
+
 
 from pkgbot import api, config, settings
 from pkgbot.db import models
