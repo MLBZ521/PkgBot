@@ -275,7 +275,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 	elif isinstance(message, dict):
 
 		for key, value in message.items():
-			if not isinstance(value, bool) and value is not None:
+			if not isinstance(value, (bool, int)) and value is not None:
 				message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', value)
 
 		return message
