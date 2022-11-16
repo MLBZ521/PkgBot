@@ -169,5 +169,6 @@ PkgBot:
 Common:
   # Strings that you do not want to be be printed "publicly" in notifications
   # Any/all passwords/secrets/keys above are already included in the redaction logic
-  # This value will be parsed as *REGEX*
-  RedactionStrings: <some_internal_string>|\b<username>\b
+  # These values will be parsed as *Regex*
+  # redaction_strings: <some_internal_string>|\b<username>\b
+  # additional_sensitive_key_names: _id|_hash

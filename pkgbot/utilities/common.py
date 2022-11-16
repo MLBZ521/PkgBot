@@ -205,9 +205,56 @@ async def save_yaml(contents, config_file):
 		yaml.dump(contents, config_file_path)
 
 
-async def replace_sensitive_strings(message, sensitive_strings=None):
+async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_regex_strings=None):
+	"""Redact sensitive strings, such as passwords, serial numbers, license keys, etc. before
+	exporting to a non-secure location.
 
-	default_sensitive_strings = str
+	Args:
+		message (str, Any): A message that could contain sensitive strings.  If `message` is not a
+			string, it will be "converted" to a string via `str(message)`.
+		sensitive_strings (str, optional): A string of sensitive strings, separated by a `|` (pipe).
+			These strings will be Regex escaped.  Defaults to None.
+		sensitive_regex_strings (str, optional): A string of sensitive strings in Regex format, 
+			separated by a `|` (pipe).  Defaults to None.
+	"""
+
+
+	async def parse_for_sensitive_keys(a_dict, sensitive_key_names):
+
+		found_sensitive_strings = ""
+
+		for key, value in a_dict.items():
+
+			if re.search(rf".*({sensitive_key_names}).*", key, re.IGNORECASE) and value:
+
+				if found_sensitive_strings:
+					found_sensitive_strings = "|".join([found_sensitive_strings, re.escape(value)])
+				else:
+					found_sensitive_strings = re.escape(value)
+
+		return found_sensitive_strings
+
+
+	all_sensitive_strings = r"bearer\s[\w+.-]+|"
+	sensitive_key_names = r"password|secret|license|serial|key"
+	
+	if config.Common.get("additional_sensitive_key_names"):
+		sensitive_key_names += f"|{config.Common.get('additional_sensitive_key_names')}"
+
+	for plist in [
+		config.JamfPro_Prod.get("autopkg_prefs"), 
+		config.JamfPro_Dev.get("autopkg_prefs")
+	]:
+		plist_contents = await plist_reader(plist)
+		all_sensitive_strings += await parse_for_sensitive_keys(plist_contents, sensitive_key_names)
+
+	for string in [ 
+		config.Common.get("redaction_strings"),
+		sensitive_regex_strings
+	]:
+		if string:
+			all_sensitive_strings = "|".join([all_sensitive_strings, string])
+
 	for string in [ 
 		config.JamfPro_Dev.get("api_user"),
 		config.JamfPro_Dev.get("api_password"),
@@ -217,17 +264,26 @@ async def replace_sensitive_strings(message, sensitive_strings=None):
 		config.JamfPro_Prod.get("api_password"),
 		config.JamfPro_Prod.get("dp1_user"),
 		config.JamfPro_Prod.get("dp1_password"),
-		config.Common.get("RedactionStrings"),
-		r"bearer\s[\w+.-]+"
+		sensitive_strings
 	]:
 		if string:
-			default_sensitive_strings = rf"{default_sensitive_strings} | {string}"
+			all_sensitive_strings = "|".join([all_sensitive_strings, re.escape(string)])
 
-	if sensitive_strings:
+	if isinstance(message, str):
+		return re.sub(rf"{all_sensitive_strings}", '<redacted>', message)
 
-		default_sensitive_strings = rf"{default_sensitive_strings}|{sensitive_strings}"
+	elif isinstance(message, dict):
 
-	return re.sub(rf"{default_sensitive_strings}", '<redacted>', message)
+		for key, value in message.items():
+			if not isinstance(value, bool) and value is not None:
+				message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', value)
+
+		return message
+
+	else:
+		log.warning(
+			f"Unaccounted for type in sensitive string substitution!  Type is:  {type(message)}")
+		return re.sub(rf"{all_sensitive_strings}", '<redacted>', str(message))
 
 
 # async def get_task_results(task_id: str):
