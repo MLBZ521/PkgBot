@@ -60,7 +60,7 @@ async def results(task_id:  str):
 			return { "Sub Task Results": sub_tasks }
 
 		elif isinstance(task_results.result, dict):
-			return { "task_results": task_results.result }
+			return { "Task Results": await utility.replace_sensitive_strings(task_results.result) }
 
 	else:
 		return { "Task completion status":  task_results.status }
