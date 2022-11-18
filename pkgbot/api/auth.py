@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 
-import requests
+import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -48,7 +48,9 @@ async def exc_handler(request, exc):
 async def authenticate_user(username: str, password: str):
 
 	# Request a token based on the provided credentials
-	response_get_token = requests.post(f"{jps_url}/api/v1/auth/token", auth=(username, password))
+	async with httpx.AsyncClient() as client:
+		response_get_token = await client.post(
+			f"{jps_url}/api/v1/auth/token", auth=(username, password))
 
 	if response_get_token.status_code == 200:
 
@@ -79,11 +81,10 @@ async def authenticate_user(username: str, password: str):
 
 async def user_authorizations(token: str = Depends(oauth2_scheme)):
 
-	# GET all user details
-	response_user_details = requests.get(
-		f"{jps_url}/api/v1/auth",
-		headers={ "Authorization": f"jamf-token {token}" }
-	)
+	# Get all user details
+	async with httpx.AsyncClient() as client:
+		response_user_details = await client.get(
+			f"{jps_url}/api/v1/auth", headers={ "Authorization": f"jamf-token {token}" })
 
 	# Get the response content from the API
 	user_details = response_user_details.json()
