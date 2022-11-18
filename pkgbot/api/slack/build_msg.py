@@ -39,7 +39,8 @@ async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	description="Builds an 'error' message for Slack after a recipe has returned an error.")
 async def recipe_error_msg(recipe_id: str, id: int, error: dict):
 
-	formatted_error = json.dumps(error, indent=4)
+	redacted_error = await utility.replace_sensitive_strings(error)
+	formatted_error = json.dumps(redacted_error, indent=4)
 	brick_error = await api.block_builders.brick_error(recipe_id, formatted_error)
 
 	return json.dumps(brick_error, indent=4)

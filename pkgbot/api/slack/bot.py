@@ -44,7 +44,7 @@ class SlackClient(object):
 			return await self.client.chat_postMessage(
 				channel = self.channel,
 				text = text,
-				blocks = await utility.replace_sensitive_strings(blocks),
+				blocks = blocks,
 				username = self.bot_name,
 				icon_emoji = ":x:"
 			)
@@ -60,7 +60,7 @@ class SlackClient(object):
 			return await self.client.chat_update(
 				channel = self.channel,
 				text = text,
-				blocks = await utility.replace_sensitive_strings(blocks),
+				blocks = blocks,
 				ts = str(ts)
 			)
 
@@ -90,7 +90,7 @@ class SlackClient(object):
 			webhook = AsyncWebhookClient(url=response_url, ssl=ssl_context)
 			response = await webhook.send(
 				text = text,
-				blocks = await utility.replace_sensitive_strings(blocks),
+				blocks = blocks,
 				replace_original = True
 			)
 
@@ -116,7 +116,7 @@ class SlackClient(object):
 				channel = self.channel,
 				user = user,
 				text = text,
-				blocks = await utility.replace_sensitive_strings(blocks),
+				blocks = blocks,
 				username = self.bot_name,
 				icon_emoji = ":x:"
 			)
@@ -137,7 +137,7 @@ class SlackClient(object):
 				filename = filename,
 				filetype = filetype,
 				title = title,
-				initial_comment = await utility.replace_sensitive_strings(text),
+				initial_comment = text,
 				thread_ts = thread_ts,
 				username = self.bot_name
 			)
