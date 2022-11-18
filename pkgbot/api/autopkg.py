@@ -24,16 +24,13 @@ log = utility.log
 router = APIRouter(
 	prefix = "/autopkg",
 	tags = ["autopkg"],
-##### Temp removal for development/testing
-	# dependencies = [Depends(user.verify_admin)],
 	responses = settings.api.custom_responses
 )
 
 
 @router.get("/results/{task_id}", summary="Get the results of an autopkg task",
 	description="Check if a task has completed and it's results.",
-	dependencies=[Depends(api.user.verify_admin)])
-	##### May change this to `api.user.get_current_user` if/after cleaning up results so secrets are not included
+	dependencies=[Depends(api.user.get_current_user)])
 async def results(task_id:  str):
 
 	log.debug(f"Checking for task_id:  {task_id}")
