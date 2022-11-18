@@ -49,15 +49,15 @@ async def recipe_error_msg(recipe_id: str, id: int, error: dict):
 @router.get("/trust-diff-msg", summary="Build trust diff message",
 	description="Builds a message with the trust diff contents "
 	"for Slack after a recipe's parent trust info has changed.")
-async def trust_diff_msg(id: int, recipe: str, error: str = None):
+async def trust_diff_msg(id: int, recipe: str, diff_msg: str = None):
 
 	blocks = [
 		await api.block_builders.brick_trust_diff_header(),
 		await api.block_builders.brick_trust_diff_main(recipe)
 	]
 
-	if error:
-		blocks.append( await api.block_builders.brick_trust_diff_content(error) )
+	if diff_msg:
+		blocks.append( await api.block_builders.brick_trust_diff_content(diff_msg) )
 
 	blocks.append( await api.block_builders.brick_trust_diff_button(id) )
 

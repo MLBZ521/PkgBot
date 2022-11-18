@@ -72,15 +72,15 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 	description="Sends a message with the trust diff contents to "
 	"Slack after a recipe's parent trust info has changed.")
 async def trust_diff_msg(
-	error_msg: str, trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
+	diff_msg: str, trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	if len(error_msg) > max_content_size:
+	if len(diff_msg) > max_content_size:
 
 		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id)
 
 	else:
 
-		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id, error_msg)
+		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id, diff_msg)
 
 	response = await api.bot.SlackBot.post_message(
 		blocks,
@@ -90,10 +90,10 @@ async def trust_diff_msg(
 	trust_object.slack_ts = response.get('ts')
 	await trust_object.save()
 
-	if len(error_msg) > max_content_size:
+	if len(diff_msg) > max_content_size:
 
 		response = await api.bot.SlackBot.file_upload(
-			content = error_msg,
+			content = diff_msg,
 			filename = f"{trust_object.recipe_id}.diff",
 			filetype = "diff",
 			title = trust_object.recipe_id,
