@@ -7,7 +7,7 @@ PkgBot is an automation framework for the open source project [AutoPkg](https://
 
 ## About
 
-PkgBot is provides this workflow utilizing Jamf Pro and the JamfUploader line of Processors.  A Slack Bot is used to send new build notifications and allows a `PkgBot Admin` to interact with those notifications.
+PkgBot provides this workflow utilizing Jamf Pro and the [JamfUploader](https://github.com/grahampugh/jamf-upload) line of Processors.  A Slack Bot is used to send new build notifications and allows a `PkgBot Admin` to interact with those notifications.
 
 To "promote" a package to a production Jamf Pro instance without re-running the entire recipe chain, a custom Post Processor (inspired by Graham Pugh's [JSSRecipeReceiptChecker](https://github.com/autopkg/grahampugh-recipes/blob/master/CommonProcessors/JSSRecipeReceiptChecker.py)) is used find and acquire the matching recipe dev run details.  The values are passed to a "production recipe template" that performs the JamfUploader steps which can be configured to upload the package and optionally, update other various items (e.g. Policy, Group, Scripts, etc.) _without_ re-downloading nor re-packaging.
 
@@ -40,7 +40,7 @@ The project has a fully asynchronous code base and utilizes numerous popular Pyt
     * ~~Better log loading/usage~~
   * A "setup/install" script
 
-<img src="examples/images/Encountered and Error.png" />
+<img src="examples/images/Encountered an Error.png" />
 
 
 ## Requirements
