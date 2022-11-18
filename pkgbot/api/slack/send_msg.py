@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends
 
 from pkgbot import api, settings
 from pkgbot.db import models
@@ -64,7 +64,6 @@ async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	blocks = await api.build_msg.recipe_error_msg(recipe_id, id, error)
-
 	return await api.bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
 
 
@@ -75,12 +74,10 @@ async def trust_diff_msg(
 	diff_msg: str, trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
 	if len(diff_msg) > max_content_size:
-
 		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id)
-
 	else:
-
-		blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id, diff_msg)
+		blocks = await api.build_msg.trust_diff_msg(
+			trust_object.id, trust_object.recipe_id, diff_msg)
 
 	response = await api.bot.SlackBot.post_message(
 		blocks,
@@ -91,7 +88,6 @@ async def trust_diff_msg(
 	await trust_object.save()
 
 	if len(diff_msg) > max_content_size:
-
 		response = await api.bot.SlackBot.file_upload(
 			content = diff_msg,
 			filename = f"{trust_object.recipe_id}.diff",
@@ -113,8 +109,10 @@ async def update_trust_success_msg(
 	blocks = await api.build_msg.update_trust_success_msg(trust_object)
 
 	response = await api.bot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"), blocks,
-		text=f"Successfully updated trust info for {trust_object.recipe_id}")
+		trust_object.dict().get("response_url"),
+		blocks,
+		text=f"Successfully updated trust info for {trust_object.recipe_id}"
+	)
 
 	if response.status_code == 200:
 		await api.bot.SlackBot.reaction(
@@ -134,8 +132,10 @@ async def update_trust_error_msg(msg: str,
 	blocks = await api.build_msg.update_trust_error_msg(msg, trust_object)
 
 	return await api.bot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"), blocks,
-		text=f"Failed to update trust info for {trust_object.recipe_id}")
+		trust_object.dict().get("response_url"),
+		blocks,
+		text=f"Failed to update trust info for {trust_object.recipe_id}"
+	)
 
 
 @router.put("/deny-pkg-msg", summary="Send deny package message",
@@ -146,8 +146,10 @@ async def deny_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In
 	blocks = await api.build_msg.deny_pkg_msg(pkg_object)
 
 	response = await api.bot.SlackBot.update_message_with_response_url(
-		pkg_object.dict().get("response_url"), blocks,
-		text=f"{pkg_object.pkg_name} was not approved for production")
+		pkg_object.dict().get("response_url"),
+		blocks,
+		text=f"{pkg_object.pkg_name} was not approved for production"
+	)
 
 	if response.status_code == 200:
 		await api.bot.SlackBot.reaction(
@@ -168,8 +170,10 @@ async def deny_trust_msg(
 	blocks = await api.build_msg.deny_trust_msg(trust_object)
 
 	response = await api.bot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"), blocks,
-		text=f"Trust info for {trust_object.recipe_id} was not approved")
+		trust_object.dict().get("response_url"),
+		blocks,
+		text=f"Trust info for {trust_object.recipe_id} was not approved"
+	)
 
 	if response.status_code == 200:
 		await api.bot.SlackBot.reaction(

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import httpx
 
@@ -19,7 +19,6 @@ from pkgbot.utilities import common as utility
 config = config.load_config()
 log = utility.log
 LOGIN_SECRET = os.urandom(1024).hex()
-
 jps_url = config.JamfPro_Prod.get("jps_url")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 login_manager = LoginManager(LOGIN_SECRET, token_url="/auth/login", use_cookie=True)
@@ -55,13 +54,9 @@ async def authenticate_user(username: str, password: str):
 	if response_get_token.status_code == 200:
 
 		response_json = response_get_token.json()
-		sites = await user_authorizations( response_json["token"] )
-
-		user_model = models.PkgBotAdmin_In(
-			username = username,
-		)
-
-		user_exists = await user.get_user( user_model )
+		sites = await user_authorizations(response_json["token"])
+		user_model = models.PkgBotAdmin_In(username=username)
+		user_exists = await user.get_user(user_model)
 
 		if len(user_exists) <= 1:
 
@@ -112,29 +107,28 @@ async def user_authorizations(token: str = Depends(oauth2_scheme)):
 @login_manager.user_loader()
 async def load_user(username: str):
 ##### This can be improved ^^^
-	user_model = models.PkgBotAdmin_In(username = username,)
-	user_object = await user.get_user(user_model)
-
+	user_model = models.PkgBotAdmin_In(username=username)
 	# Return the user object otherwise None if a user was not found
-	return user_object or None
+	return await user.get_user(user_model) or None
 
 
 @router.post("/login", summary="Login to web views",
 	description="Handles authentication on web views.")
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 
-	user = await authenticate_user( form_data.username, form_data.password )
+	user = await authenticate_user(form_data.username, form_data.password)
 
 	if not user:
-		session = { "logged_in": False }
-		return templates.TemplateResponse("index.html", { "request": request, "session": session })
+		return templates.TemplateResponse(
+			"index.html", { "request": request, "session": { "logged_in": False } })
 
 	access_token = login_manager.create_access_token(
-		data = { "sub": form_data.username }, expires = timedelta(minutes=config.PkgBot.get("token_valid_for")))
+		data = { "sub": form_data.username },
+		expires = timedelta(minutes=config.PkgBot.get("token_valid_for"))
+	)
 
 	response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 	login_manager.set_cookie(response, access_token)
-
 	return response
 
 
@@ -151,10 +145,9 @@ async def logout(response: HTMLResponse):
 	description="Handles acquiring a JSON Web Token for use with the PkgBot API.")
 async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
-	user = await authenticate_user( form_data.username, form_data.password )
+	user = await authenticate_user(form_data.username, form_data.password)
 
 	if not user:
-
 		raise HTTPException(
 			status_code = status.HTTP_401_UNAUTHORIZED,
 			detail = "Invalid credentials or not a Site Admin"
@@ -174,6 +167,4 @@ async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
 	description="Returns the authenticated user's permissions (e.g. Site access).")
 async def authorizations(user: models.PkgBotAdmin_In = Depends(user.get_current_user)):
 
-	sites = await user_authorizations( user.jps_token )
-
-	return { "sites": sites }
+	return { "sites": await user_authorizations(user.jps_token) }

@@ -10,7 +10,7 @@ import shlex
 import subprocess
 import yaml
 
-from datetime import datetime, timezone, tzinfo
+from datetime import datetime, timezone
 from distutils.util import strtobool
 
 # from sqlalchemy import create_engine
@@ -70,7 +70,6 @@ async def run_process_async(command, input=None):
 
 	if input:
 		(stdout, stderr) = await process.communicate(input=bytes(input, "utf-8"))
-
 	else:
 		(stdout, stderr) = await process.communicate()
 
@@ -107,7 +106,6 @@ def execute_process(command, input=None):
 
 	if input:
 		(stdout, stderr) = process.communicate(input=bytes(input, "utf-8"))
-
 	else:
 		(stdout, stderr) = process.communicate()
 
@@ -133,10 +131,8 @@ async def ask_yes_or_no(question):
 	print(f"{question} [Yes/No] ", end="")
 
 	while True:
-
 		try:
 			return strtobool(input().lower())
-
 		except ValueError:
 			print("Please respond with [yes|y] or [no|n]: ", end="")
 
@@ -150,11 +146,8 @@ async def plist_reader(plistFile):
 	"""
 
 	if os.path.exists(plistFile):
-
 		with open(plistFile, "rb") as plist:
-
 			plist_contents = plistlib.load(plist)
-
 		return plist_contents
 
 
@@ -163,25 +156,19 @@ async def utc_to_local(utc_dt):
 	return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
 
-async def string_to_datetime(datetime_string: str, format_string: str = None):
-
-	if not format_string:
-		format_string = "%Y-%m-%d %H:%M:%S.%f"
+async def string_to_datetime(datetime_string: str, format_string: str = "%Y-%m-%d %H:%M:%S.%f"):
 
 	return datetime.strptime(datetime_string, format_string)
 
 
-async def datetime_to_string(datetime_string: str, format_string: str = None):
-
-	if not format_string:
-		format_string = "%Y-%m-%d %I:%M:%S"
+async def datetime_to_string(datetime_string: str, format_string: str = "%Y-%m-%d %I:%M:%S"):
 
 	converted = datetime.fromisoformat(datetime_string)
-
 	return converted.strftime(format_string)
 
 
-async def compute_hex_digest(key: bytes, message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
+async def compute_hex_digest(key: bytes,
+	message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
 
 	return hmac.new(key, message, hash).hexdigest()
 
@@ -214,7 +201,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 			string, it will be "converted" to a string via `str(message)`.
 		sensitive_strings (str, optional): A string of sensitive strings, separated by a `|` (pipe).
 			These strings will be Regex escaped.  Defaults to None.
-		sensitive_regex_strings (str, optional): A string of sensitive strings in Regex format, 
+		sensitive_regex_strings (str, optional): A string of sensitive strings in Regex format,
 			separated by a `|` (pipe).  Defaults to None.
 	"""
 
@@ -237,25 +224,25 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 
 	all_sensitive_strings = r"bearer\s[\w+.-]+|"
 	sensitive_key_names = r"password|secret|license|serial|key"
-	
+
 	if config.Common.get("additional_sensitive_key_names"):
 		sensitive_key_names += f"|{config.Common.get('additional_sensitive_key_names')}"
 
 	for plist in [
-		config.JamfPro_Prod.get("autopkg_prefs"), 
+		config.JamfPro_Prod.get("autopkg_prefs"),
 		config.JamfPro_Dev.get("autopkg_prefs")
 	]:
 		plist_contents = await plist_reader(plist)
 		all_sensitive_strings += await parse_for_sensitive_keys(plist_contents, sensitive_key_names)
 
-	for string in [ 
+	for string in [
 		config.Common.get("redaction_strings"),
 		sensitive_regex_strings
 	]:
 		if string:
 			all_sensitive_strings = "|".join([all_sensitive_strings, string])
 
-	for string in [ 
+	for string in [
 		config.JamfPro_Dev.get("api_user"),
 		config.JamfPro_Dev.get("api_password"),
 		config.JamfPro_Dev.get("dp1_user"),

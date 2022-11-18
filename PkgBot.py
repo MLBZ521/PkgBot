@@ -15,6 +15,7 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from tortoise.contrib.fastapi import register_tortoise
 
 from pkgbot import config, settings
+
 config = config.load_config(cli_args=tuple(sys.argv[1:]))
 
 from pkgbot.utilities import common as utility
@@ -51,7 +52,6 @@ register_tortoise(
 	add_exception_handlers = True
 )
 
-
 # Add an exception handler to the app instance
 # Used for the login/auth logic for the HTTP views
 app.add_exception_handler(api.auth.NotAuthenticatedException, api.auth.exc_handler)
@@ -61,13 +61,9 @@ if config.PkgBot.get("enable_ssl"):
 
 	# Enforces that all incoming requests must be https.
 	app.add_middleware(HTTPSRedirectMiddleware)
-
 	server = secure.Server().set("Secure")
-
 	hsts = secure.StrictTransportSecurity().include_subdomains().preload().max_age(2592000)
-
 	cache_value = secure.CacheControl().must_revalidate()
-
 	secure_headers = secure.Secure(
 		server=server,
 		# csp=csp,
@@ -96,14 +92,12 @@ async def startup_event():
 	pkgbot_admins = config.PkgBot.get("Admins")
 
 	for admin in pkgbot_admins:
-
 		user_object = models.PkgBotAdmin_In(
 			username = admin,
-			slack_id = pkgbot_admins.get( admin ),
+			slack_id = pkgbot_admins.get(admin),
 			full_admin =  True
 		)
-
-		await api.user.create_or_update_user( user_object )
+		await api.user.create_or_update_user(user_object)
 
 
 if __name__ == "__main__":
@@ -115,7 +109,7 @@ if __name__ == "__main__":
 		port = config.PkgBot.get("port"),
 		log_config = config.PkgBot.get("log_config"),
 		log_level = config.PkgBot.get("uvicorn_log_level"),
-		# workers = asyncio.run( number_of_workers() ),
+		# workers = asyncio.run(number_of_workers()),
 		ssl_keyfile = config.PkgBot.get("ssl_keyfile"),
 		ssl_certfile = config.PkgBot.get("ssl_certfile")
 	)

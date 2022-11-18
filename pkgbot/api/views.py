@@ -1,17 +1,13 @@
-import asyncio
-import functools
 import os
 import shutil
-import time
 
 from datetime import datetime
-from typing import Callable
 
-from fastapi import APIRouter, Depends, Request, File, UploadFile
+from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from pkgbot import config, settings
+from pkgbot import config
 from pkgbot.utilities import common as utility
 from pkgbot.api import auth, package, recipe
 
@@ -20,22 +16,16 @@ log = utility.log
 config = config.load_config()
 
 
-def template_filter_datetime(date, date_format=None):
+def template_filter_datetime(date, date_format="%Y-%m-%d %I:%M:%S"):
 
 	if date:
-
-		if not date_format:
-			date_format = "%Y-%m-%d %I:%M:%S"
-
 		converted = datetime.fromisoformat(str(date))
-
 		return converted.strftime(date_format)
 
 
 session = { "logged_in": False }
 templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
 templates.env.filters["strftime"] = template_filter_datetime
-
 router = APIRouter(
 	tags = ["view"],
 	include_in_schema = False
@@ -47,7 +37,6 @@ async def index(request: Request):
 
 	if request.state.user:
 		session["logged_in"] = True
-
 	else:
 		session["logged_in"] = False
 
@@ -57,14 +46,13 @@ async def index(request: Request):
 # @router.get("/login", response_class=HTMLResponse)
 # async def userlogin(request: Request):
 
-#     return templates.TemplateResponse("login.html", { "request": request, "session": session })
+#	return templates.TemplateResponse("login.html", { "request": request, "session": session })
 
 
 @router.get("/packages", response_class=HTMLResponse)
 async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
-
 	pkgs = await package.get_packages()
 
 	table_headers = [
@@ -81,7 +69,6 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 async def get_package(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
-
 	pkg = await package.get_package_by_id(request.path_params['id'])
 
 	return templates.TemplateResponse("package.html",
@@ -101,12 +88,10 @@ async def edit(request: Request, user = Depends(auth.login_manager)):
 async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
-
 	pkgs = await recipe.get_recipes()
 
-	table_headers = [
-		"ID", "Recipe ID", "Name", "Enable", "Manual Only", "Pkg Only", "Last Ran", "Schedule",  "Notes"
-	]
+	table_headers = [ "ID", "Recipe ID", "Name", "Enable", "Manual Only", 
+		"Pkg Only", "Last Ran", "Schedule",  "Notes" ]
 
 	return templates.TemplateResponse("recipes.html",
 		{ "request": request, "session": session,
@@ -117,7 +102,6 @@ async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 async def get_recipe(request: Request, user = Depends(auth.login_manager)):
 
 	session["logged_in"] = True
-
 	pkg = await recipe.get_by_id(request.path_params['id'])
 
 	return templates.TemplateResponse("recipe.html",

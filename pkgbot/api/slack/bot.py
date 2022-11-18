@@ -4,7 +4,7 @@ import ssl
 import time
 import certifi
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, Depends, Request
 
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
@@ -13,7 +13,7 @@ from slack_sdk.webhook.async_client import AsyncWebhookClient
 from pkgbot import api, config, settings
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
-from pkgbot.tasks import task
+
 
 config = config.load_config()
 log = utility.log
@@ -38,53 +38,49 @@ class SlackClient(object):
 		self.client = AsyncWebClient(token=self.token, ssl=ssl_context)
 
 
-	async def post_message(self, blocks, text="Pkg status incoming..."):
+	async def post_message(self, blocks: str, text: str = "Pkg status incoming..."):
 
 		try:
 			return await self.client.chat_postMessage(
 				channel = self.channel,
 				text = text,
 				blocks = blocks,
-				username = self.bot_name,
-				icon_emoji = ":x:"
+				username = self.bot_name
 			)
 
 		except SlackApiError as error:
-			log.error(f"Slack encountered an error:  {error.response['error']}")
-			return error
+			log.error(f"Failed to post message:  {error.response['error']}\n{error}")
+			return { "Failed to post message":  error.response["error"] }
 
 
-	async def update_message(self, blocks, ts, text="Updated message..."):
+	async def update_message(self, blocks: str, ts: str, text: str = "Updated message..."):
 
 		try:
 			return await self.client.chat_update(
 				channel = self.channel,
 				text = text,
 				blocks = blocks,
-				ts = str(ts)
+				ts = ts
 			)
 
 		except SlackApiError as error:
-			log.error(f"Slack encountered an error:  {error.response['error']}")
-			return error
+			log.error(f"Failed to update {ts}:  {error.response['error']}\n{error}")
+			return { f"Failed to update {ts}":  error.response["error"] }
 
 
-	async def delete_message(self, ts):
+	async def delete_message(self, ts: str):
 
 		try:
-			await self.client.chat_delete(
-				channel = self.channel,
-				ts = str(ts)
-			)
-
-			return { "Result":  "Successfully deleted message" }
+			await self.client.chat_delete(channel=self.channel, ts=ts)
+			return { "result":  "Successfully deleted message" }
 
 		except SlackApiError as error:
-			log.error(f"Slack encountered an error:  {error.response['error']}")
-			return error
+			log.error(f"Failed to delete {ts}:  {error.response['error']}\n{error}")
+			return { f"Failed to delete {ts}":  error.response["error"] }
 
 
-	async def update_message_with_response_url(self, response_url, blocks, text="Pkg status update..."):
+	async def update_message_with_response_url(
+		self, response_url: str, blocks: str, text: str = "Pkg status update..."):
 
 		try:
 			webhook = AsyncWebhookClient(url=response_url, ssl=ssl_context)
@@ -95,35 +91,35 @@ class SlackClient(object):
 			)
 
 			if response.status_code != 200:
-				log.error(f"Failed to update message! Status code:  {response.status_code} | Error message:  {response.body}")
-
+				log.error(
+					f"Failed to update message! Status code:  {response.status_code} | Error message:  {response.body}")
 			else:
 				log.debug("Successfully updated msg via response_url")
 
 			return response
 
 		except SlackApiError as error:
-			log.error(f"Slack encountered an error:  {error}")
-			log.error(f"Slack encountered an error.dir:  {dir(error)}")
-			log.error(f"Slack encountered an error.response['error']:  {error.response['error']}")
-			raise error from error
+			log.error(
+				f"Failed to update {response_url}\nFull Error:\n{error}\nerror.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
+			return { f"Failed to update {response_url}":  error.response["error"] }
 
 
-	async def post_ephemeral_message(self, user, blocks, channel, text="Private Note"):
+	async def post_ephemeral_message(
+		self, user: str, blocks: str, channel: str = None, text: str = "Private Note"):
 
 		try:
 			return await self.client.chat_postEphemeral(
-				channel = self.channel,
+				channel = channel or self.channel,
 				user = user,
 				text = text,
 				blocks = blocks,
-				username = self.bot_name,
-				icon_emoji = ":x:"
+				username = self.bot_name
 			)
 
 		except SlackApiError as error:
-			log.error(f"Slack encountered an error:  {error.response['error']}")
-			return error
+			log.error(
+				f"Failed to post ephemeral message:  {error.response['error']}\nFull Error:\n{error}")
+			return { "Failed to post ephemeral message":  error.response["error"] }
 
 
 	async def file_upload(self, content=None, file=None, filename=None, filetype=None,
@@ -143,14 +139,14 @@ class SlackClient(object):
 			)
 
 		except SlackApiError as error:
-			log.error(f"Slack encountered an error:  {error.response['error']}")
-			return error
+			log.error(f"Failed to upload {file}:  {error.response['error']}\nFull Error:\n{error}")
+			return { f"Failed to upload {file}":  error.response["error"] }
 
 
 	async def invoke_reaction(self, **kwargs):
 
 		kwargs |= {
-			"channel": kwargs.get("channel", self.channel), 
+			"channel": kwargs.get("channel", self.channel),
 			"timestamp": str(kwargs.get("ts"))
 		}
 
@@ -170,14 +166,15 @@ class SlackClient(object):
 				kwargs.get("action") == "add" and error_key == "already_reacted" or
 				kwargs.get("action") == "remove" and error_key == "no_reaction"
 			):
-				log.error(f"Slack encountered an error:  {error_key}")
-				raise error from error
+				result = { f"Failed to invoke reaction on {kwargs.get('timestamp')}":  error_key }
+				log.error(result)
+				return result
 
 			else:
 				log.debug("Unable to perform the specified reaction action")
 
 
-	async def reaction(self, action=None, emoji=None, ts=None, **kwargs):
+	async def reaction(self, action: str = None, emoji: str = None, ts: str = None, **kwargs):
 
 		# log.debug("Args:\n\taction:  {}\n\temoji:  {}\n\tts:  {}\n\tkwargs:  {}".format(
 		# 	action, emoji, ts, kwargs))
@@ -266,8 +263,9 @@ async def startup_constructor():
 	)
 
 
-@router.delete("/ts/{ts}", summary="Delete Slack message by timestamp", 
-	description="Delete a Slack message by its timestamp.", dependencies=[Depends(api.user.verify_admin)])
+@router.delete("/ts/{ts}", summary="Delete Slack message by timestamp",
+	description="Delete a Slack message by its timestamp.",
+	dependencies=[Depends(api.user.verify_admin)])
 async def delete_slack_message(timestamps: str | list):
 
 	if isinstance(timestamps, str):
@@ -289,9 +287,7 @@ async def delete_slack_message(timestamps: str | list):
 @router.post("/receive", summary="Handles incoming messages from Slack",
 	description="This endpoint receives incoming messages from Slack and calls the required "
 		"actions based on the message after verifying the authenticity of the source.")
-async def receive(request: Request): #, background_tasks: BackgroundTasks):
-
-	# valid_request = await validate_slack_request(request)
+async def receive(request: Request):
 
 	if await validate_slack_request(request):
 
@@ -309,11 +305,11 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 		button_value_type, button_value = (
 			payload_object.get("actions")[0].get("value")).split(":")
 
-		log.debug("Incoming details:\n"
-			f"user id:  {user_id}\nusername:  {username}\nchannel:  {channel}\nmessage_ts:  "
-			f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
-			f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
-		)
+		# log.debug("Incoming details:\n"
+		# 	f"user id:  {user_id}\nusername:  {username}\nchannel:  {channel}\nmessage_ts:  "
+		# 	f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
+		# 	f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
+		# )
 
 		slack_user_object = models.PkgBotAdmin_In(
 			username = username,
@@ -322,20 +318,17 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 
 		user_that_clicked = await api.user.get_user(slack_user_object)
 
-		# try:
 ##### Disabled for testing
 ##### Actually don't think this is needed........
+		# try:
 		# 	if user_that_clicked.full_admin:
 		# 		full_admin = True
 
 		# except:
 		# 		full_admin = False
 
-		# Verify click was from a PkgBotAdmin...
-		if user_that_clicked:
-
-			# Perform action only if from a PkgBotAdmin
-			log.debug("PkgBotAdmin clicked button:")
+		# Verify and perform action only if a PkgBotAdmin clicked the button
+		if user_that_clicked: # and full_admin:
 
 			await SlackBot.reaction(
 				action = "add",
@@ -344,58 +337,44 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 			)
 
 			if button_text == "Approve":
-				log.debug("  -> APPROVE")
 
 				if button_value_type == "Package":
-					log.debug("  --> Promoting Package")
+					log.info(f"PkgBotAdmin `{username}` is promoting package id: {button_value}")
+
 					await api.package.update(button_value,
 						{ "response_url": response_url, "status_updated_by": username })
-
-					# background_tasks.add_task( autopkg.promote_package, background_tasks, button_value )
 					await api.package.promote_package(button_value)
-##### Testing this function -- can be removed
-					# await SlackBot.reaction(
-					# 	action = "remove",
-					# 	emoji = "gear",
-					# 	ts = message_ts
-					# )
 
 				elif button_value_type == "Trust":
-					log.debug("  --> Updating Trust Info")
+					log.info(
+						f"PkgBotAdmin `{username}` has approved updates for trust id: {button_value}")
 
-					# error_object = await models.ErrorMessages.filter(id=button_value).first()
+					updates = {
+						"response_url": response_url,
+						"status_updated_by": username,
+						"slack_ts": message_ts
+					}
+
 					trust_object = await models.TrustUpdates.filter(id=button_value).first()
-
-					updates = { "response_url": response_url, "status_updated_by": username, "slack_ts": message_ts }
-
 					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
-
-					# background_tasks.add_task( recipe.trust_recipe, button_value, background_tasks, user_id=user_id, channel=channel )
-					# task.autopkg_update_trust.apply_async()
 					await api.recipe.recipe_trust_update(trust_object)
 
 			elif button_text == "Deny":
-				log.debug("  -> DENY")
 
 				if button_value_type == "Package":
-					log.debug("  --> Denying Package")
+					log.info(f"PkgBotAdmin `{username}` has denied package id: {button_value}")
 
-					await api.package.update( button_value,
+					await api.package.update(button_value,
 						{ "response_url": response_url,
-						"status_updated_by": username,
-						"status": "Denied",
-						"notes":  "This package was not approved for use in production." }
+							"status_updated_by": username,
+							"status": "Denied",
+							"notes":  "This package was not approved for use in production." }
 					)
-
-					# background_tasks.add_task( autopkg.deny_package,
-					# 	background_tasks, button_value )
-
 					await api.package.deny_package(button_value)
 
 				if button_value_type == "Trust":
-					log.debug("  --> Disapprove Trust Changes")
-
-					trust_object = await models.TrustUpdates.filter(id=button_value).first()
+					log.info(
+						f"PkgBotAdmin `{username}` has denied updates for trust id: {button_value}")
 
 					updates = {
 						"response_url": response_url,
@@ -403,27 +382,25 @@ async def receive(request: Request): #, background_tasks: BackgroundTasks):
 						"status": "Denied"
 					}
 
+					trust_object = await models.TrustUpdates.filter(id=button_value).first()
 					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
 					await api.recipe.recipe_trust_deny(button_value)
 
 			elif button_text == "Acknowledge":
-				log.debug("  -> Acknowledge")
 
 				if button_value_type == "Error":
-					log.debug("  --> Acknowledged Error")
-
+					log.info(f"PkgBotAdmin `{username}` has acknowledged error id: {button_value}")
 					return await SlackBot.delete_message(str(message_ts))
 
 		else:
-
 			log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
+
 			blocks = await api.build_msg.unauthorized_msg(username)
+			await SlackBot.post_ephemeral_message(
+				user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
 
-			await SlackBot.post_ephemeral_message(user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
-
-		return { "results":  200 }
+		return { "result":  200 }
 
 	else:
-
-		log.warning("Invalid request")
-		return { "results":  500 }
+		log.warning("PkgBot received an invalid request!")
+		return { "result":  500 }

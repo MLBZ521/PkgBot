@@ -43,21 +43,20 @@ def instantiate_config():
 def load_config(cli_args=None):
 
 	# print(f'PkgBot.Load_Config:\n\tAll calling args:  {cli_args}')
-
 	parser = argparse.ArgumentParser(description="PkgBot Main.")
 	parser.add_argument(
-		'--pkgbot_config', '-pc', metavar='./pkgbot.config', default=None, 
+		'--pkgbot_config', '-pc', metavar='./pkgbot.config', default=None,
 		type=str, required=False, help='A defined pkgbot configuration file.'
 	)
 	args, _ = parser.parse_known_args(cli_args)
-
 	# print(f'PkgBot.Load_Config:\n\tArgparse args:  {args}')
 
 	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
+
 	config_file = (
-		args.pkgbot_config or 
+		args.pkgbot_config or
 		os.environ.get(
-			"PKGBOT_CONFIG", 
+			"PKGBOT_CONFIG",
 			os.path.join(pkg_dir, "Settings/pkgbot_config.yaml")
 		)
 	)
@@ -66,7 +65,6 @@ def load_config(cli_args=None):
 		raise("The specified config file does not exist.")
 
 	os.environ["PKGBOT_CONFIG"] = config_file
-
 	PkgBot_Configuration = instantiate_config()
 	config = PkgBot_Configuration()
 

@@ -26,8 +26,10 @@ def get_user_context():
 def get_console_user():
 
 	# Get the Console User
-	results_console_user = utility.execute_process("/usr/sbin/scutil", "show State:/Users/ConsoleUser")
-	return re.sub("(Name : )|(\n)", "", ( re.search("Name : .*\n", results_console_user["stdout"])[0] ))
+	results_console_user = utility.execute_process(
+		"/usr/sbin/scutil", "show State:/Users/ConsoleUser")
+	return re.sub(
+		"(Name : )|(\n)", "", ( re.search("Name : .*\n", results_console_user["stdout"])[0] ))
 
 
 def check_recipe_schedule(interval, last_ran):
@@ -44,18 +46,15 @@ def check_recipe_schedule(interval, last_ran):
 	"""
 
 	if interval != 0 and last_ran != None:
-
 		current_time = utility.utc_to_local(datetime.now())
 		last_ran_time = datetime.fromisoformat(last_ran)
 		interval_in_hours = interval * 24
-
 		return current_time - last_ran_time > timedelta(hours=interval_in_hours)
 
 	return True
 
 
 def api_url_helper():
-
 	secure = "s" if config.PkgBot.get("enable_ssl") else ""
 	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
 	headers = { "Content-Type": "application/json" }
@@ -64,37 +63,31 @@ def api_url_helper():
 
 def generate_autopkg_args(**kwargs):
 
-	final_opts = ""
+	options = ""
 
 	# AutoPkg args
 	if kwargs.get("verbose"):
-		final_opts = f"{final_opts} -{kwargs.get('verbose')}"
-	# else:
-	# 	final_opts = f"{final_opts} -vv"
+		options = f"{options} -{kwargs.get('verbose')}"
 
 	if kwargs.get("ignore_parent_trust"):
-		final_opts = f"{final_opts} --ignore-parent-trust-verification-errors"
+		options = f"{options} --ignore-parent-trust-verification-errors"
 
 	if kwargs.get("prefs"):
-		final_opts = f"{final_opts} --prefs=\'{kwargs.get('prefs')}\'"
+		options = f"{options} --prefs=\'{kwargs.get('prefs')}\'"
 	else:
-		final_opts = f"{final_opts} --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
+		options = f"{options} --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
 
 	# PkgBot args
 	if kwargs.get("promote_recipe_id"):
-		final_opts = f"{final_opts} --key \'RECIPE_ID={kwargs.get('promote_recipe_id')}\'"
+		options = f"{options} --key \'RECIPE_ID={kwargs.get('promote_recipe_id')}\'"
 
 	if kwargs.get("match_pkg"):
-		final_opts = f"{final_opts} --key \'MATCH_PKG={kwargs.get('match_pkg')}\'"
+		options = f"{options} --key \'MATCH_PKG={kwargs.get('match_pkg')}\'"
 
 	if kwargs.get("pkg_only"):
-		final_opts = f"{final_opts} --key \'PKG_ONLY=True\'"
+		options = f"{options} --key \'PKG_ONLY=True\'"
 
-	# if kwargs.get("promote"):
-	# 	promote = kwargs.get("promote")
-	# 	final_opts = f"{final_opts} --key promote=True"
-
-	return final_opts.lstrip()
+	return options.lstrip()
 
 
 def compare_branch_heads(repo, local_branch, remote_branch):
@@ -102,8 +95,8 @@ def compare_branch_heads(repo, local_branch, remote_branch):
 	return [
 		int(x) for x in (
 			repo.git.rev_list(
-				"--left-right", 
-				"--count", 
+				"--left-right",
+				"--count",
 				f"{local_branch}...{remote_branch}@{{u}}"
 			)).split('\t')
 	]
