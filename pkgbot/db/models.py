@@ -109,7 +109,7 @@ class AutoPkgCMD(BaseModel):
 	# overrides: str | None = None # Not yet supported
 	pkg_only: bool = False
 	promote: bool = False
-	verbose: str = "vv"
+	verbose: str = "vvv"
 
 
 class AutoPkgTaskResults(BaseModel):
