@@ -144,10 +144,7 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 @router.post("/trust/update", summary="Update recipe trust info",
 	description="Update a recipe's trust information.  Runs `autopkg update-trust-info`.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def recipe_trust_update(
-	trust_object: models.TrustUpdate_In,
-	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)
-):
+async def recipe_trust_update(trust_object: models.TrustUpdate_In):
 
 	# Get recipe object
 	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
@@ -158,7 +155,7 @@ async def recipe_trust_update(
 
 	if recipe_object:
 		queued_task = task.autopkg_update_trust.apply_async(
-			(trust_object.recipe_id, autopkg_options, trust_object.id), queue='autopkg', priority=6)
+			(trust_object.recipe_id, trust_object.id), queue='autopkg', priority=6)
 		return { "result": "Queued background task" , "task_id": queued_task.id }
 
 	else:
