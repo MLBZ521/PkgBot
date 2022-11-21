@@ -42,8 +42,8 @@ async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 async def recipe_error_msg(recipe_id: str, id: int, error: dict):
 
 	redacted_error = await utility.replace_sensitive_strings(error)
-	blocks = await api.block_builders.brick_error(recipe_id, format_json(redacted_error))
-	return format_json(blocks)
+	blocks = await api.block_builders.brick_error(recipe_id, await format_json(redacted_error))
+	return await format_json(blocks)
 
 
 @router.get("/trust-diff-msg", summary="Build trust diff message",
@@ -60,7 +60,7 @@ async def trust_diff_msg(id: int, recipe: str, diff_msg: str = None):
 		blocks.append(await api.block_builders.brick_trust_diff_content(diff_msg))
 
 	blocks.append(await api.block_builders.brick_trust_diff_button(id))
-	return format_json(blocks)
+	return await format_json(blocks)
 
 
 @router.get("/deny-pkg-msg", summary="Build deny package message",
@@ -79,7 +79,7 @@ async def deny_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In
 		brick_footer
 	]
 
-	return format_json(blocks)
+	return await format_json(blocks)
 
 
 @router.get("/deny-trust-msg", summary="Build deny trust message",
@@ -93,7 +93,7 @@ async def deny_trust_msg(
 		await api.block_builders.brick_footer_denied_trust(trust_object)
 	]
 
-	return format_json(blocks)
+	return await format_json(blocks)
 
 
 @router.get("/promote-msg", summary="Build promoted package message",
@@ -111,7 +111,7 @@ async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 		brick_footer
 	]
 
-	return format_json(blocks)
+	return await format_json(blocks)
 
 
 @router.get("/update-trust-success-msg", summary="Build trust update success message",
@@ -125,7 +125,7 @@ async def update_trust_success_msg(
 		await api.block_builders.brick_footer_update_trust_success_msg(trust_object)
 	]
 
-	return format_json(blocks)
+	return await format_json(blocks)
 
 
 @router.get("/update-trust-error-msg", summary="Build trust update error message",
@@ -133,7 +133,7 @@ async def update_trust_success_msg(
 async def update_trust_error_msg(msg: str,
 	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	return format_json([await api.block_builders.brick_update_trust_error_msg(trust_object, msg)])
+	return await format_json([await api.block_builders.brick_update_trust_error_msg(trust_object, msg)])
 
 
 @router.get("/unauthorized-msg", summary="Build unauthorized message",
@@ -141,7 +141,7 @@ async def update_trust_error_msg(msg: str,
 	"perform a Slack interaction with PkgBot that they're not authorized to perform.")
 async def unauthorized_msg(user):
 
-	return format_json(await api.block_builders.unauthorized(user))
+	return await format_json(await api.block_builders.unauthorized(user))
 
 
 @router.get("/missing-recipe-msg", summary="Build unauthorized message",
@@ -149,4 +149,4 @@ async def unauthorized_msg(user):
 	"a recipe for a requested action.")
 async def missing_recipe_msg(recipe_id, text):
 
-	return format_json(await api.block_builders.missing_recipe_msg(recipe_id, text))
+	return await format_json(await api.block_builders.missing_recipe_msg(recipe_id, text))
