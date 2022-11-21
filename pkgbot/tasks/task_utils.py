@@ -27,8 +27,8 @@ def get_user_context():
 def get_console_user():
 
 	# Get the Console User
-	results_console_user = utility.execute_process(
-		"/usr/sbin/scutil", "show State:/Users/ConsoleUser")
+	results_console_user = asyncio.run(utility.execute_process(
+		"/usr/sbin/scutil", "show State:/Users/ConsoleUser"))
 	return re.sub(
 		"(Name : )|(\n)", "", ( re.search("Name : .*\n", results_console_user["stdout"])[0] ))
 

@@ -142,7 +142,7 @@ def autopkg_repo_update(self):
 	if task_utils.get_user_context():
 		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
 
-	results_autopkg_repo_update = utility.execute_process(autopkg_repo_update_command)
+	results_autopkg_repo_update = asyncio.run(utility.execute_process(autopkg_repo_update_command))
 
 ##### This if statement can be removed after further real world testing...
 	if not results_autopkg_repo_update["success"]:
@@ -338,7 +338,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
 
 		# log.debug(f"Command to execute:  {cmd}")
-		results = utility.execute_process(cmd)
+		results = asyncio.run(utility.execute_process(cmd))
 
 		# Send task complete notification
 		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
@@ -386,7 +386,7 @@ def autopkg_verify_trust(self, recipe_id: str,
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
 
 	# log.debug(f"Command to execute:  {cmd}")
-	results = utility.execute_process(cmd)
+	results = asyncio.run(utility.execute_process(cmd))
 
 	if called_by in {"api", "slack"} and not self.request.parent_id:
 		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
@@ -449,7 +449,7 @@ def autopkg_update_trust(self, recipe_id: str,
 			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
 
 		# log.debug(f"Command to execute:  {cmd}")
-		results = utility.execute_process(cmd)
+		results = asyncio.run(utility.execute_process(cmd))
 
 		if results["success"] and private_repo.git.diff():
 

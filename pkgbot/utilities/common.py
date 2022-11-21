@@ -45,7 +45,7 @@ def log_setup(name="PkgBot"):
 log = log_setup()
 
 
-async def run_process_async(command, input=None):
+async def execute_process(command, input=None):
 	"""
 	A helper function for asyncio's subprocess.
 
@@ -72,42 +72,6 @@ async def run_process_async(command, input=None):
 		(stdout, stderr) = await process.communicate(input=bytes(input, "utf-8"))
 	else:
 		(stdout, stderr) = await process.communicate()
-
-	return {
-		"stdout": (stdout.decode()).strip(),
-		"stderr": (stderr.decode()).strip() if stderr != None else None,
-		"status": process.returncode,
-		"success": True if process.returncode == 0 else False
-	}
-
-
-def execute_process(command, input=None):
-	"""
-	A helper function for subprocess.
-
-	Args:
-		command (str):  The command line level syntax that would be
-			written in shell or a terminal window.
-	Returns:
-		Results in a dictionary.
-	"""
-
-	# Validate that command is not a string
-	if not isinstance(command, str):
-		raise TypeError('Command must be a str type')
-
-	# Format the command
-	# command = shlex.quote(command)
-
-	# Run the command
-	process = subprocess.Popen(
-		command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-		stderr=subprocess.PIPE)
-
-	if input:
-		(stdout, stderr) = process.communicate(input=bytes(input, "utf-8"))
-	else:
-		(stdout, stderr) = process.communicate()
 
 	return {
 		"stdout": (stdout.decode()).strip(),
