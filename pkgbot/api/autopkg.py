@@ -113,7 +113,7 @@ async def autopkg_run_recipes(
 	"""Run all recipes in the database.
 
 	Args:
-		autopkg_options (dict): A dictionary that will be used as 
+		autopkg_options (dict): A dictionary that will be used as
 			autopkg_options to the `autopkg` binary
 
 	Returns:
@@ -261,36 +261,19 @@ async def receive(request: Request, task_id = Body()):
 			await api.recipe.recipe_trust_update_failed(event_id, str(stderr))
 
 	elif event == "error" or not success:
-		# Post message with results
-		log.error(f"Failed running:  {recipe_id}")
 
-		try:
-			plist_contents = await utility.find_receipt_plist(stdout)
-			run_error = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
-		except Exception:
-			run_error = stderr
-
-		redacted_error = await utility.replace_sensitive_strings(run_error)
-
-		if event == "recipe_run_prod":
-			# Promotion Failed
-##### Possible ideas:  
-	# Thread the error message with the original message?
-	# Post Ephemeral Message to PkgBot Admin?
-
-			# Get the recipe that failed to be promoted
-			pkg_db_object = await models.Packages.filter(id=event_id).first()
-			recipe_id = pkg_db_object.recipe_id
-			software_title = pkg_db_object.name
-			software_version = pkg_db_object.version
-			log.error(f"Failed to promote:  {pkg_db_object.pkg_name}")
-
-			redacted_error = {
-				"Failed to promote:": f"{software_title} v{software_version}",
-				"Error:": redacted_error
+		await handle_autopkg_error(
+			{
+				task_id: task_id,
+				event: event,
+				event_id: event_id,
+				called_by: called_by,
+				recipe_id: recipe_id,
+				success: success,
+				stdout: stdout,
+				stderr: stderr
 			}
-
-		await api.recipe.recipe_error(recipe_id, redacted_error, task_id)
+		)
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
@@ -332,22 +315,38 @@ async def receive(request: Request, task_id = Body()):
 				log.info(
 					f"An icon was not identified, therefore it was not uploaded into PkgBot.  Review task_id:  {task_id}")
 
-			# No, don't check the processor summary...
-			# if pkg_processor.get("Output").get("pkg_uploaded"):
+			try:
 
-			# Instead, check if the package has already been created in the database, this 
-			# ensures a message is posted if it failed to post previously.
-			pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
+				# No, don't check the processor summary...
+				# if pkg_processor.get("Output").get("pkg_uploaded"):
 
-			if not pkg_db_object:
-				log.info(f"New package posted to dev:  {pkg_name}")
-				await workflow_dev(models.Package_In(**pkg_data))
+				# Instead, check if the package has already been created in the database, this
+				# ensures a message is posted if it failed to post previously.
+				pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
 
-			# Update attributes for this recipe
-			recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
-			recipe_object.last_ran = await utility.utc_to_local(datetime.now())
-			recipe_object.recurring_fail_count = 0
-			await recipe_object.save()
+				if not pkg_db_object:
+					log.info(f"New package posted to dev:  {pkg_name}")
+					await workflow_dev(models.Package_In(**pkg_data))
+
+				# Update attributes for this recipe
+				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
+				recipe_object.last_ran = await utility.utc_to_local(datetime.now())
+				recipe_object.recurring_fail_count = 0
+				await recipe_object.save()
+
+			except Exception as exception:
+
+				await handle_exception(
+					{
+						task_id: task_id,
+						event: event,
+						event_id: event_id,
+						called_by: called_by,
+						recipe_id: recipe_id,
+						success: success,
+						exception: exception
+					}
+				)
 
 		elif event == "recipe_run_prod":
 			log.info(f"Package promoted to production:  {pkg_name}")
@@ -405,3 +404,69 @@ async def verify_pkgbot_webhook(request: Request):
 	except Exception:
 		log.error("Exception attempting to validate PkgBot Webhook!")
 		return False
+
+
+async def handle_autopkg_error(**kwargs):
+
+	task_id = kwargs.get("task_id")
+	event = kwargs.get("event")
+	event_id = kwargs.get("event_id")
+	called_by = kwargs.get("called_by")
+	recipe_id = kwargs.get("recipe_id")
+	success = kwargs.get("success")
+	stdout = kwargs.get("stdout")
+	stderr = kwargs.get("stderr")
+
+	# Post message with results
+	log.error(f"Failed running:  {recipe_id}")
+
+	try:
+		plist_contents = await utility.find_receipt_plist(stdout)
+		run_error = await utility.parse_recipe_receipt(plist_contents, "RecipeError")
+	except Exception:
+		run_error = stderr
+
+	redacted_error = await utility.replace_sensitive_strings(run_error)
+
+	if event == "recipe_run_prod":
+		# Promotion Failed
+##### Possible ideas:
+# Thread the error message with the original message?
+# Post Ephemeral Message to PkgBot Admin?
+
+		# Get the recipe that failed to be promoted
+		pkg_db_object = await models.Packages.filter(id=event_id).first()
+		recipe_id = pkg_db_object.recipe_id
+		software_title = pkg_db_object.name
+		software_version = pkg_db_object.version
+		log.error(f"Failed to promote:  {pkg_db_object.pkg_name}")
+
+		redacted_error = {
+			"Failed to promote:": f"{software_title} v{software_version}",
+			"Error:": redacted_error
+		}
+
+	await api.recipe.recipe_error(recipe_id, redacted_error, task_id)
+
+
+async def handle_exception(**kwargs):
+
+	task_id = kwargs.pop("task_id")
+	recipe_id = kwargs.pop("recipe_id")
+	event = kwargs.get("event")
+	event_id = kwargs.get("event_id")
+	called_by = kwargs.get("called_by")
+	success = kwargs.get("success")
+	exception = await utility.replace_sensitive_strings(kwargs.get("exception"))
+
+	redacted_error = {
+		"Encountered Exception:": {
+			"Event:": event,
+			"Event ID:": event_id,
+			"Success:": success,
+			# "Called By:": called_by,
+			"Exception:": exception
+		}
+	}
+
+	await api.recipe.recipe_error(recipe_id, redacted_error, task_id)
