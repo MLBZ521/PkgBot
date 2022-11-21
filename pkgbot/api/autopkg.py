@@ -262,17 +262,9 @@ async def receive(request: Request, task_id = Body()):
 
 	elif event == "error" or not success:
 
-		await handle_autopkg_error(
-			{
-				task_id: task_id,
-				event: event,
-				event_id: event_id,
-				called_by: called_by,
-				recipe_id: recipe_id,
-				success: success,
-				stdout: stdout,
-				stderr: stderr
-			}
+		await handle_autopkg_error(task_id = task_id, event = event, event_id = event_id, 
+			called_by = called_by, recipe_id = recipe_id, success = success, stdout = stdout,
+			stderr = stderr
 		)
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
@@ -336,16 +328,9 @@ async def receive(request: Request, task_id = Body()):
 
 			except Exception as exception:
 
-				await handle_exception(
-					{
-						task_id: task_id,
-						event: event,
-						event_id: event_id,
-						called_by: called_by,
-						recipe_id: recipe_id,
-						success: success,
-						exception: exception
-					}
+				await handle_exception(task_id = task_id, event = event, event_id = event_id,
+					called_by = called_by, recipe_id = recipe_id, success = success, 
+					exception = exception
 				)
 
 		elif event == "recipe_run_prod":
