@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 
@@ -46,7 +47,7 @@ def check_recipe_schedule(interval, last_ran):
 	"""
 
 	if interval != 0 and last_ran != None:
-		current_time = utility.utc_to_local(datetime.now())
+		current_time = asyncio.run(utility.utc_to_local(datetime.now()))
 		last_ran_time = datetime.fromisoformat(last_ran)
 		interval_in_hours = interval * 24
 		return current_time - last_ran_time > timedelta(hours=interval_in_hours)
