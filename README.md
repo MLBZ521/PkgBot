@@ -1,6 +1,6 @@
 # PkgBot
 
-PkgBot is an automation framework for the open source project [AutoPkg](https://www.github.com/autopkg) that provides a web-based front end and a Slack Bot to send notifications and receive commands.  It helps manage the lifecycle of software packaging through package and version validation and then provides an interactive method to "promote" a specific package version from "development" (or "test") to production environments.
+PkgBot is an automation framework for the open source project [AutoPkg](https://www.github.com/autopkg/autopkg) that provides a web-based front end and a Slack Bot to send notifications and receive commands.  It helps manage the lifecycle of software packaging through package and version validation and then provides an interactive method to "promote" a specific package version from "development" (or "test") to production environments.
 
 <img src="examples/images/New Software Version Available.png" />
 
