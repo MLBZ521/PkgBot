@@ -404,13 +404,11 @@ def autopkg_verify_trust(self, recipe_id: str,
 
 
 @celery.task(name="autopkg:update-trust", bind=True)
-def autopkg_update_trust(self, recipe_id: str,
-	autopkg_options: models.AutoPkgCMD | dict, trust_id: int = None):
+def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 	"""Runs the passed recipe id against `autopkg update-trust-info`.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		autopkg_options (models.AutoPkgCMD | dict): AutoPkg CLI options
 		trust_id (int): The database id to associate the results to the record
 
 	Returns:
