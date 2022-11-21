@@ -260,7 +260,7 @@ async def receive(request: Request, task_id = Body()):
 		else:
 			await api.recipe.recipe_trust_update_failed(event_id, str(stderr))
 
-	elif event == "error":
+	elif event == "error" or not success:
 		# Post message with results
 		log.error(f"Failed running:  {recipe_id}")
 
@@ -294,73 +294,69 @@ async def receive(request: Request, task_id = Body()):
 
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 
-		if not success:
-			log.error(f"Uncaught error in autopkg > receive; review task_id:  {task_id}")
+		plist_contents = await utility.find_receipt_plist(stdout)
 
-		else:
-			plist_contents = await utility.find_receipt_plist(stdout)
+		# Get the log info for PackageUploader
+		pkg_processor = await utility.parse_recipe_receipt(
+			plist_contents, "JamfPackageUploader")
+		pkg_name = pkg_processor.get("Output").get("pkg_name")
+		pkg_data = {
+			"name": (pkg_name).rsplit("-", 1)[0],
+			"pkg_name": pkg_name,
+			"recipe_id": recipe_id,
+			"version": pkg_processor.get("Input").get("version"),
+			"notes": pkg_processor.get("Input").get("pkg_notes")
+		}
 
-			# Get the log info for PackageUploader
-			pkg_processor = await utility.parse_recipe_receipt(
-				plist_contents, "JamfPackageUploader")
-			pkg_name = pkg_processor.get("Output").get("pkg_name")
-			pkg_data = {
-				"name": (pkg_name).rsplit("-", 1)[0],
-				"pkg_name": pkg_name,
-				"recipe_id": recipe_id,
-				"version": pkg_processor.get("Input").get("version"),
-				"notes": pkg_processor.get("Input").get("pkg_notes")
-			}
+		if event == "recipe_run_dev":
 
-			if event == "recipe_run_dev":
+			try:
+				# Get the log info for PolicyUploader
+				policy_processor = await utility.parse_recipe_receipt(
+					plist_contents, "JamfPolicyUploader")
+				policy_results = policy_processor.get(
+					"Output").get("jamfpolicyuploader_summary_result").get("data")
+				pkg_data["icon"] = policy_results.get("icon")
 
-				try:
-					# Get the log info for PolicyUploader
-					policy_processor = await utility.parse_recipe_receipt(
-						plist_contents, "JamfPolicyUploader")
-					policy_results = policy_processor.get(
-						"Output").get("jamfpolicyuploader_summary_result").get("data")
-					pkg_data["icon"] = policy_results.get("icon")
+				# Create a temporary file to hold the icon data and upload it.
+				# This is required since we're not actually using an
+				# HTTP client to interface with the API endpoint.
+				icon_data = SpooledTemporaryFile()
+				with open(policy_results.get("icon_path"), "rb") as icon_path:
+					icon_data.write(icon_path.read())
+				_ = icon_data.seek(0)
+				icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
+				await api.views.upload_icon(icon)
 
-					# Create a temporary file to hold the icon data and upload it.
-					# This is required since we're not actually using an
-					# HTTP client to interface with the API endpoint.
-					icon_data = SpooledTemporaryFile()
-					with open(policy_results.get("icon_path"), "rb") as icon_path:
-						icon_data.write(icon_path.read())
-					_ = icon_data.seek(0)
-					icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
-					await api.views.upload_icon(icon)
+			except Exception:
+				log.info(
+					f"An icon was not identified, therefore it was not uploaded into PkgBot.  Review task_id:  {task_id}")
 
-				except Exception:
-					log.info(
-						f"An icon was not identified, therefore it was not uploaded into PkgBot.  Review task_id:  {task_id}")
+			# No, don't check the processor summary...
+			# if pkg_processor.get("Output").get("pkg_uploaded"):
 
-				# No, don't check the processor summary...
-				# if pkg_processor.get("Output").get("pkg_uploaded"):
+			# Instead, check if the package has already been created in the database, this 
+			# ensures a message is posted if it failed to post previously.
+			pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
 
-				# Instead, check if the package has already been created in the database, this 
-				# ensures a message is posted if it failed to post previously.
-				pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
+			if not pkg_db_object:
+				log.info(f"New package posted to dev:  {pkg_name}")
+				await workflow_dev(models.Package_In(**pkg_data))
 
-				if not pkg_db_object:
-					log.info(f"New package posted to dev:  {pkg_name}")
-					await workflow_dev(models.Package_In(**pkg_data))
+			# Update attributes for this recipe
+			recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
+			recipe_object.last_ran = await utility.utc_to_local(datetime.now())
+			recipe_object.recurring_fail_count = 0
+			await recipe_object.save()
 
-				# Update attributes for this recipe
-				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
-				recipe_object.last_ran = await utility.utc_to_local(datetime.now())
-				recipe_object.recurring_fail_count = 0
-				await recipe_object.save()
+		elif event == "recipe_run_prod":
+			log.info(f"Package promoted to production:  {pkg_name}")
 
-			elif event == "recipe_run_prod":
-				log.info(f"Package promoted to production:  {pkg_name}")
+			format_string = "%Y-%m-%d %H:%M:%S.%f"
+			promoted_date = datetime.strftime(datetime.now(), format_string)
+			pkg_data["promoted_date"] = promoted_date
 
-				format_string = "%Y-%m-%d %H:%M:%S.%f"
-				promoted_date = datetime.strftime(datetime.now(), format_string)
-				pkg_data["promoted_date"] = promoted_date
-
-				await workflow_prod(event_id, models.Package_In(**pkg_data))
+			await workflow_prod(event_id, models.Package_In(**pkg_data))
 
 	return { "result":  200 }
 
