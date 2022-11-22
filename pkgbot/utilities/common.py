@@ -238,7 +238,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 				if value is not None:
 
 					if isinstance(value, (bool, int)):
-						return value
+						message[key] = value
 
 					elif isinstance(value, dict):
 						message[key] = parse_dict(value, all_sensitive_strings)
