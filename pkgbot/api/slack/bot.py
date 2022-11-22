@@ -389,7 +389,8 @@ async def receive(request: Request):
 			elif button_text == "Acknowledge":
 
 				if button_value_type == "Error":
-					log.info(f"PkgBotAdmin `{username}` has acknowledged error id: {button_value}")
+					log.info(
+						f"PkgBotAdmin `{username}` has acknowledged error message: {message_ts}")
 					return await SlackBot.delete_message(str(message_ts))
 
 		else:
