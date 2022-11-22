@@ -16,6 +16,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 
+    <style>
+        .btn-main, .btn-main:active, .btn-main:not(:disabled):not(.disabled):active {
+            background-color: #8C1D40;
+            border-color: #8C1D40;
+            color:white;
+        }
+        .btn-main:hover, .btn-main:focus, .btn-main:not(:disabled):not(.disabled):focus {
+        /* .button:active:after { */
+            opacity: 1;
+            transition: 0s;
+            background: #BB2657;
+            box-shadow: 0 0 10px #BB2657;
+        }
+        .main-container {
+                /* display: flex; */
+                justify-content: center;
+                padding-top: 25px;
+                padding-left: 50px;
+                padding-right: 50px;
+            }
+    </style>
 
     <title>PkgBot:  {% block title %} {% endblock %}</title>
   </head>
@@ -45,20 +66,6 @@
             </ul>
         </div>
 
-        <style>
-            .btn-main, .btn-main:active, .btn-main:not(:disabled):not(.disabled):active {
-                background-color: #8C1D40;
-                border-color: #8C1D40;
-                color:white;
-            }
-            .btn-main:hover, .btn-main:focus, .btn-main:not(:disabled):not(.disabled):focus {
-            /* .button:active:after { */
-                opacity: 1;
-                transition: 0s;
-                background: #BB2657;
-                box-shadow: 0 0 10px #BB2657;
-            }
-        </style>
         {% if session["logged_in"] %}
 
         <form method="POST" action="/auth/logout">
@@ -91,10 +98,10 @@
         {% endif %}
 
     </nav>
-    <div class="container">
+
+    <div  class="main-container">
         {% block content %} {% endblock %}
     </div>
-
 
     <footer><center>This service is managed by the Endpoint Management team.</center></footer>
 
