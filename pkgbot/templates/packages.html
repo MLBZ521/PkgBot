@@ -57,8 +57,6 @@
                 <tr>
                 {% if app["icon"] %}
                     <td><img src="{{ url_for('static', path='/icons/%s' % app.icon) }}" width="30" height="30"/></td>
-                {% elif app["jps_url"] and app["icon_id"] %}
-                    <td><img src="{{ app.jps_url }}/iconservlet/?id={{ app.icon_id }}" width="30" height="30"/></td>
                 {% else %}
                     <td><img src="{{ url_for('static', path='/icons/%s.png' % ['package', 'metapackage']|random) }}" width="30" height="30"/></td>
                     {% endif %}
