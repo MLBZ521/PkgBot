@@ -208,7 +208,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 				called_by == "schedule" and
 				not task_utils.check_recipe_schedule(recipe.get("schedule"), recipe.get("last_ran"))
 			):
-				log.debut(f"Recipe {recipe_id} is out of schedule")
+				log.debug(f"Recipe {recipe_id} is out of schedule")
 				continue
 
 			_ = autopkg_options.pop("match_pkg", None)
