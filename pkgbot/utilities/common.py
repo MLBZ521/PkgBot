@@ -206,7 +206,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 	"""
 
 
-	async def parse_for_sensitive_keys(a_dict, sensitive_key_names):
+	async def parse_for_sensitive_keys(a_dict: dict, sensitive_key_names: str):
 
 		found_sensitive_strings = ""
 
@@ -220,6 +220,33 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 					found_sensitive_strings = re.escape(value)
 
 		return found_sensitive_strings
+
+
+	def parse_dict(message: dict, all_sensitive_strings: str):
+		"""Parse a dict object and replace sensitive strings if required.
+
+		Args:
+			message (dict): Object that will be parsed.
+
+		Returns:
+			(any): The received object will be returned, modified if required.
+		"""
+
+		if isinstance(message, dict):
+
+			for key, value in message.items():
+				if value is not None:
+
+					if isinstance(value, (bool, int)):
+						return value
+
+					elif isinstance(value, dict):
+						message[key] = parse_dict(value, all_sensitive_strings)
+
+					else:
+						message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', value)
+
+		return message
 
 
 	all_sensitive_strings = r"bearer\s[\w+.-]+|"
@@ -261,11 +288,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 
 	elif isinstance(message, dict):
 
-		for key, value in message.items():
-			if not isinstance(value, (bool, int)) and value is not None:
-				message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', value)
-
-		return message
+		return parse_dict(message, all_sensitive_strings)
 
 	else:
 		log.warning(
