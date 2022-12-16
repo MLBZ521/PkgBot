@@ -231,7 +231,7 @@ async def receive(request: Request, task_id = Body()):
 	if event == "verify_trust_info":
 		callback = await determine_callback(called_by)
 
-		if callback == "PkgBot":
+		if callback in [ "PkgBot", "api" ]:
 
 			if success:
 				# This shouldn't ever be called?
