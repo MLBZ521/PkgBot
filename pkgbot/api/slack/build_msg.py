@@ -133,7 +133,9 @@ async def update_trust_success_msg(
 async def update_trust_error_msg(msg: str,
 	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	return await format_json([await api.block_builders.brick_update_trust_error_msg(trust_object, msg)])
+	blocks = await api.block_builders.brick_update_trust_error_msg(trust_object, msg)
+	blocks.append(await api.block_builders.brick_trust_diff_button(trust_object.dict().get('id')))
+	return await format_json(blocks)
 
 
 @router.get("/unauthorized-msg", summary="Build unauthorized message",
