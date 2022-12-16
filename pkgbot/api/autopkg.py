@@ -35,7 +35,8 @@ async def results(task_id:  str):
 	task_results = task_utils.get_task_results(task_id)
 
 	if task_results.status != "SUCCESS":
-		return { "current_status":  task_results.status }
+		return { "current_status":  task_results.status,
+				 "current_result": task_results.result }
 
 	elif task_results.result != None:
 
@@ -129,6 +130,7 @@ async def autopkg_run_recipes(
 	recipe_filter = models.Recipe_Filter(**{"enabled": True, "manual_only": False})
 	recipes = (await api.recipe.get_recipes(recipe_filter)).get("recipes")
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
+	log.debug(f"Number of recipes to run:  {len(recipes)}")
 	queued_task = task.autopkg_run.apply_async(
 		(recipes, autopkg_options.dict(), called_by), queue="autopkg", priority=3)
 	return { "result": "Queued background task" , "task_id": queued_task.id }
