@@ -154,8 +154,12 @@ async def recipe_trust_update(trust_object: models.TrustUpdate_In = Depends(mode
 	# as those would not generate a failure first.
 
 	if recipe_object:
-		trust_object = await models.TrustUpdates.filter(
-			**trust_object.dict(exclude_unset=True, exclude_none=True)).first()
+
+		if not isinstance(trust_object, models.TrustUpdates):
+			# If object is not a model, find it to support different endpoint access avenues
+			trust_object = await models.TrustUpdates.filter(
+				**trust_object.dict(exclude_unset=True, exclude_none=True)).first()
+
 		queued_task = task.autopkg_update_trust.apply_async(
 			(trust_object.recipe_id, trust_object.id), queue='autopkg', priority=6)
 		return { "result": "Queued background task" , "task_id": queued_task.id }
