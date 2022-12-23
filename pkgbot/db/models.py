@@ -105,6 +105,7 @@ class AutoPkgCMD(BaseModel):
 	overrides: str | None = None
 	pkg_only: bool = False
 	promote: bool = False
+	quiet: bool = True
 	verbose: str = "vvv"
 
 

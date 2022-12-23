@@ -371,6 +371,7 @@ def autopkg_verify_trust(self, recipe_id: str,
 	log.info(f"Verifying trust info for:  {recipe_id}")
 
 	# Not overriding verbose when verifying trust info
+	_ = autopkg_options.pop('quiet')
 	_ = autopkg_options.pop('verbose')
 
 	autopkg_options |= {

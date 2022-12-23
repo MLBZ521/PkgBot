@@ -91,7 +91,8 @@ def generate_autopkg_args(**kwargs):
 	if kwargs.get("overrides"):
 		options = f"{options} {kwargs.get('overrides')}"
 
-	options = f"{options} --quiet"
+	if kwargs.get("quiet"):
+		options = f"{options} --quiet"
 
 	return options.lstrip()
 
