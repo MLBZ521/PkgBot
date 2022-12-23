@@ -230,13 +230,28 @@ async def receive(request: Request, task_id = Body()):
 	task_id = task_id.get("task_id")
 	log.debug(f"Receiving notification for task_id:  {task_id}")
 	task_results = task_utils.get_task_results(task_id)
-	event = task_results.result.get("event")
-	event_id = task_results.result.get("event_id", "")
-	called_by = task_results.result.get("called_by")
-	recipe_id = task_results.result.get("recipe_id")
-	success = task_results.result.get("success")
-	stdout = task_results.result.get("stdout")
-	stderr = task_results.result.get("stderr")
+
+	try:
+		event = task_results.result.get("event")
+		event_id = task_results.result.get("event_id", "")
+		called_by = task_results.result.get("called_by")
+		recipe_id = task_results.result.get("recipe_id")
+		success = task_results.result.get("success")
+		stdout = task_results.result.get("stdout")
+		stderr = task_results.result.get("stderr")
+
+	except Exception:
+		# Seeing a random issue where looking up the task_id returns "None" here, but if I manually
+		# lookup the task_id later, the results are found and the task completed successfully...
+		# It's almost always the _very last_ recipe to run as well (after ~100 recipes).
+		# Ideas:
+			# Due to task prioritization?
+				# But...why when the task is essentially finished when the webhook is sent
+				# And it just started (or I just started noticing it)
+		log.error(f"FAILED GETTING TASK RESULTS for {task_id} -- WHY?!?")
+		log.debug(f"task_results:  {task_results}")
+		log.debug(f"task_results.result:  {task_results.result}")
+		task_results = task_utils.get_task_results(task_id)
 
 	if event == "verify_trust_info":
 		callback = await determine_callback(called_by)
