@@ -251,7 +251,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 				"ignore_parent_trust": True,
 				"prefs": os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs")),
 				"promote_recipe_id": recipe.get("recipe_id"),
-				"verbose": autopkg_options.get('verbose', 'vv')
+				"verbose": autopkg_options.get('verbose', 'vvv')
 			}
 
 			if recipe.get("pkg_only"):
