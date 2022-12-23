@@ -349,7 +349,7 @@ async def receive(request: Request, task_id = Body()):
 	# Post ephemeral msg to Slack user
 						log.debug("Post ephemeral msg to Slack user new software version was not available")
 
-				else:
+				elif not pkg_db_object:
 					log.info(f"New package posted to dev:  {pkg_name}")
 					await workflow_dev(models.Package_In(**pkg_data))
 
