@@ -109,12 +109,14 @@ async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body()
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def autopkg_run_recipes(
-	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD), called_by: str = "schedule"):
+async def autopkg_run_recipes(called_by: str = "schedule",
+	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
 	"""Run all recipes in the database.
 
 	Args:
-		autopkg_options (dict): A dictionary that will be used as
+		called_by (str): Source method that executed this endpoint 
+			and will be used to determine response destination
+		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
 			autopkg_options to the `autopkg` binary
 
 	Returns:
@@ -144,8 +146,11 @@ async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
 	"""Runs the passed recipe id.
 
 	Args:
-		recipe (str): Recipe ID of a recipe
-		autopkg_options (str):
+		recipe_id (str): Recipe ID of a recipe
+		called_by (str): Source method that executed this endpoint 
+			and will be used to determine response destination
+		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
+			autopkg_options to the `autopkg` binary
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -182,8 +187,11 @@ async def autopkg_verify_recipe(recipe_id: str, called_by: str = "slack",
 	"""Runs the passed recipe id.
 
 	Args:
-		recipe (str): Recipe ID of a recipe
-		autopkg_options (str):
+		recipe_id (str): Recipe ID of a recipe
+		called_by (str): Source method that executed this endpoint 
+			and will be used to determine response destination
+		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
+			autopkg_options to the `autopkg` binary
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -264,7 +272,7 @@ async def receive(request: Request, task_id = Body()):
 
 	elif event == "error" or not success:
 
-		await handle_autopkg_error(task_id = task_id, event = event, event_id = event_id, 
+		await handle_autopkg_error(task_id = task_id, event = event, event_id = event_id,
 			called_by = called_by, recipe_id = recipe_id, success = success, stdout = stdout,
 			stderr = stderr
 		)
@@ -331,7 +339,7 @@ async def receive(request: Request, task_id = Body()):
 			except Exception as exception:
 
 				await handle_exception(task_id = task_id, event = event, event_id = event_id,
-					called_by = called_by, recipe_id = recipe_id, success = success, 
+					called_by = called_by, recipe_id = recipe_id, success = success,
 					exception = exception
 				)
 
