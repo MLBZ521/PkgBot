@@ -60,7 +60,7 @@ async def create(recipe_object: models.Recipe_In = Body()):
 	dependencies=[Depends(api.user.verify_admin)], response_model=models.Recipe_Out)
 async def update_by_id(id: int, recipe_object: models.Recipe_In = Depends(models.Recipe_In)):
 
-	if type(recipe_object) != dict:
+	if not isinstance(recipe_object, dict):
 		recipe_object = recipe_object.dict(exclude_unset=True, exclude_none=True)
 
 	await models.Recipes.filter(id=id).update(**recipe_object)
@@ -73,7 +73,7 @@ async def update_by_id(id: int, recipe_object: models.Recipe_In = Depends(models
 async def update_by_recipe_id(recipe_id: str,
 	recipe_object: models.Recipe_In = Depends(models.Recipe_In)):
 
-	if type(recipe_object) != dict:
+	if not isinstance(recipe_object, dict):
 		recipe_object = recipe_object.dict(exclude_unset=True, exclude_none=True)
 
 	if await models.Recipes.filter(recipe_id=recipe_id).update(**recipe_object):
@@ -89,7 +89,7 @@ async def delete_by_id(id: int):
 	delete_object = await models.Recipes.filter(id=id).delete()
 
 	if not delete_object:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe does not exist.")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"A recipe does not exist with id:  '{id}'")
 	else:
 		return { "result":  f"Successfully deleted recipe id:  {id}" }
 
@@ -101,7 +101,7 @@ async def delete_by_recipe_id(recipe_id: str):
 	delete_object = await models.Recipes.filter(recipe_id=recipe_id).delete()
 
 	if not delete_object:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe does not exist.")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
 	else:
 		return { "result":  f"Successfully deleted recipe id:  {recipe_id}" }
 
