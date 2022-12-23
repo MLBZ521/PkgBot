@@ -225,7 +225,7 @@ async def receive(request: Request, task_id = Body()):
 	# 	return {"result": "Content too long"}
 
 	if not await verify_pkgbot_webhook(request):
-		raise HTTPException(status_code=401, detail="Failed to authenticate webhook.")
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to authenticate webhook.")
 
 	task_id = task_id.get("task_id")
 	log.debug(f"Receiving notification for task_id:  {task_id}")
