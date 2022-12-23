@@ -41,7 +41,9 @@ async def get_by_id(id: int):
 	dependencies=[Depends(api.user.get_current_user)], response_model=models.Recipe_Out)
 async def get_by_recipe_id(recipe_id: str):
 
-	return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
+	if recipe_object := await models.Recipes.filter(recipe_id=recipe_id).first():
+		return await models.Recipe_Out.from_tortoise_orm(recipe_object)
+	return recipe_object
 
 
 @router.post("/", summary="Create a recipe", description="Create a recipe.",
@@ -69,14 +71,15 @@ async def update_by_id(id: int, recipe_object: models.Recipe_In = Depends(models
 	description="Update a recipe by recipe_id.",
 	dependencies=[Depends(api.user.verify_admin)], response_model=models.Recipe_Out)
 async def update_by_recipe_id(recipe_id: str,
-	# recipe_object: models.Recipe_In = Body(..., recipe_object=Depends(models.Recipe_In))):
-	recipe_object: models.Recipe_In = Body()):
+	recipe_object: models.Recipe_In = Depends(models.Recipe_In)):
 
 	if type(recipe_object) != dict:
 		recipe_object = recipe_object.dict(exclude_unset=True, exclude_none=True)
 
-	await models.Recipes.filter(recipe_id=recipe_id).update(**recipe_object)
-	return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
+	if await models.Recipes.filter(recipe_id=recipe_id).update(**recipe_object):
+		return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
+
+	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
 
 
 @router.delete("/id/{id}", summary="Delete recipe by id", description="Delete a recipe by id.",
