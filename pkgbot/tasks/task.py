@@ -344,12 +344,13 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
 
 		return {
+			"called_by":  called_by,
 			"event": run_type,
 			"event_id": parent_task_results.get("id"),
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],
-			"stderr": results["stderr"],
+			"stderr": results["stderr"]
 		}
 
 

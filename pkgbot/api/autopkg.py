@@ -114,7 +114,7 @@ async def autopkg_run_recipes(called_by: str = "schedule",
 	"""Run all recipes in the database.
 
 	Args:
-		called_by (str): Source method that executed this endpoint 
+		called_by (str): Source method that executed this endpoint
 			and will be used to determine response destination
 		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
 			autopkg_options to the `autopkg` binary
@@ -147,7 +147,7 @@ async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		called_by (str): Source method that executed this endpoint 
+		called_by (str): Source method that executed this endpoint
 			and will be used to determine response destination
 		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
 			autopkg_options to the `autopkg` binary
@@ -190,7 +190,7 @@ async def autopkg_verify_recipe(recipe_id: str, called_by: str = "slack",
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		called_by (str): Source method that executed this endpoint 
+		called_by (str): Source method that executed this endpoint
 			and will be used to determine response destination
 		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
 			autopkg_options to the `autopkg` binary
@@ -253,8 +253,9 @@ async def receive(request: Request, task_id = Body()):
 		log.debug(f"task_results.result:  {task_results.result}")
 		task_results = task_utils.get_task_results(task_id)
 
+	callback = await determine_callback(called_by)
+
 	if event == "verify_trust_info":
-		callback = await determine_callback(called_by)
 
 		if callback in [ "PkgBot", "api" ]:
 
@@ -343,9 +344,19 @@ async def receive(request: Request, task_id = Body()):
 				# ensures a message is posted if it failed to post previously.
 				pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
 
-				if not pkg_db_object:
+				if pkg_db_object and callback == "ephemeral":
+##### TO DO:
+	# Post ephemeral msg to Slack user
+						log.debug("Post ephemeral msg to Slack user new software version was not available")
+
+				else:
 					log.info(f"New package posted to dev:  {pkg_name}")
 					await workflow_dev(models.Package_In(**pkg_data))
+
+					if callback == "ephemeral":
+##### TO DO:
+	# Post ephemeral msg to Slack user
+						log.debug("Post ephemeral msg to Slack user that a new pkg was posted")
 
 				# Update attributes for this recipe
 				recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
