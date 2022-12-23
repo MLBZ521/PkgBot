@@ -88,6 +88,9 @@ def generate_autopkg_args(**kwargs):
 	if kwargs.get("pkg_only"):
 		options = f"{options} --key \'PKG_ONLY=True\'"
 
+	if kwargs.get("overrides"):
+		options = f"{options} {kwargs.get('overrides')}"
+
 	options = f"{options} --quiet"
 
 	return options.lstrip()
