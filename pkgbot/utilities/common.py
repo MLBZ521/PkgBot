@@ -6,8 +6,7 @@ import os
 # import pickle
 import plistlib
 import re
-import shlex
-import subprocess
+# import shlex
 import yaml
 
 from datetime import datetime, timezone
@@ -132,8 +131,8 @@ async def datetime_to_string(datetime_string: str, format_string: str = "%Y-%m-%
 
 
 async def compute_hex_digest(key: bytes,
-	message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
 
+	message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
 	return hmac.new(key, message, hash).hexdigest()
 
 
@@ -285,3 +284,51 @@ async def parse_recipe_receipt(content: dict, key: str):
 			return step.get(key)
 		elif re.search(key, step.get("Processor"), re.IGNORECASE):
 			return step
+
+
+async def split_string(string: str, split_on: str = " ", split_index: int = 1):
+
+	return string.split(split_on, split_index)
+
+
+async def parse_slash_cmd_options(cmd_text: str, verb: str):
+
+	if " " not in cmd_text:
+		return cmd_text
+
+	final_options = {}
+
+	if verb in { "run", "verify-trust-info" }:
+
+		if v_count := re.search(r"-vv+", cmd_text, flags=re.IGNORECASE):
+			v_count = re.subn("v", '', v_count[0])[1]
+			final_options["verbose"] = f"{'v' * v_count}"
+
+		elif v_count := re.subn(r"--verbose|-v", '', cmd_text)[1]:
+			final_options["verbose"] = f"{'v' * v_count}"
+
+	options_to_parse = await split_string(cmd_text, -1)
+	indexes_to_ignore = []
+	overrides = ""
+
+	for index, option in enumerate(options_to_parse):
+
+		if index not in indexes_to_ignore and option in { "-k", "--key" }:
+
+			indexes_to_ignore.append(index + 1)
+			override_pair = options_to_parse[index + 1]
+
+			(key, sep, value) = override_pair.partition("=")
+			key = re.sub(r'[“”"]', "", key)
+			value = re.sub(r'[“”"]', "", value)
+
+			if sep != "=":
+				raise Exception(f"Error processing override --key `{override_pair}`")
+
+			overrides = f"{overrides} --key '{key}={value}'"
+
+		if option == "--ignore-parent-trust-verification-errors":
+			final_options["ignore_parent_trust"] = True
+
+	final_options["overrides"] = overrides.lstrip()
+	return final_options

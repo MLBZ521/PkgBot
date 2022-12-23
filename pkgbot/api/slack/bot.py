@@ -4,7 +4,7 @@ import json
 import ssl
 import time
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
@@ -405,5 +405,86 @@ async def receive(request: Request):
 	return { "result":  200 }
 
 
+@router.post("/slashcmd", summary="Handles incoming slash commands from Slack",
+	description="This endpoint receives incoming slash commands from Slack and performs the "
+		"required actions based on the message after verifying the authenticity of the source.")
+async def slashcmd(request: Request):
+
+	if not await validate_slack_request(request):
 		log.warning("PkgBot received an invalid request!")
 		return { "result":  500 }
+
+	form_data = await request.form()
+	user_id = form_data.get("user_id")
+	username = form_data.get("user_name")
+	# channel = form_data.get("channel").get("id")
+	command = form_data.get("command")
+	cmd_text = form_data.get("text")
+	response_url = form_data.get("response_url")
+
+	slack_user_object = models.PkgBotAdmin_In(
+		username = username,
+		slack_id = user_id
+	)
+
+	user_that_clicked = await api.user.get_user(slack_user_object)
+
+	log.debug("Incoming details:\n"
+		f"user id:  {user_id}\nusername:  {username}\nfull admin:  {user_that_clicked.full_admin}"
+		f"\ncommand:  {command}\ncmd_text:  {cmd_text}\nresponse_url:  {response_url}\n"
+	)
+
+##### TO DO:
+	# Update below return statements to use an appropriate Slack message type
+		# Current returns are simply place holders for verbosity and development work
+
+	if not user_that_clicked.full_admin:
+		return "Slash commands are in development and not available for public consumption at this time."
+
+	verb, options = await utility.split_string(cmd_text)
+
+	supported_options = {
+		"pkgbot_admin": ["update-trust-info", "repo-add", "enable", "disable" ],
+		"pkgbot_user": [ "run", "verify-trust-info", "version" ]
+	}
+
+	if not user_that_clicked.full_admin and verb not in supported_options.get("pkgbot_user"):
+		return f"The autopkg verb {verb} is not supported by PkgBot users."
+	elif (
+		user_that_clicked.full_admin and 
+		verb not in supported_options.get("pkgbot_admin") + supported_options.get("pkgbot_user")
+	):
+		return f"The autopkg verb {verb} is not supported at this time by PkgBot."
+
+	if " " not in options:
+		recipe_id = options
+		autopkg_options = models.AutoPkgCMD()
+	else:
+		recipe_id, cmd_options = await utility.split_string(options)
+
+		try:
+			options = await utility.parse_slash_cmd_options(cmd_options, verb)
+		except Exception as error:
+			return f"Error processing override --key | Error:  {error}"
+
+		autopkg_options = models.AutoPkgCMD(**options)
+
+	log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ]")
+
+	try:
+
+		if verb in { "enable", "disable" }:
+			results = await api.recipe.update_by_recipe_id(recipe_id, {"enabled": verb == "enable" })
+			return f"Successfully {verb}d recipe id:  {recipe_id}"
+
+		else:
+			results = await api.autopkg.autopkg_run_recipe(recipe_id, "slack", autopkg_options)
+
+			if results.get("result") == "Queued background task":
+				return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | task_id:  {results.get('task_id')}"
+
+			elif results.get("result") == "Recipe is disabled":
+				return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | result: Recipe is disabled"
+
+	except HTTPException as error:
+		return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | Unknown recipe id:  '{recipe_id}' "
