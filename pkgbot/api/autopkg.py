@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from tempfile import SpooledTemporaryFile
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status, UploadFile
 
 from fastapi_utils.tasks import repeat_every
 
@@ -156,7 +156,11 @@ async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
 		dict:  Dict describing the results of the ran process
 	"""
 
-	log.info(f"Running recipe:  {recipe_id}")
+	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
+
+	if not a_recipe:
+		log.warning(f"Unknown recipe id:  '{recipe_id}'")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
 
 	if autopkg_options.dict().get("promote"):
 
@@ -166,8 +170,6 @@ async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
 		)
 
 		return await api.package.promote_package(id=pkg_object.dict().get("id"))
-
-	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	if a_recipe.dict().get("enabled"):
 		queued_task = task.autopkg_run.apply_async(
