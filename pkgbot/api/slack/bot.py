@@ -1,8 +1,8 @@
+import certifi
 import hmac
 import json
 import ssl
 import time
-import certifi
 
 from fastapi import APIRouter, Depends, Request
 
@@ -285,123 +285,125 @@ async def delete_slack_message(timestamps: str | list):
 
 
 @router.post("/receive", summary="Handles incoming messages from Slack",
-	description="This endpoint receives incoming messages from Slack and calls the required "
+	description="This endpoint receives incoming messages from Slack and performs the required "
 		"actions based on the message after verifying the authenticity of the source.")
 async def receive(request: Request):
 
-	if await validate_slack_request(request):
+	if not await validate_slack_request(request):
+		log.warning("PkgBot received an invalid request!")
+		return { "result":  500 }
 
-		form_data = await request.form()
-		payload = form_data.get("payload")
-		payload_object = json.loads(payload)
+	form_data = await request.form()
+	payload = form_data.get("payload")
+	payload_object = json.loads(payload)
 
-		user_id = payload_object.get("user").get("id")
-		username = payload_object.get("user").get("username")
-		channel = payload_object.get("channel").get("id")
-		message_ts = payload_object.get("message").get("ts")
-		response_url = payload_object.get("response_url")
+	user_id = payload_object.get("user").get("id")
+	username = payload_object.get("user").get("username")
+	channel = payload_object.get("channel").get("id")
+	message_ts = payload_object.get("message").get("ts")
+	response_url = payload_object.get("response_url")
 
-		button_text = payload_object.get("actions")[0].get("text").get("text")
-		button_value_type, button_value = (
-			payload_object.get("actions")[0].get("value")).split(":")
+	button_text = payload_object.get("actions")[0].get("text").get("text")
+	button_value_type, button_value = (
+		payload_object.get("actions")[0].get("value")).split(":")
 
-		# log.debug("Incoming details:\n"
-		# 	f"user id:  {user_id}\nusername:  {username}\nchannel:  {channel}\nmessage_ts:  "
-		# 	f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
-		# 	f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
-		# )
+	# log.debug("Incoming details:\n"
+	# 	f"user id:  {user_id}\nusername:  {username}\nchannel:  {channel}\nmessage_ts:  "
+	# 	f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
+	# 	f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
+	# )
 
-		slack_user_object = models.PkgBotAdmin_In(
-			username = username,
-			slack_id = user_id
-		)
+	slack_user_object = models.PkgBotAdmin_In(
+		username = username,
+		slack_id = user_id
+	)
 
-		user_that_clicked = await api.user.get_user(slack_user_object)
+	user_that_clicked = await api.user.get_user(slack_user_object)
 
 ##### Disabled for testing
 ##### Actually don't think this is needed........
-		# try:
-		# 	if user_that_clicked.full_admin:
-		# 		full_admin = True
+	# try:
+	# 	if user_that_clicked.full_admin:
+	# 		full_admin = True
 
-		# except:
-		# 		full_admin = False
+	# except:
+	# 		full_admin = False
 
-		# Verify and perform action only if a PkgBotAdmin clicked the button
-		if user_that_clicked: # and full_admin:
+	# Verify and perform action only if a PkgBotAdmin clicked the button
+	if user_that_clicked: # and full_admin:
 
-			await SlackBot.reaction(
-				action = "add",
-				emoji = "gear",
-				ts = message_ts
-			)
+		await SlackBot.reaction(
+			action = "add",
+			emoji = "gear",
+			ts = message_ts
+		)
 
-			if button_text == "Approve":
+		if button_text == "Approve":
 
-				if button_value_type == "Package":
-					log.info(f"PkgBotAdmin `{username}` is promoting package id: {button_value}")
+			if button_value_type == "Package":
+				log.info(f"PkgBotAdmin `{username}` is promoting package id: {button_value}")
 
-					await api.package.update(button_value,
-						{ "response_url": response_url, "status_updated_by": username })
-					await api.package.promote_package(button_value)
+				await api.package.update(button_value,
+					{ "response_url": response_url, "status_updated_by": username })
+				await api.package.promote_package(button_value)
 
-				elif button_value_type == "Trust":
-					log.info(
-						f"PkgBotAdmin `{username}` has approved updates for trust id: {button_value}")
+			elif button_value_type == "Trust":
+				log.info(
+					f"PkgBotAdmin `{username}` has approved updates for trust id: {button_value}")
 
-					updates = {
-						"response_url": response_url,
+				updates = {
+					"response_url": response_url,
+					"status_updated_by": username,
+					"slack_ts": message_ts
+				}
+
+				trust_object = await models.TrustUpdates.filter(id=button_value).first()
+				await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
+				await api.recipe.recipe_trust_update(trust_object)
+
+		elif button_text == "Deny":
+
+			if button_value_type == "Package":
+				log.info(f"PkgBotAdmin `{username}` has denied package id: {button_value}")
+
+				await api.package.update(button_value,
+					{ "response_url": response_url,
 						"status_updated_by": username,
-						"slack_ts": message_ts
-					}
+						"status": "Denied",
+						"notes":  "This package was not approved for use in production." }
+				)
+				await api.package.deny_package(button_value)
 
-					trust_object = await models.TrustUpdates.filter(id=button_value).first()
-					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
-					await api.recipe.recipe_trust_update(trust_object)
+			if button_value_type == "Trust":
+				log.info(
+					f"PkgBotAdmin `{username}` has denied updates for trust id: {button_value}")
 
-			elif button_text == "Deny":
+				updates = {
+					"response_url": response_url,
+					"status_updated_by": username,
+					"status": "Denied"
+				}
 
-				if button_value_type == "Package":
-					log.info(f"PkgBotAdmin `{username}` has denied package id: {button_value}")
+				trust_object = await models.TrustUpdates.filter(id=button_value).first()
+				await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
+				await api.recipe.recipe_trust_deny(button_value)
 
-					await api.package.update(button_value,
-						{ "response_url": response_url,
-							"status_updated_by": username,
-							"status": "Denied",
-							"notes":  "This package was not approved for use in production." }
-					)
-					await api.package.deny_package(button_value)
+		elif button_text == "Acknowledge":
 
-				if button_value_type == "Trust":
-					log.info(
-						f"PkgBotAdmin `{username}` has denied updates for trust id: {button_value}")
-
-					updates = {
-						"response_url": response_url,
-						"status_updated_by": username,
-						"status": "Denied"
-					}
-
-					trust_object = await models.TrustUpdates.filter(id=button_value).first()
-					await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
-					await api.recipe.recipe_trust_deny(button_value)
-
-			elif button_text == "Acknowledge":
-
-				if button_value_type == "Error":
-					log.info(
-						f"PkgBotAdmin `{username}` has acknowledged error message: {message_ts}")
-					return await SlackBot.delete_message(str(message_ts))
-
-		else:
-			log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
-
-			blocks = await api.build_msg.unauthorized_msg(username)
-			await SlackBot.post_ephemeral_message(
-				user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
-
-		return { "result":  200 }
+			if button_value_type == "Error":
+				log.info(
+					f"PkgBotAdmin `{username}` has acknowledged error message: {message_ts}")
+				return await SlackBot.delete_message(str(message_ts))
 
 	else:
+		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
+
+		blocks = await api.build_msg.unauthorized_msg(username)
+		await SlackBot.post_ephemeral_message(
+			user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
+
+	return { "result":  200 }
+
+
 		log.warning("PkgBot received an invalid request!")
 		return { "result":  500 }
