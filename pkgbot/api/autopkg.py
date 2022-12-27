@@ -288,20 +288,34 @@ async def receive(request: Request, task_id = Body()):
 		else:
 			await api.recipe.recipe_trust_update_failed(event_id, str(stderr))
 
-	elif event == "check_disk_space":
-		""" Checked if cache volume has sufficient disk space """
+	elif event == "disk_space_warning":
+		""" If cache volume has low disk space """
 
-		status = task_results.result.get("status")
+		await api.send_msg.disk_space_msg("Warning", stderr, config.PkgBot.get('icon_warning'))
 
-		if status == 1:
-			header = "Warning"
-			image = config.PkgBot.get('icon_warning')
+	elif event == "failed_pre_checks":
 
-		elif status == 2:
-			header = "Critical"
-			image = config.PkgBot.get('icon_error')
+		for task_id in task_results.result.get("task_id"):
 
-		await api.send_msg.disk_space_msg(header, stderr, image)
+			task_results = task_utils.get_task_results(task_id)
+			event = task_results.result.get("event")
+
+			if event == "autopkg_repo_update":
+##### TODO:
+				pass
+
+			if event == "disk_space_critical":
+				""" If cache volume has insufficient disk space """
+
+				await api.send_msg.disk_space_msg(
+					"Critical", 
+					task_results.result.get("stderr"), 
+					config.PkgBot.get('icon_error')
+				)
+
+			if event == "private_git_pull":
+##### TODO:
+				pass
 
 	elif event == "error" or not success:
 

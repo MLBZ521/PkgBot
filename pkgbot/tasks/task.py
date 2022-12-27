@@ -173,22 +173,25 @@ def autopkg_check_space(self):
 	status = 0
 
 	if current_free_space_unit in {"B", "KB", "MB"} or float(current_free_space_int) <= minimum_free_space:
+		event = "disk_space_critical"
 		msg = f"Not enough free space available to execute an AutoPkg run:  {current_free_space}"
 		success = False
 		status = 2
 		log.error(msg)
 
 	elif float(current_free_space_int) <= warning_free_space:
+		event = "disk_space_warning"
 		msg = f"AutoPkg cache volume is running low on disk space:  {current_free_space}"
 		status = 1
 		log.warning(msg)
 		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 	else:
+		event = "disk_space_passed"
 		msg = "Disk Check:  Passed"
 
 	return {
-		"event": "check_disk_space",
+		"event": event,
 		"stdout": msg,
 		"stderr": msg,
 		"status": status,
@@ -215,11 +218,13 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 
 	# Track all child tasks that are queued by this parent task
 	queued_tasks = []
-	pre_checks = []
 	promote = autopkg_options.pop("promote", False)
 
 	if not promote:
 		# Run pre-checks if not promoting a pkg
+
+		pre_checks = []
+		failed_pre_checks = []
 
 		pre_checks.append(autopkg_check_space.signature())
 		
@@ -232,9 +237,22 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 
 		# Check results
 		for task_result in tasks_results:
+
 			if not task_result["success"]:
-				send_webhook.apply_async((task_result["task_id"],), queue='autopkg', priority=9)
+				send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
+				failed_pre_checks.append(task_result["task_id"])
+
 			queued_tasks.append(task_result["task_id"])
+
+		if failed_pre_checks:
+			return {
+				"event": "failed_pre_checks",
+				"stdout": "Error",
+				"stderr": "Error",
+				"status": 1,
+				"success": False,
+				"task_id": failed_pre_checks
+			}
 
 	for recipe in recipes:
 
