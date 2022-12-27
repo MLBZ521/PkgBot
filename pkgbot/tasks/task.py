@@ -233,7 +233,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 		# Check results
 		for task_result in tasks_results:
 			if not task_result["success"]:
-				send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
+				send_webhook.apply_async((task_result["task_id"],), queue='autopkg', priority=9)
 			queued_tasks.append(task_result["task_id"])
 
 	for recipe in recipes:
