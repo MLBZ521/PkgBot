@@ -8,6 +8,12 @@ AutoPkg:
   UseTrustInfo: True
   # Location of non-standard RecipeOverrides directory
   # recipe_overrides: /path/to/RecipeOverrides
+  # Volume where autopkg cache is located
+  cache_volume: /
+  # Minimum amount of free space (in GB) available that must be available for a scheduled run
+  minimum_free_space: 50
+  # Warning threshold of free space (in GB) available for when a warning message will be generated
+  warning_free_space: 100
 
 # Location of a yaml formatted file with defined recipe configurations
 # recipe_config: ./settings/recipe_config.yaml

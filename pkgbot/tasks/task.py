@@ -158,6 +158,45 @@ def autopkg_repo_update(self):
 	return results_autopkg_repo_update
 
 
+@celery.task(name="pkgbot:check_space", bind=True)
+def autopkg_check_space(self):
+	"""Checks free space on PkgBot storage volume"""
+
+	minimum_free_space = config.AutoPkg.get("minimum_free_space")
+	warning_free_space = config.AutoPkg.get("warning_free_space")
+	cache_volume = config.AutoPkg.get("cache_volume")
+	log.debug(f"Checking available free space on:  {cache_volume}")
+	current_free_space = asyncio.run(utility.get_disk_usage(cache_volume))[2]
+	current_free_space_int, current_free_space_unit = current_free_space.split(" ")
+	log.debug(f"Free space:  {current_free_space}")
+	success = True
+	status = 0
+
+	if current_free_space_unit in {"B", "KB", "MB"} or float(current_free_space_int) <= minimum_free_space:
+		msg = f"Not enough free space available to execute an AutoPkg run:  {current_free_space}"
+		success = False
+		status = 2
+		log.error(msg)
+
+	elif float(current_free_space_int) <= warning_free_space:
+		msg = f"AutoPkg cache volume is running low on disk space:  {current_free_space}"
+		status = 1
+		log.warning(msg)
+		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
+
+	else:
+		msg = "Disk Check:  Passed"
+
+	return {
+		"event": "check_disk_space",
+		"stdout": msg,
+		"stderr": msg,
+		"status": status,
+		"success": success,
+		"task_id": self.request.id
+	}
+
+
 @celery.task(name="autopkg:run", bind=True)
 def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, called_by: str):
 	"""Creates parent and individual recipe tasks.
@@ -176,14 +215,20 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 
 	# Track all child tasks that are queued by this parent task
 	queued_tasks = []
+	pre_checks = []
 	promote = autopkg_options.pop("promote", False)
 
-	if not promote and not autopkg_options.get("ignore_parent_trust"):
+	if not promote:
+		# Run pre-checks if not promoting a pkg
 
-		# Run checks if we're not promoting the recipe
-		task_group = group([ autopkg_repo_update.signature(), git_pull_private_repo.signature() ])
-		tasks_results = (task_group.apply_async(
-			queue='autopkg', priority=7)).get(disable_sync_subtasks=False)
+		pre_checks.append(autopkg_check_space.signature())
+		
+		if not autopkg_options.get("ignore_parent_trust"):
+			pre_checks.extend(
+				[ autopkg_repo_update.signature(), git_pull_private_repo.signature() ])
+
+		tasks_results = (group(pre_checks).apply_async(
+			queue="autopkg", priority=7)).get(disable_sync_subtasks=False)
 
 		# Check results
 		for task_result in tasks_results:

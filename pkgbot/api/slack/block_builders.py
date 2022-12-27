@@ -349,3 +349,30 @@ async def missing_recipe_msg(recipe_id, text):
 			}
 		}
 	]
+
+
+async def brick_disk_space_msg(header, msg, image):
+
+	return [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": f"Disk Usage {header}",
+				"emoji": True
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": msg,
+				"verbatim": True
+			},
+			"accessory": {
+				"type": "image",
+				"image_url": f"{pkgbot_server}/static/icons/{image}",
+				"alt_text": ":warning:"
+			}
+		}
+	]

@@ -183,3 +183,11 @@ async def deny_trust_msg(
 		)
 
 	return response
+
+
+@router.post("/disk-space-msg", summary="Send message regarding disk usage",
+	description="Sends a message to Slack if there is a disk space size issue.")
+async def disk_space_msg(header: str, msg: str, image: str):
+
+	blocks = await api.build_msg.disk_space_msg(header, msg, image)
+	return await api.bot.SlackBot.post_message(blocks, text=f"Disk Space {header}")

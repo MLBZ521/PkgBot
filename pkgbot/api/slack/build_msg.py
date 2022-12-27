@@ -152,3 +152,10 @@ async def unauthorized_msg(user):
 async def missing_recipe_msg(recipe_id, text):
 
 	return await format_json(await api.block_builders.missing_recipe_msg(recipe_id, text))
+
+
+@router.get("/disk-space-msg", summary="Build message regarding disk usage",
+	description="Builds a message for Slack when there is a disk space size issue.")
+async def disk_space_msg(header, msg, image):
+
+	return await format_json(await api.block_builders.brick_disk_space_msg(header, msg, image))
