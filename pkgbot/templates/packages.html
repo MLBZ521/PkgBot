@@ -60,7 +60,7 @@
             </thead>
             <tbody>
             {% set sort_on = request.sort_on | default("id") %}
-            {% for app in packages | sort(attribute=sort_on) %}
+            {% for app in packages | sort(attribute = sort_on, reverse = True) %}
                 <tr>
                 {% if app["icon"] %}
                     <td><img src="{{ url_for('static', path='/icons/%s' % app.icon) }}" width="30" height="30"/></td>
