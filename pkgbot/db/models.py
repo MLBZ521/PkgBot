@@ -71,7 +71,7 @@ class ErrorMessages(Model):
 	type = fields.CharField(64, default="error")
 	status = fields.CharField(64, null=True)
 	last_update = fields.DatetimeField(auto_now=True)
-	ack_by = fields.CharField(64)
+	ack_by = fields.CharField(64, null=True)
 	slack_ts = fields.CharField(32, null=True)
 	slack_channel = fields.CharField(32, null=True)
 	response_url = fields.CharField(1024, null=True)
