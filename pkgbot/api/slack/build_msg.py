@@ -146,7 +146,7 @@ async def unauthorized_msg(user):
 	return await format_json(await api.block_builders.unauthorized(user))
 
 
-@router.get("/missing-recipe-msg", summary="Build unauthorized message",
+@router.get("/missing-recipe-msg", summary="Build missing recipe message",
 	description="Builds a 'missing recipe' message for Slack when unable to locate "
 	"a recipe for a requested action.")
 async def missing_recipe_msg(recipe_id, text):

@@ -451,7 +451,7 @@ async def slashcmd(request: Request):
 	if not user_that_clicked.full_admin and verb not in supported_options.get("pkgbot_user"):
 		return f"The autopkg verb {verb} is not supported by PkgBot users."
 	elif (
-		user_that_clicked.full_admin and 
+		user_that_clicked.full_admin and
 		verb not in supported_options.get("pkgbot_admin") + supported_options.get("pkgbot_user")
 	):
 		return f"The autopkg verb {verb} is not supported at this time by PkgBot."

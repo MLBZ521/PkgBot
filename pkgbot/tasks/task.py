@@ -227,7 +227,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 		failed_pre_checks = []
 
 		pre_checks.append(autopkg_check_space.signature())
-		
+
 		if not autopkg_options.get("ignore_parent_trust"):
 			pre_checks.extend(
 				[ autopkg_repo_update.signature(), git_pull_private_repo.signature() ])
@@ -259,12 +259,6 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 		# log.debug(f"recipe:  {recipe}")
 		recipe_id = recipe.get("recipe_id")
 
-##### Not yet supported
-			# if autopkg_options["override_keys"]:
-			# 	for override_key in autopkg_options["override_keys"]:
-			# 		extra_options = f"{extra_options} --key '{override_key}'"
-##### How will the extra_options be passed?
-
 		if not promote:
 
 			if (
@@ -283,7 +277,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 
 				queued_task = run_recipe.apply_async(
 					({"success": True}, recipe_id, autopkg_options, called_by),
-					queue='autopkg',
+					queue="autopkg",
 					priority=4
 				)
 
@@ -295,12 +289,12 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 				chain_results = chain(
 					autopkg_verify_trust.signature(
 						(recipe_id, autopkg_options, called_by),
-						queue='autopkg',
+						queue="autopkg",
 						priority=2
 					) |
 					run_recipe.signature(
 						(recipe_id, autopkg_options, called_by),
-						queue='autopkg',
+						queue="autopkg",
 						priority=3
 					)
 				)()
@@ -314,7 +308,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 				"ignore_parent_trust": True,
 				"prefs": os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs")),
 				"promote_recipe_id": recipe.get("recipe_id"),
-				"verbose": autopkg_options.get('verbose', 'vvv')
+				"verbose": autopkg_options.get("verbose", "vvv")
 			}
 
 			if recipe.get("pkg_only"):
@@ -329,7 +323,7 @@ def autopkg_run(self, recipes: list, autopkg_options: models.AutoPkgCMD | dict, 
 					recipe_id,
 					autopkg_options,
 					called_by),
-				queue='autopkg', priority=4
+				queue="autopkg", priority=4
 			)
 
 			queued_tasks.append(queued_task.id)
@@ -377,7 +371,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 			event_type = "error"
 
 		log.error(f"{log_msg} recipe: {recipe_id}")
-		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
+		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": event_type,
@@ -404,7 +398,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 		results = asyncio.run(utility.execute_process(cmd))
 
 		# Send task complete notification
-		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
+		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"called_by":  called_by,
@@ -434,8 +428,8 @@ def autopkg_verify_trust(self, recipe_id: str,
 	log.info(f"Verifying trust info for:  {recipe_id}")
 
 	# Not overriding verbose when verifying trust info
-	_ = autopkg_options.pop('quiet')
-	_ = autopkg_options.pop('verbose')
+	_ = autopkg_options.pop("quiet")
+	_ = autopkg_options.pop("verbose")
 
 	autopkg_options |= {
 		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),
@@ -454,7 +448,7 @@ def autopkg_verify_trust(self, recipe_id: str,
 	results = asyncio.run(utility.execute_process(cmd))
 
 	if called_by in {"api", "slack"} and not self.request.parent_id:
-		send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
+		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "verify_trust_info",
@@ -541,7 +535,7 @@ def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 	if stashed:
 		private_repo.git.stash("pop")
 
-	send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
+	send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 	return {
 		"event": "update_trust_info",
