@@ -41,7 +41,7 @@ async def get_by_id(id: int):
 	dependencies=[Depends(api.user.get_current_user)], response_model=models.Recipe_Out)
 async def get_by_recipe_id(recipe_id: str):
 
-	if recipe_object := await models.Recipes.filter(recipe_id=recipe_id).first():
+	if recipe_object := await models.Recipes.filter(recipe_id__iexact=recipe_id).first():
 		return await models.Recipe_Out.from_tortoise_orm(recipe_object)
 	return recipe_object
 
@@ -76,7 +76,7 @@ async def update_by_recipe_id(recipe_id: str,
 	if not isinstance(recipe_object, dict):
 		recipe_object = recipe_object.dict(exclude_unset=True, exclude_none=True)
 
-	if await models.Recipes.filter(recipe_id=recipe_id).update(**recipe_object):
+	if await models.Recipes.filter(recipe_id__iexact=recipe_id).update(**recipe_object):
 		return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
 
 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
@@ -98,7 +98,7 @@ async def delete_by_id(id: int):
 	description="Delete a recipe by recipe_id.", dependencies=[Depends(api.user.verify_admin)])
 async def delete_by_recipe_id(recipe_id: str):
 
-	delete_object = await models.Recipes.filter(recipe_id=recipe_id).delete()
+	delete_object = await models.Recipes.filter(recipe_id__iexact=recipe_id).delete()
 
 	if not delete_object:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
