@@ -127,8 +127,9 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 	results = await api.send_msg.recipe_error_msg(recipe_id, error_message.id, error_dict)
 
 	updates = {
+		"slack_channel": results.get('channel'),
 		"slack_ts": results.get('ts'),
-		"slack_channel": results.get('channel')
+		"status": "Notified"
 	}
 
 	await models.ErrorMessages.update_or_create(updates, id=error_message.id)

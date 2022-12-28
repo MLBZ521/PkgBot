@@ -133,7 +133,17 @@ async def event_disk_space_warning(task_results):
 
 	event, event_id, called_by, recipe_id, success, stdout, stderr = await event_details(task_results)
 
-	await api.send_msg.disk_space_msg("Warning", stderr, config.PkgBot.get('icon_warning'))
+	# Post Slack Message
+	results = await api.send_msg.disk_space_msg(
+		"Warning", stderr, config.PkgBot.get('icon_warning'))
+
+	# Create DB entry
+	await models.ErrorMessages.create(
+		type = event,
+		slack_ts = results.get('ts'),
+		slack_channel = results.get('channel'),
+		status = "Acknowledged"
+	)
 
 
 async def event_failed_pre_checks(task_results):
@@ -153,10 +163,18 @@ async def event_failed_pre_checks(task_results):
 		if event == "disk_space_critical":
 			""" If cache volume has insufficient disk space """
 
-			await api.send_msg.disk_space_msg(
+			results = await api.send_msg.disk_space_msg(
 				"Critical",
 				task_results.result.get("stderr"),
 				config.PkgBot.get('icon_error')
+			)
+
+			# Create DB entry
+			await models.ErrorMessages.create(
+				type = event,
+				slack_ts = results.get('ts'),
+				slack_channel = results.get('channel'),
+				status = "Notified"
 			)
 
 		if event == "private_git_pull":

@@ -391,9 +391,18 @@ async def receive(request: Request):
 		elif button_text == "Acknowledge":
 
 			if button_value_type == "Error":
+
 				log.info(
 					f"PkgBotAdmin `{username}` has acknowledged error message: {message_ts}")
-				return await SlackBot.delete_message(str(message_ts))
+				await SlackBot.delete_message(str(message_ts))
+
+				updates = {
+					"response_url": response_url,
+					"status": "Acknowledged",
+					"ack_by": username
+				}
+
+				return await models.ErrorMessages.update_or_create(updates, slack_ts=message_ts)
 
 	else:
 		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
