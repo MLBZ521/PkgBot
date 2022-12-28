@@ -374,5 +374,20 @@ async def brick_disk_space_msg(header, msg, image):
 				"image_url": f"{pkgbot_server}/static/icons/{image}",
 				"alt_text": ":warning:"
 			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": True,
+						"text": "Acknowledge"
+					},
+					"style": "danger",
+					"value": "Error:ack"
+				}
+			]
 		}
 	]
