@@ -465,28 +465,45 @@ async def slashcmd(request: Request):
 	):
 		return f"The autopkg verb `{verb}` is not supported at this time by PkgBot or is invalid."
 
-	if " " not in options:
-		recipe_id = options
-		autopkg_options = models.AutoPkgCMD()
-	else:
-		recipe_id, cmd_options = await utility.split_string(options)
-
-		try:
-			options = await utility.parse_slash_cmd_options(cmd_options, verb)
-		except Exception as error:
-			return f"Error processing override --key | Error:  {error}"
-
-		autopkg_options = models.AutoPkgCMD(**options)
-
-	log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ]")
-
 	try:
 
 		if verb in { "enable", "disable" }:
-			results = await api.recipe.update_by_recipe_id(recipe_id, {"enabled": verb == "enable" })
+
+			updates = {"enabled": verb == "enable"}
+
+			if " " in options:
+				recipe_id, notes = await utility.split_string(options)
+				debug_notes = f" | [ notes:  {notes} ]"
+
+			else:
+				recipe_id = options
+				notes = ""
+				debug_notes = ""
+
+			updates |= {"notes": notes }
+
+			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ]{debug_notes}")
+
+			results = await api.recipe.update_by_recipe_id(recipe_id, updates)
 			return f"Successfully {verb}d recipe id:  {recipe_id}"
 
 		else:
+
+			if " " not in options:
+				recipe_id = options
+				autopkg_options = models.AutoPkgCMD()
+			else:
+				recipe_id, cmd_options = await utility.split_string(options)
+
+				try:
+					options = await utility.parse_slash_cmd_options(cmd_options, verb)
+				except Exception as error:
+					return f"Error processing override --key | Error:  {error}"
+
+				autopkg_options = models.AutoPkgCMD(**options)
+
+			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ]")
+
 			results = await api.autopkg.autopkg_run_recipe(recipe_id, "slack", autopkg_options)
 
 			if results.get("result") == "Queued background task":
