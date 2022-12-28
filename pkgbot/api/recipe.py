@@ -139,6 +139,7 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 
 	if recipe_object:
 		recipe_object.enabled = False
+		recipe_object.notes = "Disabled due to error during run."
 		recipe_object.recurring_fail_count = recipe_object.recurring_fail_count + 1
 		await recipe_object.save()
 
@@ -196,7 +197,7 @@ async def recipe_trust_update_success(trust_id: int):
 	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_id))
 
 	# Re-enable the recipe
-	await update_by_recipe_id(trust_object.recipe_id, {"enabled": True})
+	await update_by_recipe_id(trust_object.recipe_id, {"enabled": True, "notes": ""})
 
 	if trust_object:
 		return await api.send_msg.update_trust_success_msg(trust_object)
@@ -243,5 +244,6 @@ async def recipe_trust_verify_failed(recipe_id: str, diff_msg: str = Body()):
 	# Mark the recipe disabled
 	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
 	recipe_object.enabled = False
+	recipe_object.notes = "Disabled due to failing parent recipe trust verification."
 	await recipe_object.save()
 	return { "result": "Success" }
