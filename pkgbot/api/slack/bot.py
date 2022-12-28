@@ -50,7 +50,7 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Failed to post message:  {error.response['error']}\n{error}")
-			return { "Failed to post message":  error.response["error"] }
+			return { "result": "Failed to post message", "error": error.response["error"] }
 
 
 	async def update_message(self, blocks: str, ts: str, text: str = "Updated message..."):
@@ -65,7 +65,7 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Failed to update {ts}:  {error.response['error']}\n{error}")
-			return { f"Failed to update {ts}":  error.response["error"] }
+			return { "result": f"Failed to update {ts}", "error": error.response["error"] }
 
 
 	async def delete_message(self, ts: str):
@@ -76,7 +76,7 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Failed to delete {ts}:  {error.response['error']}\n{error}")
-			return { f"Failed to delete {ts}":  error.response["error"] }
+			return { "Failed to delete": ts, "error": error.response["error"] }
 
 
 	async def update_message_with_response_url(
@@ -101,7 +101,7 @@ class SlackClient(object):
 		except SlackApiError as error:
 			log.error(
 				f"Failed to update {response_url}\nFull Error:\n{error}\nerror.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
-			return { f"Failed to update {response_url}":  error.response["error"] }
+			return { "result": f"Failed to update {response_url}", "error": error.response["error"] }
 
 
 	async def post_ephemeral_message(
@@ -119,7 +119,7 @@ class SlackClient(object):
 		except SlackApiError as error:
 			log.error(
 				f"Failed to post ephemeral message:  {error.response['error']}\nFull Error:\n{error}")
-			return { "Failed to post ephemeral message":  error.response["error"] }
+			return { "result": "Failed to post ephemeral message", "error": error.response["error"] }
 
 
 	async def file_upload(self, content=None, file=None, filename=None, filetype=None,
@@ -140,7 +140,7 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Failed to upload {file}:  {error.response['error']}\nFull Error:\n{error}")
-			return { f"Failed to upload {file}":  error.response["error"] }
+			return { "result": f"Failed to upload {file}", "error": error.response["error"] }
 
 
 	async def invoke_reaction(self, **kwargs):
@@ -166,7 +166,7 @@ class SlackClient(object):
 				kwargs.get("action") == "add" and error_key == "already_reacted" or
 				kwargs.get("action") == "remove" and error_key == "no_reaction"
 			):
-				result = { f"Failed to invoke reaction on {kwargs.get('timestamp')}":  error_key }
+				result = { "result": f"Failed to invoke reaction on {kwargs.get('timestamp')}", "error": error_key }
 				log.error(result)
 				return result
 
@@ -277,7 +277,7 @@ async def delete_slack_message(timestamps: str | list):
 		result = await SlackBot.delete_message(str(ts))
 
 		try:
-			results[ts] = result.response['error']
+			results[ts] = result.get("error")
 		except Exception:
 			results[ts] = "Successfully deleted message"
 
