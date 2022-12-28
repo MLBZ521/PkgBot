@@ -458,12 +458,12 @@ async def slashcmd(request: Request):
 	}
 
 	if not user_that_clicked.full_admin and verb not in supported_options.get("pkgbot_user"):
-		return f"The autopkg verb {verb} is not supported by PkgBot users."
+		return f"The autopkg verb `{verb}` is not supported by PkgBot users or is invalid."
 	elif (
 		user_that_clicked.full_admin and
 		verb not in supported_options.get("pkgbot_admin") + supported_options.get("pkgbot_user")
 	):
-		return f"The autopkg verb {verb} is not supported at this time by PkgBot."
+		return f"The autopkg verb `{verb}` is not supported at this time by PkgBot or is invalid."
 
 	if " " not in options:
 		recipe_id = options
