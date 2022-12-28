@@ -57,7 +57,7 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 	table_headers = [
 		"", "", "Name", "Version", "Status", "Updated By",
-		"Packaged", "Promoted", "COMMON", "Flags", "Notes"
+		"Packaged", "Promoted", "Flags", "Notes"
 	]
 
 	return templates.TemplateResponse("packages.html",
