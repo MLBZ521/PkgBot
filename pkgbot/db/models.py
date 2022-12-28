@@ -15,12 +15,11 @@ class Packages(Model):
 	promoted_date = fields.DatetimeField(null=True, default=None)
 	last_update = fields.DatetimeField(auto_now=True)
 	status = fields.CharField(64, default="dev")
-	status_updated_by = fields.CharField(64, default="PkgBot")
-	used_in_common = fields.BooleanField(default=False)
-	special_flags = fields.CharField(64, null=True)
+	updated_by = fields.CharField(64, default="PkgBot")
+	special_flags = fields.JSONField(null=True)
 	notes = fields.CharField(4096, null=True)
-	slack_ts = fields.CharField(32, null=True)
 	slack_channel = fields.CharField(32, null=True)
+	slack_ts = fields.CharField(32, null=True)
 	response_url = fields.CharField(1024, null=True)
 
 Package_Out = pydantic_model_creator(Packages, name="Package_Out")
@@ -30,7 +29,6 @@ Package_In = pydantic_model_creator(Packages, name="Package_In", exclude_readonl
 class Recipes(Model):
 	id = fields.IntField(pk=True)
 	recipe_id = fields.CharField(512, unique=True)
-	name = fields.CharField(64)
 	enabled = fields.BooleanField(default=True)
 	manual_only = fields.BooleanField(default=False)
 	pkg_only = fields.BooleanField(default=False)
@@ -70,13 +68,13 @@ PkgBotAdmin_In = pydantic_model_creator(
 
 class ErrorMessages(Model):
 	id = fields.IntField(pk=True)
-	recipe_id = fields.CharField(1024)
+	type = fields.CharField(64, default="error")
+	status = fields.CharField(64, null=True)
+	last_update = fields.DatetimeField(auto_now=True)
+	ack_by = fields.CharField(64)
 	slack_ts = fields.CharField(32, null=True)
 	slack_channel = fields.CharField(32, null=True)
 	response_url = fields.CharField(1024, null=True)
-	status_updated_by = fields.CharField(64, default="PkgBot")
-	last_update = fields.DatetimeField(auto_now=True)
-	status = fields.CharField(64, null=True)
 
 ErrorMessage_Out = pydantic_model_creator(ErrorMessages, name="ErrorMessage_Out")
 ErrorMessage_In = pydantic_model_creator(
@@ -86,12 +84,12 @@ ErrorMessage_In = pydantic_model_creator(
 class TrustUpdates(Model):
 	id = fields.IntField(pk=True)
 	recipe_id = fields.CharField(1024)
-	slack_ts = fields.CharField(32, null=True)
-	slack_channel = fields.CharField(32, null=True)
-	response_url = fields.CharField(1024, null=True)
-	status_updated_by = fields.CharField(64, default="PkgBot")
-	last_update = fields.DatetimeField(auto_now=True)
 	status = fields.CharField(64, null=True)
+	updated_by = fields.CharField(64, default="PkgBot")
+	last_update = fields.DatetimeField(auto_now=True)
+	slack_channel = fields.CharField(32, null=True)
+	slack_ts = fields.CharField(32, null=True)
+	response_url = fields.CharField(1024, null=True)
 
 TrustUpdate_Out = pydantic_model_creator(TrustUpdates, name="TrustUpdate_Out")
 TrustUpdate_In = pydantic_model_creator(
@@ -109,6 +107,7 @@ class AutoPkgCMD(BaseModel):
 	verbose: str = "vvv"
 
 
+# Not currently used
 class AutoPkgTaskResults(BaseModel):
 	event: str
 	event_id: str = ""

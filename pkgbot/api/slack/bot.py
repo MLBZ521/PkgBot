@@ -344,7 +344,7 @@ async def receive(request: Request):
 				log.info(f"PkgBotAdmin `{username}` is promoting package id: {button_value}")
 
 				await api.package.update(button_value,
-					{ "response_url": response_url, "status_updated_by": username })
+					{ "response_url": response_url, "updated_by": username })
 				await api.package.promote_package(button_value)
 
 			elif button_value_type == "Trust":
@@ -353,7 +353,7 @@ async def receive(request: Request):
 
 				updates = {
 					"response_url": response_url,
-					"status_updated_by": username,
+					"updated_by": username,
 					"slack_ts": message_ts
 				}
 
@@ -368,7 +368,7 @@ async def receive(request: Request):
 
 				await api.package.update(button_value,
 					{ "response_url": response_url,
-						"status_updated_by": username,
+						"updated_by": username,
 						"status": "Denied",
 						"notes":  "This package was not approved for use in production." }
 				)
@@ -380,7 +380,7 @@ async def receive(request: Request):
 
 				updates = {
 					"response_url": response_url,
-					"status_updated_by": username,
+					"updated_by": username,
 					"status": "Denied"
 				}
 

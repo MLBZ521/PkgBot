@@ -112,7 +112,7 @@ async def delete_by_recipe_id(recipe_id: str):
 async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 
 	# Create DB entry in errors table
-	error_message = await models.ErrorMessages.create( recipe_id=recipe_id )
+	error_message = await models.ErrorMessages.create(type=f"recipe: {recipe_id}")
 
 	# Post Slack Message
 	try:
@@ -170,7 +170,7 @@ async def recipe_trust_update(trust_object: models.TrustUpdate_In = Depends(mode
 	else:
 		blocks = await api.build_msg.missing_recipe_msg(trust_object.recipe_id, "update trust for")
 		await api.bot.SlackBot.post_ephemeral_message(
-			trust_object.status_updated_by, blocks,
+			trust_object.updated_by, blocks,
 			channel=trust_object.slack_channel,
 			text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
 		)
@@ -203,7 +203,7 @@ async def recipe_trust_update_success(trust_id: int):
 	# else:
 ##### Post message to whomever requested the update?
 		# await bot.SlackBot.post_ephemeral_message(
-		# 	trust_object.status_updated_by, blocks,
+		# 	trust_object.updated_by, blocks,
 		# 	channel=trust_object.slack_channel,
 		# 	text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
 		# )
