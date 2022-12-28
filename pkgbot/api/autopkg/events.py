@@ -187,7 +187,7 @@ async def event_error(task_results):
 
 	event, event_id, called_by, recipe_id, success, stdout, stderr = await event_details(task_results)
 
-	await handle_autopkg_error(task_id = task_results, event = event, event_id = event_id,
+	await handle_autopkg_error(task_id = task_results.task_id, event = event, event_id = event_id,
 		called_by = called_by, recipe_id = recipe_id, success = success, stdout = stdout,
 		stderr = stderr
 	)
@@ -266,7 +266,7 @@ async def event_recipe_run(task_results):
 
 		except Exception as exception:
 
-			await handle_exception(task_id = task_results, event = event, event_id = event_id,
+			await handle_exception(task_id = task_results.task_id, event = event, event_id = event_id,
 				called_by = called_by, recipe_id = recipe_id, success = success,
 				exception = exception
 			)
@@ -348,6 +348,7 @@ async def handle_exception(**kwargs):
 
 	redacted_error = {
 		"Encountered Exception:": {
+			"Recipe ID:": recipe_id,
 			"Event:": event,
 			"Event ID:": event_id,
 			"Success:": success,
