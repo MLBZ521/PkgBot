@@ -103,16 +103,22 @@ async def event_verify_trust_info(task_results):
 			await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
 
 	elif callback.ingress == "Slack":
-##### TO DO:
-		log.debug("Recipe trust info was checked via Slack command.")
 		# Post ephemeral msg to Slack user
+		log.debug("Recipe trust info was checked via Slack command.")
 
 		if success:
-			# trust info verified msg
-			pass
+			text = f"Recipe trust info passed for `{recipe_id}`!  :link-success:"
 		else:
-			# trust info invalid msg
-			pass
+			text = f"Recipe trust info failed for `{recipe_id}`!  :git-pr-check-failed:"
+
+		await api.slack.send_msg.ephemeral_msg(
+			user = callback.egress,
+			text = text,
+			alt_text = "Results from task...",
+			channel = None,
+			image = None, 
+			alt_image_text = None
+		)
 
 
 async def event_update_trust_info(task_results):
