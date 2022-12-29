@@ -504,7 +504,23 @@ async def slashcmd(request: Request):
 
 			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ]")
 
-			results = await api.autopkg.autopkg_run_recipe(recipe_id, "slack", autopkg_options)
+			if verb == "run":
+				results = await api.autopkg.autopkg_run_recipe(recipe_id, "slack", autopkg_options)
+
+			elif verb == "verify-trust-info":
+				results = await api.autopkg.autopkg_verify_recipe(recipe_id, "slack", autopkg_options)
+
+			elif verb == "update-trust-info":
+##### TODO:  Add Support
+				pass
+
+			elif verb == "repo-add":
+##### TODO:  Add Support
+				pass
+
+			elif verb == "version":
+##### TODO:  Add Support
+				pass
 
 			if results.get("result") == "Queued background task":
 				return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | task_id:  {results.get('task_id')}"
