@@ -146,12 +146,16 @@ async def unauthorized_msg(user):
 	return await format_json(await api.block_builders.unauthorized(user))
 
 
-@router.get("/missing-recipe-msg", summary="Build missing recipe message",
-	description="Builds a 'missing recipe' message for Slack when unable to locate "
-	"a recipe for a requested action.")
-async def missing_recipe_msg(recipe_id, text):
+@router.get("/basic-msg", summary="Build generic message",
+	description="Builds a simple message for Slack.")
+async def basic_msg(text, image: str | None = None, alt_text: str | None = None):
 
-	return await format_json(await api.block_builders.missing_recipe_msg(recipe_id, text))
+	blocks = await api.block_builders.brick_section_text(text)
+
+	if image:
+		blocks = blocks | await api.block_builders.brick_accessory_image(image, alt_text)
+
+	return await format_json([blocks])
 
 
 @router.get("/disk-space-msg", summary="Build message regarding disk usage",

@@ -332,23 +332,27 @@ async def unauthorized(user):
 	]
 
 
-async def missing_recipe_msg(recipe_id, text):
+async def brick_section_text(text):
 
-	return [
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": f"Failed to {text} `{recipe_id}`",
-				"verbatim": True
-			},
-			"accessory": {
-				"type": "image",
-				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
-				"alt_text": ":x:"
-			}
+	return {
+		"type": "section",
+		"text": {
+			"type": "mrkdwn",
+			"text": text,
+			"verbatim": True
 		}
-	]
+	}
+
+
+async def brick_accessory_image(image, alt_text=":notification:"):
+
+	return {
+		"accessory": {
+			"type": "image",
+			"image_url": f"{pkgbot_server}/static/icons/{image}",
+			"alt_text": alt_text
+		}
+	}
 
 
 async def brick_disk_space_msg(header, msg, image):

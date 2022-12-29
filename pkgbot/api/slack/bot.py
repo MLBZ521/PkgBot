@@ -1,6 +1,7 @@
 import certifi
 import hmac
 import json
+import re
 import ssl
 import time
 
@@ -106,6 +107,11 @@ class SlackClient(object):
 
 	async def post_ephemeral_message(
 		self, user: str, blocks: str, channel: str = None, text: str = "Private Note"):
+
+		# `user` must match regex pattern: ^[UW][A-Z0-9]{2,}$
+		if not re.match(r"^[UW][A-Z0-9]{2,}$", user):
+			user_object = await api.user.get_user(models.PkgBotAdmin_In(username = user))
+			user = user_object.slack_id
 
 		try:
 			return await self.client.chat_postEphemeral(
