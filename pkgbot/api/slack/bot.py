@@ -432,7 +432,7 @@ async def slashcmd(request: Request):
 	form_data = await request.form()
 	user_id = form_data.get("user_id")
 	username = form_data.get("user_name")
-	channel = form_data.get("channel").get("id")
+	channel = form_data.get("channel_id")
 	command = form_data.get("command")
 	cmd_text = form_data.get("text")
 	response_url = form_data.get("response_url")
