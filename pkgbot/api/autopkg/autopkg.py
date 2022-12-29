@@ -109,15 +109,13 @@ async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body()
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def autopkg_run_recipes(called_by: str = "schedule",
+async def autopkg_run_recipes(callback: models.AutoPkgCMDResponse = Depends(models.AutoPkgCMDResponse),
 	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
 	"""Run all recipes in the database.
 
 	Args:
-		called_by (str): Source method that executed this endpoint
-			and will be used to determine response destination
-		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
-			autopkg_options to the `autopkg` binary
+		callback (models.AutoPkgCMDResponse): Will be used to determine response method
+		autopkg_options (dict|models.AutoPkgCMD): Will be used as options to the `autopkg` binary
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -128,29 +126,27 @@ async def autopkg_run_recipes(called_by: str = "schedule",
 	if not isinstance(autopkg_options, models.AutoPkgCMD):
 		autopkg_options = models.AutoPkgCMD()
 
-	# callback = await events.determine_callback(called_by)
 	recipe_filter = models.Recipe_Filter(**{"enabled": True, "manual_only": False})
 	recipes = (await api.recipe.get_recipes(recipe_filter)).get("recipes")
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 	log.debug(f"Number of recipes to run:  {len(recipes)}")
 	queued_task = task.autopkg_run.apply_async(
-		(recipes, autopkg_options.dict(), called_by), queue="autopkg", priority=3)
+		(recipes, autopkg_options.dict(), callback.dict()), queue="autopkg", priority=3)
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
 @router.post("/run/recipe/{recipe_id}", summary="Executes a recipes",
 	description="Executes a recipe in a background task.",
 	dependencies=[Depends(api.user.get_current_user)])
-async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
+async def autopkg_run_recipe(recipe_id: str, 
+	callback: models.AutoPkgCMDResponse = Depends(models.AutoPkgCMDResponse),
 	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
 	"""Runs the passed recipe id.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		called_by (str): Source method that executed this endpoint
-			and will be used to determine response destination
-		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
-			autopkg_options to the `autopkg` binary
+		callback (models.AutoPkgCMDResponse): Will be used to determine response method
+		autopkg_options (dict|models.AutoPkgCMD): Will be used as options to the `autopkg` binary
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -173,7 +169,7 @@ async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
 
 	if a_recipe.dict().get("enabled"):
 		queued_task = task.autopkg_run.apply_async(
-			([ a_recipe.dict() ], autopkg_options.dict(), called_by), queue="autopkg", priority=3)
+			([ a_recipe.dict() ], autopkg_options.dict(), callback.dict()), queue="autopkg", priority=3)
 
 		return { "result": "Queued background task" , "task_id": queued_task.id }
 
@@ -184,16 +180,15 @@ async def autopkg_run_recipe(recipe_id: str, called_by: str = "schedule",
 @router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
 	description="Validates a recipes trust info in a background task.",
 	dependencies=[Depends(api.user.get_current_user)])
-async def autopkg_verify_recipe(recipe_id: str, called_by: str = "slack",
+async def autopkg_verify_recipe(recipe_id: str,
+	callback: models.AutoPkgCMDResponse = Depends(models.AutoPkgCMDResponse),
 	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
 	"""Runs the passed recipe id.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		called_by (str): Source method that executed this endpoint
-			and will be used to determine response destination
-		autopkg_options (dict|models.AutoPkgCM): dict or AutoPkgCMD model that will be used as
-			autopkg_options to the `autopkg` binary
+		callback (models.AutoPkgCMDResponse): Will be used to determine response method
+		autopkg_options (dict|models.AutoPkgCMD): Will be used as options to the `autopkg` binary
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -205,7 +200,7 @@ async def autopkg_verify_recipe(recipe_id: str, called_by: str = "slack",
 		(
 			a_recipe.dict().get("recipe_id"),
 			autopkg_options.dict(exclude_unset=True, exclude_none=True),
-			called_by
+			callback.dict()
 		),
 		queue="autopkg", priority=6
 	)

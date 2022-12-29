@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from datetime import datetime, timedelta
+
+from pydantic import BaseModel, validator
 from tortoise import fields
 from tortoise.models import Model
 from tortoise.contrib.pydantic import pydantic_model_creator
@@ -115,3 +117,17 @@ class AutoPkgTaskResults(BaseModel):
 	success: str
 	stdout: str
 	stderr: str
+
+
+class AutoPkgCMDResponse(BaseModel):
+	ingress: str = "Schedule"
+	egress: str = "PkgBot"
+	channel: str | None = None
+	start: datetime = datetime.now()
+	completed: datetime | timedelta | None = None # Haven't decided yet which to use...
+
+	@validator('ingress')
+	def prevent_none(cls, v, values):
+		if v == "Slack" and "egress" in values:
+			assert values["egress"] is not None, 'egress may not be None'
+		return v

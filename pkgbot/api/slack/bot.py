@@ -432,7 +432,7 @@ async def slashcmd(request: Request):
 	form_data = await request.form()
 	user_id = form_data.get("user_id")
 	username = form_data.get("user_name")
-	# channel = form_data.get("channel").get("id")
+	channel = form_data.get("channel").get("id")
 	command = form_data.get("command")
 	cmd_text = form_data.get("text")
 	response_url = form_data.get("response_url")
@@ -510,11 +510,14 @@ async def slashcmd(request: Request):
 
 			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ]")
 
+			callback = models.AutoPkgCMDResponse(
+				**{ "ingress": "Slack", "egress": username, "channel": channel})
+
 			if verb == "run":
-				results = await api.autopkg.autopkg_run_recipe(recipe_id, "slack", autopkg_options)
+				results = await api.autopkg.autopkg_run_recipe(recipe_id, callback, autopkg_options)
 
 			elif verb == "verify-trust-info":
-				results = await api.autopkg.autopkg_verify_recipe(recipe_id, "slack", autopkg_options)
+				results = await api.autopkg.autopkg_verify_recipe(recipe_id, callback, autopkg_options)
 
 			elif verb == "update-trust-info":
 ##### TODO:  Add Support
