@@ -309,7 +309,7 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 		elif v_count := re.subn(r"--verbose|-v", '', cmd_text)[1]:
 			final_options["verbose"] = f"{'v' * v_count}"
 
-	options_to_parse = await split_string(cmd_text, -1)
+	options_to_parse = await split_string(cmd_text, split_index = -1)
 	indexes_to_ignore = []
 	overrides = ""
 
