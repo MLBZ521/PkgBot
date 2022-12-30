@@ -131,7 +131,11 @@ async def autopkg_run_recipes(autopkg_cmd: models.AutoPkgCMD = Depends(models.Au
 	log.info("Running all recipes")
 
 	if not isinstance(autopkg_cmd, models.AutoPkgCMD):
+		autopkg_cmd = models.AutoPkgCMD()
+
+	elif isinstance(autopkg_cmd, models.AutoPkgCMD):
 		autopkg_cmd = models.AutoPkgCMD(**autopkg_cmd)
+
 	autopkg_cmd.verb = "run"
 
 	recipe_filter = models.Recipe_Filter(**{"enabled": True, "manual_only": False})
@@ -141,8 +145,7 @@ async def autopkg_run_recipes(autopkg_cmd: models.AutoPkgCMD = Depends(models.Au
 
 	queued_task = task.autopkg_verb_parser.apply_async(
 		(autopkg_cmd.dict(), recipes), queue="autopkg", priority=3)
-##### TODO: REMOVE:
-	log.debug(f"queued_task:  {queued_task}")
+
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
