@@ -21,12 +21,6 @@ async def event_handler(task_id):
 
 	try:
 		event = task_results.result.get("event")
-		# event_id = task_results.result.get("event_id", "")
-		# callback = task_results.result.get("callback")
-		# recipe_id = task_results.result.get("recipe_id")
-		# success = task_results.result.get("success")
-		# stdout = task_results.result.get("stdout")
-		# stderr = task_results.result.get("stderr")
 
 	except Exception:
 		# Seeing a random issue where looking up the task_id returns "None" here, but if I manually
@@ -67,18 +61,19 @@ async def event_handler(task_id):
 
 async def event_details(task_results):
 
-	return ( task_results.result.get("event"), #"event":
-		task_results.result.get("event_id", ""), #"event_id":
-		models.AutoPkgCMDResponse(**task_results.result.get("callback")), #"callback":
-		task_results.result.get("recipe_id"), #"recipe_id":
-		task_results.result.get("success"), #"success":
-		task_results.result.get("stdout"), #"stdout":
-		task_results.result.get("stderr") #"stderr":
+	return (
+		task_results.result.get("event"),
+		task_results.result.get("event_id", ""),
+		models.AutoPkgCMD(**task_results.result.get("autopkg_cmd")),
+		task_results.result.get("recipe_id"),
+		task_results.result.get("success"),
+		task_results.result.get("stdout"),
+		task_results.result.get("stderr")
 	)
 	# or: {
 		# "event": task_results.result.get("event"),
 		# "event_id": task_results.result.get("event_id", ""),
-		# "callback": task_results.result.get("callback"),
+		# "autopkg_cmd": task_results.result.get("autopkg_cmd"),
 		# "recipe_id": task_results.result.get("recipe_id"),
 		# "success": task_results.result.get("success"),
 		# "stdout": task_results.result.get("stdout"),
@@ -89,9 +84,9 @@ async def event_details(task_results):
 async def event_verify_trust_info(task_results):
 	""" When a user has requested to run `autopkg verify-trust-info <recipe>` """
 
-	event, event_id, callback, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
-	if callback.ingress in [ "PkgBot", "api" ]:
+	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
 
 		if success:
 			# This shouldn't ever be called?
@@ -102,7 +97,7 @@ async def event_verify_trust_info(task_results):
 			redacted_error = await utility.replace_sensitive_strings(stderr)
 			await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
 
-	elif callback.ingress == "Slack":
+	elif autopkg_cmd.ingress == "Slack":
 		# Post ephemeral msg to Slack user
 		log.debug("Recipe trust info was checked via Slack command.")
 
@@ -112,11 +107,11 @@ async def event_verify_trust_info(task_results):
 			text = f"Recipe trust info failed for `{recipe_id}`!  :git-pr-check-failed:"
 
 		await api.slack.send_msg.ephemeral_msg(
-			user = callback.egress,
+			user = autopkg_cmd.egress,
 			text = text,
 			alt_text = "Results from task...",
 			channel = None,
-			image = None, 
+			image = None,
 			alt_image_text = None
 		)
 
@@ -124,7 +119,7 @@ async def event_verify_trust_info(task_results):
 async def event_update_trust_info(task_results):
 	""" Update message with result of update-trust-info attempt """
 
-	event, event_id, callback, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	if success:
 		await api.recipe.recipe_trust_update_success(event_id)
@@ -135,7 +130,7 @@ async def event_update_trust_info(task_results):
 async def event_disk_space_warning(task_results):
 	""" If cache volume has low disk space """
 
-	event, event_id, callback, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	# Post Slack Message
 	results = await api.send_msg.disk_space_msg(
@@ -153,7 +148,7 @@ async def event_disk_space_warning(task_results):
 async def event_failed_pre_checks(task_results):
 	""" When a pre-check task fails """
 
-	event, event_id, callback, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	for task_id in task_results.result.get("task_id"):
 
@@ -189,17 +184,17 @@ async def event_failed_pre_checks(task_results):
 async def event_error(task_results):
 	""" When a recipe run or unknown event fails """
 
-	event, event_id, callback, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	await handle_autopkg_error(task_id = task_results.task_id, event = event, event_id = event_id,
-		callback = callback, recipe_id = recipe_id, success = success, stdout = stdout,
+		autopkg_cmd = autopkg_cmd, recipe_id = recipe_id, success = success, stdout = stdout,
 		stderr = stderr
 	)
 
 
 async def event_recipe_run(task_results):
 
-	event, event_id, callback, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 	plist_contents = await utility.find_receipt_plist(stdout)
 
 	# Get the log info for PackageUploader
@@ -247,7 +242,7 @@ async def event_recipe_run(task_results):
 			# ensures a message is posted if it failed to post previously.
 			pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
 
-			if pkg_db_object and callback.ingress == "Slack":
+			if pkg_db_object and autopkg_cmd.ingress == "Slack":
 ##### TO DO:
 # Post ephemeral msg to Slack user
 					log.debug("Post ephemeral msg to Slack user new software version was not available")
@@ -256,7 +251,7 @@ async def event_recipe_run(task_results):
 				log.info(f"New package posted to dev:  {pkg_name}")
 				await api.autopkg.workflow_dev(models.Package_In(**pkg_data))
 
-				if callback.ingress == "Slack":
+				if autopkg_cmd.ingress == "Slack":
 ##### TO DO:
 # Post ephemeral msg to Slack user
 					log.debug("Post ephemeral msg to Slack user that a new pkg was posted")
@@ -270,7 +265,7 @@ async def event_recipe_run(task_results):
 		except Exception as exception:
 
 			await handle_exception(task_id = task_results.task_id, event = event, event_id = event_id,
-				callback = callback, recipe_id = recipe_id, success = success,
+				autopkg_cmd = autopkg_cmd, recipe_id = recipe_id, success = success,
 				exception = exception
 			)
 
@@ -289,7 +284,7 @@ async def handle_autopkg_error(**kwargs):
 	task_id = kwargs.get("task_id")
 	event = kwargs.get("event")
 	event_id = kwargs.get("event_id")
-	callback = kwargs.get("callback")
+	autopkg_cmd = kwargs.get("autopkg_cmd")
 	recipe_id = kwargs.get("recipe_id")
 	success = kwargs.get("success")
 	stdout = kwargs.get("stdout")
@@ -333,7 +328,7 @@ async def handle_exception(**kwargs):
 	recipe_id = kwargs.pop("recipe_id")
 	event = kwargs.get("event")
 	event_id = kwargs.get("event_id")
-	callback = kwargs.get("callback")
+	autopkg_cmd = kwargs.get("autopkg_cmd")
 	success = kwargs.get("success")
 	exception = await utility.replace_sensitive_strings(kwargs.get("exception"))
 
@@ -343,7 +338,13 @@ async def handle_exception(**kwargs):
 			"Event:": event,
 			"Event ID:": event_id,
 			"Success:": success,
-			"Called By:": callback.dict(),
+			"Called By:": {
+				"ingress": autopkg_cmd.get("ingress"),
+				"egress": autopkg_cmd.get("egress"),
+				"channel": autopkg_cmd.get("channel"),
+				"start": autopkg_cmd.get("start"),
+				"completed": autopkg_cmd.get("completed")
+			},
 			"Exception:": exception
 		}
 	}

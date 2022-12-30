@@ -44,7 +44,7 @@ async def results(task_id:  str):
 			sub_tasks = []
 
 			if len(sub_task_ids) == 1:
-				return { 
+				return {
 					"task_results": await utility.replace_sensitive_strings(
 						task_utils.get_task_results(sub_task_ids[0]).result)
 				}
@@ -115,13 +115,14 @@ async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body()
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def autopkg_run_recipes(callback: models.AutoPkgCMDResponse = Depends(models.AutoPkgCMDResponse),
-	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
-	"""Run all recipes in the database.
+async def autopkg_run_recipes(autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
+	"""Run all recipes in the database; recipes are filtered to match:
+		* enabled
+		* _not_ manual only
 
 	Args:
-		callback (models.AutoPkgCMDResponse): Will be used to determine response method
-		autopkg_options (dict|models.AutoPkgCMD): Will be used as options to the `autopkg` binary
+		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
+			and details on response method
 
 	Returns:
 		dict:  Dict describing the results of the ran process
@@ -129,53 +130,57 @@ async def autopkg_run_recipes(callback: models.AutoPkgCMDResponse = Depends(mode
 
 	log.info("Running all recipes")
 
-	if not isinstance(autopkg_options, models.AutoPkgCMD):
-		autopkg_options = models.AutoPkgCMD()
+	if not isinstance(autopkg_cmd, models.AutoPkgCMD):
+		autopkg_cmd = models.AutoPkgCMD(**autopkg_cmd)
+	autopkg_cmd.verb = "run"
 
 	recipe_filter = models.Recipe_Filter(**{"enabled": True, "manual_only": False})
 	recipes = (await api.recipe.get_recipes(recipe_filter)).get("recipes")
 	recipes = [ a_recipe.dict() for a_recipe in recipes ]
 	log.debug(f"Number of recipes to run:  {len(recipes)}")
-	queued_task = task.autopkg_run.apply_async(
-		(recipes, autopkg_options.dict(), callback.dict()), queue="autopkg", priority=3)
+
+	queued_task = task.autopkg_verb_parser.apply_async(
+		(autopkg_cmd.dict(), recipes), queue="autopkg", priority=3)
+##### TODO: REMOVE:
+	log.debug(f"queued_task:  {queued_task}")
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
 @router.post("/run/recipe/{recipe_id}", summary="Executes a recipes",
 	description="Executes a recipe in a background task.",
 	dependencies=[Depends(api.user.get_current_user)])
-async def autopkg_run_recipe(recipe_id: str, 
-	callback: models.AutoPkgCMDResponse = Depends(models.AutoPkgCMDResponse),
-	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
+async def autopkg_run_recipe(recipe_id: str,
+	autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
 	"""Runs the passed recipe id.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		callback (models.AutoPkgCMDResponse): Will be used to determine response method
-		autopkg_options (dict|models.AutoPkgCMD): Will be used as options to the `autopkg` binary
+		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
+			and details on response method
 
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
 
+	autopkg_cmd.verb = "run"
 	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	if not a_recipe:
 		log.warning(f"Unknown recipe id:  '{recipe_id}'")
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
 
-	if autopkg_options.dict().get("promote"):
+	if autopkg_cmd.promote:
 
 		pkg_object = await models.Package_Out.from_queryset_single(
 			models.Packages.get(
-				recipe_id=recipe_id, pkg_name=autopkg_options.dict().get("match_pkg"))
+				recipe_id=recipe_id, pkg_name=autopkg_cmd.match_pkg)
 		)
 
-		return await api.package.promote_package(id=pkg_object.dict().get("id"))
+		return await api.package.promote_package(id=pkg_object.id, autopkg_cmd=autopkg_cmd)
 
-	if a_recipe.dict().get("enabled"):
-		queued_task = task.autopkg_run.apply_async(
-			([ a_recipe.dict() ], autopkg_options.dict(), callback.dict()), queue="autopkg", priority=3)
+	if a_recipe.enabled:
+		queued_task = task.autopkg_verb_parser.apply_async(
+			(autopkg_cmd.dict(), [ a_recipe.dict() ]), queue="autopkg", priority=4)
 
 		return { "result": "Queued background task" , "task_id": queued_task.id }
 
@@ -187,29 +192,23 @@ async def autopkg_run_recipe(recipe_id: str,
 	description="Validates a recipes trust info in a background task.",
 	dependencies=[Depends(api.user.get_current_user)])
 async def autopkg_verify_recipe(recipe_id: str,
-	callback: models.AutoPkgCMDResponse = Depends(models.AutoPkgCMDResponse),
-	autopkg_options: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
+	autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
 	"""Runs the passed recipe id.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		callback (models.AutoPkgCMDResponse): Will be used to determine response method
-		autopkg_options (dict|models.AutoPkgCMD): Will be used as options to the `autopkg` binary
+		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
+			and details on response method
 
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
 
+	autopkg_cmd.verb = "verify-trust-info"
 	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
-	queued_task = task.autopkg_verify_trust.apply_async(
-		(
-			a_recipe.dict().get("recipe_id"),
-			autopkg_options.dict(exclude_unset=True, exclude_none=True),
-			callback.dict()
-		),
-		queue="autopkg", priority=6
-	)
+	queued_task = task.autopkg_verb_parser.apply_async(
+		(autopkg_cmd.dict(), a_recipe.recipe_id), queue="autopkg", priority=6)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 

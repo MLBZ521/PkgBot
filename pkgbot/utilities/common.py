@@ -132,6 +132,13 @@ async def datetime_to_string(datetime_string: str, format_string: str = "%Y-%m-%
 	return converted.strftime(format_string)
 
 
+async def get_timestamp(format_string: str = None):
+
+	if format_string:
+		return await datetime_to_string(str(datetime.now()), format_string)
+	return await datetime_to_string(str(datetime.now()))
+
+
 async def compute_hex_digest(key: bytes,
 
 	message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):

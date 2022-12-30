@@ -62,21 +62,25 @@ async def delete_package_by_id(id: int):
 
 
 @router.post("/promote", summary="Promote package to production",
-	description="Promote a package to production by id.", 
+	description="Promote a package to production by id.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def promote_package(id: int):
+async def promote_package(id: int, autopkg_cmd: models.AutoPkgCMD | None = Depends(models.AutoPkgCMD)):
 
 	pkg_object = await get_package_by_id(id)
 	recipe = await api.recipe.get_by_recipe_id(pkg_object.recipe_id)
 
 	autopkg_options = {
 		"promote": True,
-		"match_pkg": pkg_object.dict().get("pkg_name"),
-		"pkg_id": pkg_object.dict().get("id")
+		"match_pkg": pkg_object.pkg_name,
+		"pkg_id": pkg_object.id
 	}
 
-	queued_task = task.autopkg_run.apply_async(
-		([recipe.dict()], autopkg_options, "slack"), queue='autopkg', priority=4)
+	if not isinstance(autopkg_cmd, models.AutoPkgCMD):
+		autopkg_cmd = models.AutoPkgCMD(**autopkg_cmd, **autopkg_options)
+	autopkg_cmd.verb = "run"
+
+	queued_task = task.autopkg_verb_parser.apply_async(
+		(autopkg_cmd, [recipe.dict()]), queue='autopkg', priority=4)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 

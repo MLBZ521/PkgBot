@@ -1,9 +1,14 @@
-from datetime import datetime, timedelta
+import asyncio
+
+from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, validator
 from tortoise import fields
 from tortoise.models import Model
 from tortoise.contrib.pydantic import pydantic_model_creator
+
+from pkgbot.utilities import common as utility
 
 
 class Packages(Model):
@@ -41,10 +46,7 @@ class Recipes(Model):
 
 Recipe_Out = pydantic_model_creator(Recipes, name="Recipe_Out")
 Recipe_In = pydantic_model_creator(Recipes, name="Recipe_In", exclude_readonly=True)
-# Recipe_Filter = pydantic_model_creator(
-# 	Recipes, name="Recipe_Filter", exclude_readonly=True, 
-# 	exclude=('id', "recipe_id", "name", "last_ran", "notes"), 
-# 	optional=( "enabled", "manual_only", "pkg_only", "recurring_fail_count", "schedule"))
+
 
 class Recipe_Filter(BaseModel):
 	enabled: bool | None = None
@@ -98,36 +100,45 @@ TrustUpdate_In = pydantic_model_creator(
 	TrustUpdates, name="TrustUpdate_In", exclude_readonly=True)
 
 
+class CallBack(BaseModel):
+	egress: str = "PkgBot"
+	ingress: str = "Schedule"
+	channel: str | None = None
+	start: datetime = asyncio.run(utility.get_timestamp())
+	completed: datetime | None = None
+
+	@validator('ingress')
+	def prevent_none(cls, v, values):
+		if v == "Slack":
+			assert "egress" in values and values["egress"] is not None, 'egress may not be None'
+		return v
+
+
 ##### May make this a Tortoise Model, to support tracking who/what generated each command
-class AutoPkgCMD(BaseModel):
+class AutoPkgCMD(CallBack):
+	verb: str = Literal["disable", "enable", "repo-add", "run",
+		"update-trust-info", "verify-trust-info", "version"]
 	ignore_parent_trust: bool = False
-	match_pkg: str | None = None
 	overrides: str | None = None
 	pkg_only: bool = False
-	promote: bool = False
 	quiet: bool = True
 	verbose: str = "vvv"
 
+	match_pkg: str | None = None
+	promote: bool = False
+
+	@validator('promote')
+	def prevent_none(cls, v, values):
+		if v == "promote" and "egress" in values:
+			assert "match_pkg" in values and values["match_pkg"] is not None, 'match_pkg may not be None'
+		return v
+
 
 # Not currently used
-class AutoPkgTaskResults(BaseModel):
+class TaskResults(BaseModel):
 	event: str
 	event_id: str = ""
 	recipe_id: str
 	success: str
 	stdout: str
 	stderr: str
-
-
-class AutoPkgCMDResponse(BaseModel):
-	ingress: str = "Schedule"
-	egress: str = "PkgBot"
-	channel: str | None = None
-	start: datetime = datetime.now()
-	completed: datetime | timedelta | None = None # Haven't decided yet which to use...
-
-	@validator('ingress')
-	def prevent_none(cls, v, values):
-		if v == "Slack" and "egress" in values:
-			assert values["egress"] is not None, 'egress may not be None'
-		return v

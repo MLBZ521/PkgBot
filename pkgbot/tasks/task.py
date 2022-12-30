@@ -4,8 +4,6 @@ import json
 import os
 import requests
 
-from datetime import datetime
-
 import git
 from celery import Celery, group, chain
 
@@ -18,6 +16,58 @@ config = config.load_config()
 log = utility.log
 celery = Celery()
 celery.config_from_object(settings.celery.settings)
+
+
+def determine_priority(default: int, ingress: str):
+
+	return default + 1 if ingress == "Slack" else default
+
+
+def perform_pre_checks(task_id: str, ignore_parent_trust: bool):
+	"""Perform pre-checks before running `autopkg run`
+
+	Args:
+		task_id (str): Calling tasks' task_id
+		ignore_parent_trust (bool): Whether --ignore-parent-trust-verification-info was passed
+
+	Returns:
+		dict|list:
+			if dict: contains error information from failed pre-checks
+			if list: contains child `task_id`s
+	"""
+
+	# Track all child tasks that are queued
+	queued_tasks = []
+	failed_pre_checks = []
+
+	pre_checks = [check_space.signature(), git_pull_private_repo.signature()]
+
+	if not ignore_parent_trust:
+		pre_checks.extend([autopkg_repo_update.signature()])
+
+	tasks_results = (
+		group(pre_checks).apply_async(queue="autopkg", priority=8)).get(disable_sync_subtasks=False)
+
+	# Check results
+	for task_result in tasks_results:
+
+		if not task_result["success"]:
+			send_webhook.apply_async((task_id,), queue='autopkg', priority=9)
+			failed_pre_checks.append(task_result["task_id"])
+
+		queued_tasks.append(task_result["task_id"])
+
+	if failed_pre_checks:
+		return {
+			"event": "failed_pre_checks",
+			"stdout": "Error",
+			"stderr": "Error",
+			"status": 1,
+			"success": False,
+			"task_id": failed_pre_checks
+		}
+
+	return queued_tasks
 
 
 @celery.task(name="pkgbot:send_webhook", namebind=True)
@@ -75,8 +125,7 @@ def git_pull_private_repo(self):
 					# private_repo.delete_head(repo_push_branch)
 					# For safety, just renaming the branch for now and after a bit of real world
 					# testing, switch to deleting the branch
-					timestamp = asyncio.run(
-						utility.datetime_to_string(str(datetime.now()), "%Y-%m-%d_%I-%M-%S"))
+					timestamp = asyncio.run(utility.get_timestamp("%Y-%m-%d_%I-%M-%S"))
 					private_repo.branches[repo_push_branch].rename(
 						f"{repo_push_branch}_{timestamp}")
 
@@ -158,7 +207,7 @@ def autopkg_repo_update(self):
 
 
 @celery.task(name="pkgbot:check_space", bind=True)
-def autopkg_check_space(self):
+def check_space(self):
 	"""Checks free space on PkgBot storage volume"""
 
 	minimum_free_space = config.AutoPkg.get("minimum_free_space")
@@ -199,59 +248,86 @@ def autopkg_check_space(self):
 	}
 
 
-@celery.task(name="autopkg:run", bind=True)
-def autopkg_run(self, recipes: list, autopkg_options: dict, callback: dict):
-	"""Creates parent and individual recipe tasks.
+@celery.task(name="autopkg:verb_parser", bind=True)
+def autopkg_verb_parser(self, autopkg_cmd: dict, recipes: list | str | None = None):
+	"""Handles `autopkg` tasks.
 
 	Args:
-		recipes (list): A list of recipe dicts, which contain their configurations
-		autopkg_options (dict): Will be used as options to the `autopkg` binary
-		callback (dict): Will be used to determine response method
+		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
+		recipes (list|None): A optional list of recipes (in dicts,
+			in which contains their configurations)
 
 	Returns:
-		dict:  Dict describing the results of the ran process
+		dict:  dict describing the results of the ran process
 	"""
 
-	# log.debug(f"Calling autopkg_options:  {autopkg_options}")
+	# log.debug(f"Calling autopkg_cmd:  {autopkg_cmd}")
 	# log.debug(f"recipes:  {recipes}")
 
 	# Track all child tasks that are queued by this parent task
 	queued_tasks = []
-	promote = autopkg_options.pop("promote", False)
 
-	if not promote:
-		# Run pre-checks if not promoting a pkg
+	verb = autopkg_cmd.get("verb")
 
-		pre_checks = []
-		failed_pre_checks = []
+	if verb in { "repo-add", "update-trust-info", "verify-trust-info", "version"}:
 
-		pre_checks.append(autopkg_check_space.signature())
+		# if verb == "update-trust-info":
+##### TODO:  Add Support
+			# pass
 
-		if not autopkg_options.get("ignore_parent_trust"):
-			pre_checks.extend(
-				[ autopkg_repo_update.signature(), git_pull_private_repo.signature() ])
+		if verb == "verify-trust-info":
+			queued_task = autopkg_verify_trust.apply_async(
+				(recipes, autopkg_cmd),
+				queue="autopkg",
+				priority=6
+			)
 
-		tasks_results = (group(pre_checks).apply_async(
-			queue="autopkg", priority=7)).get(disable_sync_subtasks=False)
+		# elif verb == "repo-add":
+##### TODO:  Add Support
+			# pass
 
-		# Check results
-		for task_result in tasks_results:
+		# elif verb == "version":
+##### TODO:  Add Support
+			# pass
 
-			if not task_result["success"]:
-				send_webhook.apply_async((self.request.id,), queue='autopkg', priority=9)
-				failed_pre_checks.append(task_result["task_id"])
+		queued_tasks.append(queued_task.id)
 
-			queued_tasks.append(task_result["task_id"])
+	else:
 
-		if failed_pre_checks:
-			return {
-				"event": "failed_pre_checks",
-				"stdout": "Error",
-				"stderr": "Error",
-				"status": 1,
-				"success": False,
-				"task_id": failed_pre_checks
-			}
+		if not autopkg_cmd.get("promote"):
+			# Run pre-checks if not promoting a pkg
+			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
+
+			if isinstance(results_pre_check, dict):
+				# An error occurred in a pre-check
+				return results_pre_check
+
+			queued_tasks.extend(results_pre_check)
+
+		results = autopkg_run(recipes, autopkg_cmd)
+		queued_tasks.extend(results)
+
+	return { "Queued background tasks": queued_tasks }
+
+
+@celery.task(name="autopkg:run", bind=True)
+def autopkg_run(self, recipes: list, autopkg_cmd: dict):
+	"""Creates parent and individual recipe tasks.
+
+	Args:
+		recipes (list): A list of recipes (in dicts, in which contains their configurations)
+		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
+
+	Returns:
+		dict:  dict describing the results of the ran process
+	"""
+
+	# log.debug(f"Calling autopkg_cmd:  {autopkg_cmd}")
+	# log.debug(f"recipes:  {recipes}")
+
+	# Track all child tasks that are queued by this parent task
+	queued_tasks = []
+	promote = autopkg_cmd.pop("promote", False)
 
 	for recipe in recipes:
 
@@ -261,88 +337,87 @@ def autopkg_run(self, recipes: list, autopkg_options: dict, callback: dict):
 		if not promote:
 
 			if (
-				callback.get("ingress") == "Schedule" and
+				autopkg_cmd.get("ingress") == "Schedule" and
 				not task_utils.check_recipe_schedule(recipe.get("schedule"), recipe.get("last_ran"))
 			):
 				log.debug(f"Recipe {recipe_id} is out of schedule")
 				continue
 
-			_ = autopkg_options.pop("match_pkg", None)
-			_ = autopkg_options.pop("pkg_only", None)
-			_ = autopkg_options.pop("pkg_id", None)
+			_ = autopkg_cmd.pop("match_pkg", None)
+			_ = autopkg_cmd.pop("pkg_only", None)
+			_ = autopkg_cmd.pop("pkg_id", None)
 
 			# If ignore parent trust, don't run autopkg_verify_trust
-			if autopkg_options.get("ignore_parent_trust"):
+			if autopkg_cmd.get("ignore_parent_trust"):
 
 				queued_task = run_recipe.apply_async(
-					({"success": True}, recipe_id, autopkg_options, callback),
+					({"success": True}, recipe_id, autopkg_cmd),
 					queue="autopkg",
-					priority=4
+					priority=determine_priority(3, autopkg_cmd.get("ingress"))
 				)
 
 				queued_tasks.append(queued_task.id)
 
 			else:
 
-				# Verify trust info and wait
+				# Perform `verify-trust-info` and pass the results to next task.
+				# `verify-trust-info` task has a lower priority _here_ so that `recipe_run`
+				# tasks can run after; instead of all `verify-trust-info` tasks running first.
 				chain_results = chain(
 					autopkg_verify_trust.signature(
-						(recipe_id, autopkg_options, callback),
+						(recipe_id, autopkg_cmd),
 						queue="autopkg",
-						priority=2
+						priority=determine_priority(2, autopkg_cmd.get("ingress"))
 					) |
 					run_recipe.signature(
-						(recipe_id, autopkg_options, callback),
+						(recipe_id, autopkg_cmd),
 						queue="autopkg",
-						priority=3
+						priority=determine_priority(4, autopkg_cmd.get("ingress"))
 					)
 				)()
 
 				queued_tasks.extend([chain_results.parent, chain_results.task_id])
 
 		else:
-			log.info(f"Promoting to production: {autopkg_options['match_pkg']}")
+			log.info(f"Promoting to production: {autopkg_cmd['match_pkg']}")
 
-			autopkg_options |= {
+			autopkg_cmd |= {
 				"ignore_parent_trust": True,
 				"prefs": os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs")),
 				"promote_recipe_id": recipe.get("recipe_id"),
-				"verbose": autopkg_options.get("verbose", "vvv")
+				"verbose": autopkg_cmd.get("verbose", None)
 			}
 
 			if recipe.get("pkg_only"):
 				# Only upload the .pkg, do not create/update a Policy
 				recipe_id = config.JamfPro_Prod.get("recipe_template_pkg_only")
-				autopkg_options |= { "pkg_only": True }
+				autopkg_cmd |= { "pkg_only": True }
 			else:
 				recipe_id = config.JamfPro_Prod.get("recipe_template")
 
 			queued_task = run_recipe.apply_async(
-				({"event": "promote", "id": autopkg_options.pop("pkg_id")},
+				({"event": "promote", "id": autopkg_cmd.pop("pkg_id")},
 					recipe_id,
-					autopkg_options,
-					callback),
+					autopkg_cmd),
 				queue="autopkg", priority=4
 			)
 
 			queued_tasks.append(queued_task.id)
 
-	return { "Queued background tasks": queued_tasks }
+	return queued_tasks
 
 
 @celery.task(name="autopkg:run_recipe", bind=True)
-def run_recipe(self, parent_task_results: dict, recipe_id: str,
-	autopkg_options: dict, callback: dict):
+def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dict):
 	"""Runs the passed recipe id against `autopkg run`.
 
 	Args:
 		parent_task_results (dict): Results from the calling task
 		recipe_id (str): Recipe ID of a recipe
-		autopkg_options (dict): Will be used as options to the `autopkg` binary
-		callback (dict): Will be used to determine response method
+		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
 
 	Returns:
-		dict:  Dict describing the results of the ran process
+		dict:  dict describing the results of the ran process
 	"""
 
 	run_type = "recipe_run_prod" if parent_task_results.get("event") == "promote" else "recipe_run_dev"
@@ -375,7 +450,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 		return {
 			"event": event_type,
 			# "event_id": event_id,
-			"callback":  callback,
+			"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
 			"recipe_id": recipe_id,
 			"success": parent_task_results["success"],
 			"stdout": parent_task_results["stdout"],
@@ -386,7 +461,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 		log.info(f"Creating `autopkg run` task for recipe:  {recipe_id}")
 
 		# Generate AutoPkg options
-		options = task_utils.generate_autopkg_args(**autopkg_options)
+		options = task_utils.generate_autopkg_args(**autopkg_cmd)
 		# Build the autopkg command
 		cmd = f"{config.AutoPkg.get('binary')} run {recipe_id} {options}"
 
@@ -400,7 +475,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
-			"callback":  callback,
+			"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
 			"event": run_type,
 			"event_id": parent_task_results.get("id"),
 			"recipe_id": recipe_id,
@@ -411,31 +486,30 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str,
 
 
 @celery.task(name="autopkg:verify-trust", bind=True)
-def autopkg_verify_trust(self, recipe_id: str, autopkg_options: dict, callback: dict):
+def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict):
 	"""Runs the passed recipe id against `autopkg verify-trust-info`.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		callback (dict): Will be used to determine response method
-		autopkg_options (dict): Will be used as options to the `autopkg` binary
+		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
 
 	Returns:
-		dict:  Dict describing the results of the ran process
+		dict:  dict describing the results of the ran process
 	"""
 
 	log.info(f"Verifying trust info for:  {recipe_id}")
 
 	# Not overriding verbose when verifying trust info
-	_ = autopkg_options.pop("quiet", None)
-	_ = autopkg_options.pop("verbose", None)
+	_ = autopkg_cmd.pop("quiet", None)
+	_ = autopkg_cmd.pop("verbose", None)
 
-	autopkg_options |= {
+	autopkg_cmd |= {
 		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),
 		"verbose": "vvv"
 	}
 
 	# Generate AutoPkg options
-	options = task_utils.generate_autopkg_args(**autopkg_options)
+	options = task_utils.generate_autopkg_args(**autopkg_cmd)
 	# Build the autopkg command
 	cmd = f"{config.AutoPkg.get('binary')} verify-trust-info {recipe_id} {options}"
 
@@ -445,12 +519,12 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_options: dict, callback: 
 	# log.debug(f"Command to execute:  {cmd}")
 	results = asyncio.run(utility.execute_process(cmd))
 
-	if callback.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
+	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
 		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "verify_trust_info",
-			"callback":  callback,
+			"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],
@@ -469,7 +543,7 @@ def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 		trust_id (int): The database id to associate the results to the record
 
 	Returns:
-		dict:  Dict describing the results of the ran process
+		dict:  dict describing the results of the ran process
 	"""
 
 	log.info(f"Updating trust info for:  {recipe_id}")

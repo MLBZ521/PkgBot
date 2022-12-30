@@ -445,8 +445,9 @@ async def slashcmd(request: Request):
 	user_that_clicked = await api.user.get_user(slack_user_object)
 
 	log.debug("Incoming details:\n"
-		f"user id:  {user_id}\nusername:  {username}\nfull admin:  {user_that_clicked.full_admin}"
-		f"\ncommand:  {command}\ncmd_text:  {cmd_text}\nresponse_url:  {response_url}\n"
+		f"channel:  {channel}\nuser id:  {user_id}\nusername:  {username}\n"
+		f"full admin:  {user_that_clicked.full_admin}\ncommand:  {command}\ncmd_text:  {cmd_text}"
+		f"\nresponse_url:  {response_url}\n"
 	)
 
 ##### TO DO:
@@ -497,7 +498,7 @@ async def slashcmd(request: Request):
 
 			if " " not in options:
 				recipe_id = options
-				autopkg_options = models.AutoPkgCMD()
+				autopkg_cmd = models.AutoPkgCMD()
 			else:
 				recipe_id, cmd_options = await utility.split_string(options)
 
@@ -506,18 +507,18 @@ async def slashcmd(request: Request):
 				except Exception as error:
 					return f"Error processing override --key | Error:  {error}"
 
-				autopkg_options = models.AutoPkgCMD(**options)
+				autopkg_cmd = models.AutoPkgCMD(**options)
 
-			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ]")
+			autopkg_cmd.__dict__.update({
+				"verb": verb, "ingress": "Slack", "egress": username, "channel": channel})
 
-			callback = models.AutoPkgCMDResponse(
-				**{ "ingress": "Slack", "egress": username, "channel": channel})
+			log.debug(f"[ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ]")
 
 			if verb == "run":
-				results = await api.autopkg.autopkg_run_recipe(recipe_id, callback, autopkg_options)
+				results = await api.autopkg.autopkg_run_recipe(recipe_id, autopkg_cmd)
 
 			elif verb == "verify-trust-info":
-				results = await api.autopkg.autopkg_verify_recipe(recipe_id, callback, autopkg_options)
+				results = await api.autopkg.autopkg_verify_recipe(recipe_id, autopkg_cmd)
 
 			elif verb == "update-trust-info":
 ##### TODO:  Add Support
@@ -532,10 +533,10 @@ async def slashcmd(request: Request):
 				pass
 
 			if results.get("result") == "Queued background task":
-				return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | task_id:  {results.get('task_id')}"
+				return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results.get('task_id')}"
 
 			elif results.get("result") == "Recipe is disabled":
-				return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | result: Recipe is disabled"
+				return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | result: Recipe is disabled"
 
 	except HTTPException as error:
-		return f"Queue task:  [ verb:  {verb} ] | [ recipe_id:  {recipe_id} ] | [ autopkg_options:  {autopkg_options} ] | Unknown recipe id:  '{recipe_id}' "
+		return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | Unknown recipe id:  '{recipe_id}' "
