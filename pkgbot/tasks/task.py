@@ -276,21 +276,19 @@ def autopkg_verb_parser(self, autopkg_cmd: dict, recipes: list | str | None = No
 			# pass
 
 		if verb == "verify-trust-info":
-			queued_task = autopkg_verify_trust.apply_async(
-				(recipes, autopkg_cmd),
-				queue="autopkg",
-				priority=6
-			)
+			# if recipes == None:
+			# if isinstance(recipes, list) and len(recipes) == 1:
+			# if isinstance(recipes, str):
+			return autopkg_verify_trust(recipes, autopkg_cmd, task_id=self.request.id)
 
 		# elif verb == "repo-add":
 ##### TODO:  Add Support
 			# pass
 
-		# elif verb == "version":
-##### TODO:  Add Support
-			# pass
+		elif verb == "version":
+			return autopkg_version(autopkg_cmd, task_id=self.request.id)
 
-		queued_tasks.append(queued_task.id)
+		# queued_tasks.append(queued_task.id)
 
 	else:
 
@@ -486,7 +484,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 
 
 @celery.task(name="autopkg:verify-trust", bind=True)
-def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict):
+def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str | None = None):
 	"""Runs the passed recipe id against `autopkg verify-trust-info`.
 
 	Args:
@@ -520,7 +518,7 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict):
 	results = asyncio.run(utility.execute_process(cmd))
 
 	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
-		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
+		send_webhook.apply_async((task_id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "verify_trust_info",
@@ -617,3 +615,37 @@ def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 		"stdout": results["stdout"],
 		"stderr": results["stderr"],
 	}
+
+
+@celery.task(name="autopkg:version", bind=True)
+def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
+	"""Runs `autopkg version`.
+
+	Args:
+		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
+
+	Returns:
+		dict:  dict describing the results of the ran process
+	"""
+
+	# Build the autopkg command
+	cmd = f"{config.AutoPkg.get('binary')} version"
+
+	if task_utils.get_user_context():
+		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
+
+	# log.debug(f"Command to execute:  {cmd}")
+	results = asyncio.run(utility.execute_process(cmd))
+
+	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
+		send_webhook.apply_async((task_id,), queue="autopkg", priority=9)
+
+		return {
+			"event": "autopkg_version",
+			"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
+			"success": results["success"],
+			"stdout": results["stdout"],
+			"stderr": results["stderr"],
+		}
+
+	return results

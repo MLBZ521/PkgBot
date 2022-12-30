@@ -457,7 +457,11 @@ async def slashcmd(request: Request):
 	if not user_that_clicked.full_admin:
 		return "Slash commands are in development and not available for public consumption at this time."
 
-	verb, options = await utility.split_string(cmd_text)
+	if " " in cmd_text:
+		verb, options = await utility.split_string(cmd_text)
+	else:
+		verb = cmd_text
+		options = ""
 
 	supported_options = {
 		"pkgbot_admin": ["update-trust-info", "repo-add", "enable", "disable" ],
@@ -529,8 +533,7 @@ async def slashcmd(request: Request):
 				pass
 
 			elif verb == "version":
-##### TODO:  Add Support
-				pass
+				results = await api.autopkg.get_version(autopkg_cmd)
 
 			if results.get("result") == "Queued background task":
 				return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results.get('task_id')}"

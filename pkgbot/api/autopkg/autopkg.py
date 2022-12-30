@@ -213,6 +213,25 @@ async def autopkg_verify_recipe(recipe_id: str,
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
+@router.get("/version", summary="Get AutoPkg version",
+	description="Gets the current version of AutoPkg installed.",
+	dependencies=[Depends(api.user.get_current_user)])
+async def get_version(autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
+	"""Gets the current version of AutoPkg installed.
+
+	Args:
+		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
+			and details on response method
+
+	Returns:
+		dict:  Dict describing the results of the ran process
+	"""
+
+	autopkg_cmd.verb = "version"
+	queued_task = task.autopkg_verb_parser.apply_async((autopkg_cmd.dict(),), queue="autopkg")
+	return { "result": "Queued background task" , "task_id": queued_task.id }
+
+
 @router.post("/receive", summary="Handles incoming task messages with autopkg results",
 	description="This endpoint receives incoming messages from tasks and calls the required "
 		"actions based on the message after verifying the authenticity of the source.")

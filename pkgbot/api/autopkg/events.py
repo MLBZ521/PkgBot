@@ -61,6 +61,9 @@ async def event_handler(task_id, loop_count=0):
 	elif event in ("recipe_run_dev", "recipe_run_prod"):
 		await event_recipe_run(task_results)
 
+	elif event == "autopkg_version":
+		await event_autopkg_version(task_results)
+
 
 async def event_details(task_results):
 
@@ -280,6 +283,41 @@ async def event_recipe_run(task_results):
 		pkg_data["promoted_date"] = promoted_date
 
 		await api.autopkg.workflow_prod(event_id, models.Package_In(**pkg_data))
+
+
+async def event_autopkg_version(task_results):
+	""" When a user requests `autopkg version` """
+
+	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
+
+	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
+
+		if success:
+			# This shouldn't ever be called?
+			log.debug(f"AutoPkg version:  {stdout}")
+
+		else:
+			# Send message that recipe_id failed verify-trust-info
+			redacted_error = await utility.replace_sensitive_strings(stderr)
+			await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
+
+	elif autopkg_cmd.ingress == "Slack":
+		# Post ephemeral msg to Slack user
+		log.debug(f"{autopkg_cmd.egress} requested the AutoPkg version.")
+
+		if success:
+			text = f"AutoPkg version:  `{stdout}`  :link-success:"
+		else:
+			text = f"Uh oh!  Something with wrong:  `{stderr}`!  :git-pr-check-failed:"
+
+		await api.slack.send_msg.ephemeral_msg(
+			user = autopkg_cmd.egress,
+			text = text,
+			alt_text = "Results from task...",
+			channel = None,
+			image = None,
+			alt_image_text = None
+		)
 
 
 async def handle_autopkg_error(**kwargs):
