@@ -15,7 +15,7 @@ config = config.load_config()
 log = utility.log
 
 
-async def event_handler(task_id):
+async def event_handler(task_id, loop_count=0):
 
 	task_results = task_utils.get_task_results(task_id)
 
@@ -30,12 +30,15 @@ async def event_handler(task_id):
 			# Due to task prioritization?
 				# But...why when the task is essentially finished when the webhook is sent
 				# And it just started (or I just started noticing it)
+		if loop_count > 10:
+			raise Exception(f"Failed getting task results for {task_id}")
+
 		log.error(f"FAILED GETTING TASK RESULTS for {task_id} -- WHY?!?")
 		log.debug(f"task_results:  {task_results}")
 		log.debug(f"task_results.result:  {task_results.result}")
 		log.debug("Sleeping for one second...")
 		time.sleep(1)
-		await event_handler(task_id)
+		await event_handler(task_id, loop_count + 1)
 
 	if event == "verify_trust_info":
 		await event_verify_trust_info(task_results)
