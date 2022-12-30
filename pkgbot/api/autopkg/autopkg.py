@@ -43,6 +43,12 @@ async def results(task_id:  str):
 		if sub_task_ids := (task_results.result).get("Queued background tasks", None):
 			sub_tasks = []
 
+			if len(sub_task_ids) == 1:
+				return { 
+					"task_results": await utility.replace_sensitive_strings(
+						task_utils.get_task_results(sub_task_ids[0]).result)
+				}
+
 			for sub_task in sub_task_ids:
 
 				if isinstance(sub_task, AsyncResult):
