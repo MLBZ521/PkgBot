@@ -302,7 +302,7 @@ async def event_autopkg_version(task_results):
 		else:
 			# Send error message
 			redacted_error = await utility.replace_sensitive_strings(stderr)
-			api.slack.send_msg.basic_error_msg(
+			api.slack.send_msg.basic_msg(
 				f"Failed to obtain the AutoPkg Version.\nError:  {redacted_error}",
 				config.PkgBot.get("icon_error"),
 				alt_image_text="Error"
@@ -341,7 +341,7 @@ async def event_autopkg_repo_add(task_results):
 		else:
 			# Send error message
 			redacted_error = await utility.replace_sensitive_strings(stderr)
-			api.slack.send_msg.basic_error_msg(
+			api.slack.send_msg.basic_msg(
 				f"Failed to add recipe repo(s):  {repo}.\nError:  {redacted_error}",
 				config.PkgBot.get("icon_error"),
 				alt_image_text="Error"

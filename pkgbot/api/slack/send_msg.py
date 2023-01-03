@@ -205,3 +205,12 @@ async def ephemeral_msg(user, text, channel: str | None = None, image: str | Non
 		channel=channel,
 		text=alt_text
 	)
+
+
+@router.post("/basic-msg", summary="Send basic error message",
+	description="Sends a basic error message to the specified user.")
+async def basic_msg(text, image: str | None = None,
+	alt_text: str | None = None, alt_image_text: str | None = None):
+
+	blocks = await api.build_msg.basic_msg(text, image, alt_image_text)
+	return await api.bot.SlackBot.post_message(blocks, text=alt_text)
