@@ -300,9 +300,13 @@ async def event_autopkg_version(task_results):
 			log.debug(f"AutoPkg version:  {stdout}")
 
 		else:
-			# Send message that recipe_id failed verify-trust-info
+			# Send error message
 			redacted_error = await utility.replace_sensitive_strings(stderr)
-			await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
+			api.slack.send_msg.basic_error_msg(
+				f"Failed to obtain the AutoPkg Version.\nError:  {redacted_error}",
+				config.PkgBot.get("icon_error"),
+				alt_image_text="Error"
+			)
 
 	elif autopkg_cmd.ingress == "Slack":
 		# Post ephemeral msg to Slack user
