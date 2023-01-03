@@ -64,6 +64,9 @@ async def event_handler(task_id, loop_count=0):
 	elif event == "autopkg_version":
 		await event_autopkg_version(task_results)
 
+	elif event == "repo-add":
+		await event_autopkg_repo_add(task_results)
+
 
 async def event_details(task_results):
 
@@ -71,7 +74,7 @@ async def event_details(task_results):
 		task_results.result.get("event"),
 		task_results.result.get("event_id", ""),
 		models.AutoPkgCMD(**task_results.result.get("autopkg_cmd")),
-		task_results.result.get("recipe_id"),
+		task_results.result.get("recipe_id") if "recipe_id" in task_results.result.keys() else task_results.result.get("repo"),
 		task_results.result.get("success"),
 		task_results.result.get("stdout"),
 		task_results.result.get("stderr")
@@ -288,7 +291,7 @@ async def event_recipe_run(task_results):
 async def event_autopkg_version(task_results):
 	""" When a user requests `autopkg version` """
 
-	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
+	event, event_id, autopkg_cmd, target, success, stdout, stderr = await event_details(task_results)
 
 	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
 
@@ -307,6 +310,45 @@ async def event_autopkg_version(task_results):
 
 		if success:
 			text = f"AutoPkg version:  `{stdout}`  :link-success:"
+		else:
+			text = f"Uh oh!  Something with wrong:  `{stderr}`!  :git-pr-check-failed:"
+
+		await api.slack.send_msg.ephemeral_msg(
+			user = autopkg_cmd.egress,
+			text = text,
+			alt_text = "Results from task...",
+			channel = None,
+			image = None,
+			alt_image_text = None
+		)
+
+
+async def event_autopkg_repo_add(task_results):
+	""" When a recipe repo is added """
+
+	event, event_id, autopkg_cmd, repo, success, stdout, stderr = await event_details(task_results)
+
+	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
+
+		if success:
+			# This shouldn't ever be called?
+			log.debug(f"Added recipe repo(s):  {repo}")
+
+		else:
+			# Send error message
+			redacted_error = await utility.replace_sensitive_strings(stderr)
+			api.slack.send_msg.basic_error_msg(
+				f"Failed to add recipe repo(s):  {repo}.\nError:  {redacted_error}",
+				config.PkgBot.get("icon_error"),
+				alt_image_text="Error"
+			)
+
+	elif autopkg_cmd.ingress == "Slack":
+		# Post ephemeral msg to Slack user
+		log.debug(f"{autopkg_cmd.egress} requested to add recipe repo:  {repo}.")
+
+		if success:
+			text = f"Added recipe repo(s):  `{repo}`  :link-success:"
 		else:
 			text = f"Uh oh!  Something with wrong:  `{stderr}`!  :git-pr-check-failed:"
 

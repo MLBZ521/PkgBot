@@ -501,10 +501,10 @@ async def slashcmd(request: Request):
 		else:
 
 			if " " not in options:
-				recipe_id = options
+				target = options
 				autopkg_cmd = models.AutoPkgCMD()
 			else:
-				recipe_id, cmd_options = await utility.split_string(options)
+				target, cmd_options = await utility.split_string(options)
 
 				try:
 					options = await utility.parse_slash_cmd_options(cmd_options, verb)
@@ -516,30 +516,29 @@ async def slashcmd(request: Request):
 			autopkg_cmd.__dict__.update({
 				"verb": verb, "ingress": "Slack", "egress": username, "channel": channel})
 
-			log.debug(f"[ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ]")
+			log.debug(f"[ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ]")
 
 			if verb == "run":
-				results = await api.autopkg.autopkg_run_recipe(recipe_id, autopkg_cmd)
+				results = await api.autopkg.autopkg_run_recipe(target, autopkg_cmd)
 
 			elif verb == "verify-trust-info":
-				results = await api.autopkg.autopkg_verify_recipe(recipe_id, autopkg_cmd)
+				results = await api.autopkg.autopkg_verify_recipe(target, autopkg_cmd)
 
 			elif verb == "update-trust-info":
 ##### TODO:  Add Support
 				pass
 
 			elif verb == "repo-add":
-##### TODO:  Add Support
-				pass
+				results = await api.autopkg.autopkg_repo_add(target, autopkg_cmd)
 
 			elif verb == "version":
 				results = await api.autopkg.get_version(autopkg_cmd)
 
 			if results.get("result") == "Queued background task":
-				return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results.get('task_id')}"
+				return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results.get('task_id')}"
 
 			elif results.get("result") == "Recipe is disabled":
-				return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | result: Recipe is disabled"
+				return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | result: Recipe is disabled"
 
 	except HTTPException as error:
-		return f"Queue task:  [ recipe_id:  {recipe_id} ] | [ autopkg_cmd:  {autopkg_cmd} ] | Unknown recipe id:  '{recipe_id}' "
+		return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | Unknown target:  '{target}' "

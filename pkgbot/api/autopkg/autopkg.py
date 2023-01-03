@@ -235,6 +235,30 @@ async def get_version(autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
+@router.post("/repo-add/{repo}", summary="Add new recipe repos from URL",
+	description="Add one or more new recipe repos.  Supports native `autopkg repo-add` functionality.",
+	dependencies=[Depends(api.user.get_current_user)])
+async def autopkg_repo_add(repo: str,
+	autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD)):
+	"""Adds the passed recipe repo to the available parent search repos.
+
+	Args:
+		repo (str): Path (URL or [GitHub] user/repo) of an AutoPkg recipe repo
+		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
+			and details on response method
+
+	Returns:
+		dict:  Dict describing the results of the ran process
+	"""
+
+	autopkg_cmd.verb = "repo-add"
+
+	queued_task = task.autopkg_verb_parser.apply_async(
+		(autopkg_cmd.dict(), repo), queue="autopkg", priority=6)
+
+	return { "result": "Queued background task" , "task_id": queued_task.id }
+
+
 @router.post("/receive", summary="Handles incoming task messages with autopkg results",
 	description="This endpoint receives incoming messages from tasks and calls the required "
 		"actions based on the message after verifying the authenticity of the source.")

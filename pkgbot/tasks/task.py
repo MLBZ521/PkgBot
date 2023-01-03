@@ -249,20 +249,20 @@ def check_space(self):
 
 
 @celery.task(name="autopkg:verb_parser", bind=True)
-def autopkg_verb_parser(self, autopkg_cmd: dict, recipes: list | str | None = None):
+def autopkg_verb_parser(self, autopkg_cmd: dict, targets: list | str | None = None):
 	"""Handles `autopkg` tasks.
 
 	Args:
 		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
-		recipes (list|None): A optional list of recipes (in dicts,
-			in which contains their configurations)
+		targets (list|None): A optional list of recipes (in dicts,
+			in which contains their configurations) or AutoPkg recipe repos
 
 	Returns:
 		dict:  dict describing the results of the ran process
 	"""
 
 	# log.debug(f"Calling autopkg_cmd:  {autopkg_cmd}")
-	# log.debug(f"recipes:  {recipes}")
+	# log.debug(f"targets:  {targets}")
 
 	# Track all child tasks that are queued by this parent task
 	queued_tasks = []
@@ -279,11 +279,10 @@ def autopkg_verb_parser(self, autopkg_cmd: dict, recipes: list | str | None = No
 			# if recipes == None:
 			# if isinstance(recipes, list) and len(recipes) == 1:
 			# if isinstance(recipes, str):
-			return autopkg_verify_trust(recipes, autopkg_cmd, task_id=self.request.id)
+			return autopkg_verify_trust(targets, autopkg_cmd, task_id=self.request.id)
 
-		# elif verb == "repo-add":
-##### TODO:  Add Support
-			# pass
+		elif verb == "repo-add":
+			return autopkg_repo_add(targets, autopkg_cmd, task_id=self.request.id)
 
 		elif verb == "version":
 			return autopkg_version(autopkg_cmd, task_id=self.request.id)
@@ -302,7 +301,7 @@ def autopkg_verb_parser(self, autopkg_cmd: dict, recipes: list | str | None = No
 
 			queued_tasks.extend(results_pre_check)
 
-		results = autopkg_run(recipes, autopkg_cmd)
+		results = autopkg_run(targets, autopkg_cmd)
 		queued_tasks.extend(results)
 
 	return { "Queued background tasks": queued_tasks }
@@ -643,6 +642,50 @@ def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
 		return {
 			"event": "autopkg_version",
 			"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
+			"success": results["success"],
+			"stdout": results["stdout"],
+			"stderr": results["stderr"],
+		}
+
+	return results
+
+
+@celery.task(name="autopkg:repo-add", bind=True)
+def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = None):
+	"""Runs the passed recipe id against `autopkg verify-trust-info`.
+
+	Args:
+		repo (str): Path (URL or [GitHub] user/repo) of an AutoPkg recipe repo
+		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
+
+	Returns:
+		dict:  dict describing the results of the ran process
+	"""
+
+	log.info(f"Adding repo:  {repo}")
+
+	autopkg_options = {
+		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),
+	}
+
+	# Generate AutoPkg options
+	options = task_utils.generate_autopkg_args(**autopkg_options)
+	# Build the autopkg command
+	cmd = f"{config.AutoPkg.get('binary')} repo-add {repo} {options}"
+
+	if task_utils.get_user_context():
+		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
+
+	log.debug(f"Command to execute:  {cmd}")
+	results = asyncio.run(utility.execute_process(cmd))
+
+	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
+		send_webhook.apply_async((task_id,), queue="autopkg", priority=9)
+
+		return {
+			"event": "repo-add",
+			"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
+			"repo": repo,
 			"success": results["success"],
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
