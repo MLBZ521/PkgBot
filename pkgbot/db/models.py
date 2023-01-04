@@ -1,7 +1,7 @@
 import asyncio
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, validator
 from tortoise import fields
@@ -49,11 +49,11 @@ Recipe_In = pydantic_model_creator(Recipes, name="Recipe_In", exclude_readonly=T
 
 
 class Recipe_Filter(BaseModel):
-	enabled: bool | None = None
-	manual_only: bool | None = None
-	pkg_only: bool | None = None
-	recurring_fail_count: int | None = None
-	schedule: int | None = None
+	enabled: Optional[bool]
+	manual_only: Optional[bool]
+	pkg_only: Optional[bool]
+	recurring_fail_count: Optional[int]
+	schedule: Optional[int]
 
 
 class PkgBotAdmins(Model):
@@ -101,30 +101,35 @@ TrustUpdate_In = pydantic_model_creator(
 
 
 class CallBack(BaseModel):
-	egress: str = "PkgBot"
-	ingress: str = "Schedule"
-	channel: str | None = None
+	egress: Optional[str]# | None #= "PkgBot"
+	ingress: Literal["Schedule", "API", "Slack"]
+	channel: Optional[str]
 	start: datetime = asyncio.run(utility.get_timestamp())
-	completed: datetime | None = None
+	completed: Optional[datetime]
 
 	@validator('ingress')
 	def prevent_none(cls, v, values):
-		if v == "Slack":
-			assert "egress" in values and values["egress"] is not None, 'egress may not be None'
+		match v:
+			case "Slack":
+				assert "egress" in values and values["egress"] is not None, 'egress may not be None'
+			case "Schedule":
+				values["egress"] == "PkgBot"
+			case "API":
+				values["egress"] == "API"
 		return v
 
 
 ##### May make this a Tortoise Model, to support tracking who/what generated each command
 class AutoPkgCMD(CallBack):
-	verb: str = Literal["disable", "enable", "repo-add", "run",
+	verb: Literal["disable", "enable", "repo-add", "run",
 		"update-trust-info", "verify-trust-info", "version"]
 	ignore_parent_trust: bool = False
-	overrides: str | None = None
+	overrides: Optional[str]
 	pkg_only: bool = False
 	quiet: bool = True
 	verbose: str = "vvv"
 
-	match_pkg: str | None = None
+	match_pkg: Optional[str]
 	promote: bool = False
 
 	@validator('promote')
