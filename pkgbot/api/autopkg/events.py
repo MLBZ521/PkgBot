@@ -121,7 +121,7 @@ async def event_verify_trust_info(task_results):
 			user = autopkg_cmd.egress,
 			text = text,
 			alt_text = "Results from task...",
-			channel = None,
+			channel = autopkg_cmd.channel,
 			image = None,
 			alt_image_text = None
 		)
@@ -152,7 +152,7 @@ async def event_update_trust_info(task_results):
 			user = autopkg_cmd.egress,
 			text = text,
 			alt_text = "Results from task...",
-			channel = None,
+			channel = autopkg_cmd.channel,
 			image = None,
 			alt_image_text = None
 		)
@@ -347,7 +347,7 @@ async def event_autopkg_version(task_results):
 			user = autopkg_cmd.egress,
 			text = text,
 			alt_text = "Results from task...",
-			channel = None,
+			channel = autopkg_cmd.channel,
 			image = None,
 			alt_image_text = None
 		)
@@ -386,7 +386,7 @@ async def event_autopkg_repo_add(task_results):
 			user = autopkg_cmd.egress,
 			text = text,
 			alt_text = "Results from task...",
-			channel = None,
+			channel = autopkg_cmd.channel,
 			image = None,
 			alt_image_text = None
 		)
