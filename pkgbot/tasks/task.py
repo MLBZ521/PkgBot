@@ -577,7 +577,11 @@ def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 		# log.debug(f"Command to execute:  {cmd}")
 		results = asyncio.run(utility.execute_process(cmd))
 
-		if results["success"] and private_repo.git.diff():
+		if results["stdout"] == f"Didn\'t find a recipe for {recipe_id}.":
+
+			results |= { "success": False }
+
+		elif results["success"] and private_repo.git.diff():
 
 			log.info(f"Successfully updated trust for:  {recipe_id}")
 			recipe_file_path = results["stdout"].split("Wrote updated ")[-1]
@@ -595,10 +599,10 @@ def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 
 	except Exception as error:
 		log.error(f"Failed to updated private repo due to:\n{error}")
-		results = {
+		results |= {
 			"success": False,
-			"stdout": error,
-			"stderr": error
+			"stdout": f"{error}",
+			"stderr": f"{error}"
 		}
 
 	if stashed:
