@@ -216,7 +216,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 						message[key] = parse_dict(value, all_sensitive_strings)
 
 					else:
-						message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', value)
+						message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', str(value))
 
 		return message
 
