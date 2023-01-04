@@ -277,19 +277,23 @@ async def event_recipe_run(task_results):
 			# ensures a message is posted if it failed to post previously.
 			pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
 
-			if pkg_db_object and autopkg_cmd.ingress == "Slack":
-##### TO DO:
-# Post ephemeral msg to Slack user
-					log.debug("Post ephemeral msg to Slack user new software version was not available")
+			if pkg_db_object:
+				slack_msg = f"`{task_results.task_id}`:  Recipe run for `{recipe_id}` did not find a new version."
 
-			elif not pkg_db_object:
+			else:
 				log.info(f"New package posted to dev:  {pkg_name}")
 				await api.autopkg.workflow_dev(models.Package_In(**pkg_data))
+				slack_msg = f"`{task_results.task_id}`:  Recipe run for `{recipe_id}` found a new version `{pkg_data.get('version')}`!"
 
-				if autopkg_cmd.ingress == "Slack":
-##### TO DO:
-# Post ephemeral msg to Slack user
-					log.debug("Post ephemeral msg to Slack user that a new pkg was posted")
+			if autopkg_cmd.ingress == "Slack":
+				await api.slack.send_msg.ephemeral_msg(
+					user = autopkg_cmd.egress,
+					text = slack_msg,
+					alt_text = "Results from task...",
+					channel = autopkg_cmd.channel,
+					image = None,
+					alt_image_text = None
+				)
 
 			# Update attributes for this recipe
 			recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
