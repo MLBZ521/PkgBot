@@ -130,10 +130,30 @@ async def event_update_trust_info(task_results):
 
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
-	if success:
-		await api.recipe.recipe_trust_update_success(event_id)
-	else:
-		await api.recipe.recipe_trust_update_failed(event_id, str(stderr))
+	if event_id:
+
+		if success:
+			await api.recipe.recipe_trust_update_success(event_id)
+		else:
+			await api.recipe.recipe_trust_update_failed(event_id, str(stderr))
+
+	elif autopkg_cmd.ingress == "Slack":
+		# Post ephemeral msg to Slack user
+		log.debug("Recipe trust info was updated via Slack command.")
+
+		if success:
+			text = f"Recipe trust info successfully updated for `{recipe_id}`!  :link-success:"
+		else:
+			text = f"Failed to update recipe trust info for `{recipe_id}`!  :git-pr-check-failed:"
+
+		await api.slack.send_msg.ephemeral_msg(
+			user = autopkg_cmd.egress,
+			text = text,
+			alt_text = "Results from task...",
+			channel = None,
+			image = None,
+			alt_image_text = None
+		)
 
 
 async def event_disk_space_warning(task_results):

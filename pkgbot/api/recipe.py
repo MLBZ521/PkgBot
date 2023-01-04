@@ -149,33 +149,47 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 @router.post("/trust/update", summary="Update recipe trust info",
 	description="Update a recipe's trust information.  Runs `autopkg update-trust-info`.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def recipe_trust_update(trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
+async def recipe_trust_update(
+	recipe_id: str | None = None,
+	autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD),
+	trust_object: models.TrustUpdate_In | None = Depends(models.TrustUpdate_In)
+):
 
 	# Get recipe object
-	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
+	if recipe_object := await models.Recipes.filter(recipe_id__iexact=recipe_id).first():
+		log.debug(f"recipe_object:  {recipe_object}")
+		event_id = None
+		recipe_id = recipe_object.recipe_id
 
-##### May need to create a trust_object db entry if one doesn't exist.
-	# Would be needed for a direct call to endpoint (API/Slack command)
-	# as those would not generate a failure first.
+	elif isinstance(trust_object, (models.TrustUpdates, models.TrustUpdate_In)):
 
-	if recipe_object:
-
-		if not isinstance(trust_object, models.TrustUpdates):
-			# If object is not a model, find it to support different endpoint access avenues
+		if isinstance(trust_object, models.TrustUpdate_In):
+			# If object is not a ORM model, get an ORM model
 			trust_object = await models.TrustUpdates.filter(
 				**trust_object.dict(exclude_unset=True, exclude_none=True)).first()
 
-		queued_task = task.autopkg_update_trust.apply_async(
-			(trust_object.recipe_id, trust_object.id), queue='autopkg', priority=6)
-		return { "result": "Queued background task" , "task_id": queued_task.id }
+		event_id = trust_object.id
+		recipe_id = trust_object.recipe_id
 
 	else:
-		blocks = await api.build_msg.missing_recipe_msg(trust_object.recipe_id, "update trust for")
-		await api.bot.SlackBot.post_ephemeral_message(
-			trust_object.updated_by, blocks,
-			channel=trust_object.slack_channel,
-			text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
+
+		await api.slack.send_msg.ephemeral_msg(
+			user = autopkg_cmd.egress,
+			text = f":no_good: Unable to update trust info.  Unknown recipe id:  `{recipe_id}`",
+			alt_text = ":no_good: Failed to update trust info for...",
+			channel = autopkg_cmd.channel
 		)
+		return { "result": f"Unknown recipe id:  `{recipe_id}'" }
+
+	queued_task = task.autopkg_verb_parser.apply_async(
+		kwargs = {
+				"recipes": recipe_id,
+				"event_id":  event_id,
+				"autopkg_cmd": autopkg_cmd.dict()
+			},
+		queue="autopkg", priority=6)
+
+	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
 @router.post("/trust/deny", summary="Do not approve trust changes",

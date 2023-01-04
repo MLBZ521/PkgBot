@@ -363,9 +363,17 @@ async def receive(request: Request):
 					"slack_ts": message_ts
 				}
 
+				autopkg_cmd = models.AutoPkgCMD(**{
+					"verb": "update-trust-info",
+					"ingress": "Slack",
+					"egress": username,
+					"channel": channel
+				})
+
 				trust_object = await models.TrustUpdates.filter(id=button_value).first()
 				await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
-				await api.recipe.recipe_trust_update(trust_object)
+				await api.recipe.recipe_trust_update(
+					trust_object = trust_object, autopkg_cmd = autopkg_cmd)
 
 		elif button_text == "Deny":
 
@@ -525,8 +533,7 @@ async def slashcmd(request: Request):
 				results = await api.autopkg.autopkg_verify_recipe(target, autopkg_cmd)
 
 			elif verb == "update-trust-info":
-##### TODO:  Add Support
-				pass
+				results = await api.recipe.recipe_trust_update(target, autopkg_cmd)
 
 			elif verb == "repo-add":
 				results = await api.autopkg.autopkg_repo_add(target, autopkg_cmd)
@@ -537,8 +544,8 @@ async def slashcmd(request: Request):
 			if results.get("result") == "Queued background task":
 				return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results.get('task_id')}"
 
-			elif results.get("result") == "Recipe is disabled":
-				return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | result: Recipe is disabled"
+			else:
+				return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | result: {results.get('result')}"
 
 	except HTTPException as error:
 		return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | Unknown target:  '{target}' "

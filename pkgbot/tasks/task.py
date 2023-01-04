@@ -271,9 +271,8 @@ def autopkg_verb_parser(self, autopkg_cmd: dict, targets: list | str | None = No
 
 	if verb in { "repo-add", "update-trust-info", "verify-trust-info", "version"}:
 
-		# if verb == "update-trust-info":
-##### TODO:  Add Support
-			# pass
+		if verb == "update-trust-info":
+			return autopkg_update_trust(recipes, autopkg_cmd, event_id, self.request.id)
 
 		if verb == "verify-trust-info":
 			# if recipes == None:
@@ -532,7 +531,8 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 
 
 @celery.task(name="autopkg:update-trust", bind=True)
-def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
+def autopkg_update_trust(
+	self, recipe_id: str, autopkg_cmd: dict, trust_id: int = None, task_id: str | None = None):
 	"""Runs the passed recipe id against `autopkg update-trust-info`.
 
 	Args:
@@ -608,11 +608,12 @@ def autopkg_update_trust(self, recipe_id: str, trust_id: int = None):
 	if stashed:
 		private_repo.git.stash("pop")
 
-	send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
+	send_webhook.apply_async((self.request.id or task_id,), queue="autopkg", priority=9)
 
 	return {
 		"event": "update_trust_info",
 		"event_id": trust_id,
+		"autopkg_cmd": autopkg_cmd | {"completed": asyncio.run(utility.get_timestamp())},
 		"recipe_id": recipe_id,
 		"success": results["success"],
 		"stdout": results["stdout"],
