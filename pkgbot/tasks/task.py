@@ -249,24 +249,29 @@ def check_space(self):
 
 
 @celery.task(name="autopkg:verb_parser", bind=True)
-def autopkg_verb_parser(self, autopkg_cmd: dict, targets: list | str | None = None):
+def autopkg_verb_parser(self, **kwargs):
 	"""Handles `autopkg` tasks.
 
 	Args:
 		autopkg_cmd (dict): Contains options for `autopkg` and details on response method
-		targets (list|None): A optional list of recipes (in dicts,
-			in which contains their configurations) or AutoPkg recipe repos
+		recipes (list): An optional list of recipes (in dicts,
+			in which contains their configurations)
+		repos (str|None): An optional str of AutoPkg recipe repo(s)
+		event_id (int|None): ID of an event from the PkgBot database
 
 	Returns:
 		dict:  dict describing the results of the ran process
 	"""
 
-	# log.debug(f"Calling autopkg_cmd:  {autopkg_cmd}")
-	# log.debug(f"targets:  {targets}")
+	# log.debug(f"Calling kwargs:  {kwargs}")
 
 	# Track all child tasks that are queued by this parent task
 	queued_tasks = []
 
+	autopkg_cmd = kwargs.get("autopkg_cmd")
+	recipes = kwargs.get("recipes")
+	repos = kwargs.get("repos")
+	event_id = kwargs.get("event_id")
 	verb = autopkg_cmd.get("verb")
 
 	if verb in { "repo-add", "update-trust-info", "verify-trust-info", "version"}:
@@ -278,10 +283,10 @@ def autopkg_verb_parser(self, autopkg_cmd: dict, targets: list | str | None = No
 			# if recipes == None:
 			# if isinstance(recipes, list) and len(recipes) == 1:
 			# if isinstance(recipes, str):
-			return autopkg_verify_trust(targets, autopkg_cmd, task_id=self.request.id)
+			return autopkg_verify_trust(recipes, autopkg_cmd, task_id=self.request.id)
 
 		elif verb == "repo-add":
-			return autopkg_repo_add(targets, autopkg_cmd, task_id=self.request.id)
+			return autopkg_repo_add(repos, autopkg_cmd, task_id=self.request.id)
 
 		elif verb == "version":
 			return autopkg_version(autopkg_cmd, task_id=self.request.id)
@@ -300,7 +305,7 @@ def autopkg_verb_parser(self, autopkg_cmd: dict, targets: list | str | None = No
 
 			queued_tasks.extend(results_pre_check)
 
-		results = autopkg_run(targets, autopkg_cmd)
+		results = autopkg_run(recipes, autopkg_cmd)
 		queued_tasks.extend(results)
 
 	return { "Queued background tasks": queued_tasks }

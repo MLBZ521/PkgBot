@@ -80,7 +80,13 @@ async def promote_package(id: int, autopkg_cmd: models.AutoPkgCMD | None = Depen
 	autopkg_cmd.verb = "run"
 
 	queued_task = task.autopkg_verb_parser.apply_async(
-		(autopkg_cmd, [recipe.dict()]), queue='autopkg', priority=4)
+		kwargs = {
+			"recipes": [ recipe.dict() ],
+			"autopkg_cmd": autopkg_cmd.dict()
+		},
+		queue="autopkg",
+		priority=4
+	)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 

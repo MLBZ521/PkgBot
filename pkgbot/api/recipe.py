@@ -183,11 +183,13 @@ async def recipe_trust_update(
 
 	queued_task = task.autopkg_verb_parser.apply_async(
 		kwargs = {
-				"recipes": recipe_id,
-				"event_id":  event_id,
-				"autopkg_cmd": autopkg_cmd.dict()
-			},
-		queue="autopkg", priority=6)
+			"recipes": recipe_id,
+			"event_id":  event_id,
+			"autopkg_cmd": autopkg_cmd.dict()
+		},
+		queue="autopkg",
+		priority=6
+	)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 

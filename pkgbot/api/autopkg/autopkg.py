@@ -144,7 +144,13 @@ async def autopkg_run_recipes(autopkg_cmd: models.AutoPkgCMD = Depends(models.Au
 	log.debug(f"Number of recipes to run:  {len(recipes)}")
 
 	queued_task = task.autopkg_verb_parser.apply_async(
-		(autopkg_cmd.dict(), recipes), queue="autopkg", priority=3)
+		kwargs = {
+			"recipes": recipes,
+			"autopkg_cmd": autopkg_cmd.dict()
+		},
+		queue="autopkg",
+		priority=3
+	)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
@@ -182,8 +188,15 @@ async def autopkg_run_recipe(recipe_id: str,
 		return await api.package.promote_package(id=pkg_object.id, autopkg_cmd=autopkg_cmd)
 
 	if a_recipe.enabled:
+
 		queued_task = task.autopkg_verb_parser.apply_async(
-			(autopkg_cmd.dict(), [ a_recipe.dict() ]), queue="autopkg", priority=4)
+			kwargs = {
+				"recipes": [ a_recipe.dict() ],
+				"autopkg_cmd": autopkg_cmd.dict()
+			},
+			queue="autopkg",
+			priority=4
+		)
 
 		return { "result": "Queued background task" , "task_id": queued_task.id }
 
@@ -211,7 +224,13 @@ async def autopkg_verify_recipe(recipe_id: str,
 	a_recipe = await api.recipe.get_by_recipe_id(recipe_id)
 
 	queued_task = task.autopkg_verb_parser.apply_async(
-		(autopkg_cmd.dict(), a_recipe.recipe_id), queue="autopkg", priority=6)
+		kwargs = {
+			"recipes": a_recipe.recipe_id,
+			"autopkg_cmd": autopkg_cmd.dict()
+		},
+		queue="autopkg",
+		priority=6
+	)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
@@ -231,7 +250,12 @@ async def get_version(autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD
 	"""
 
 	autopkg_cmd.verb = "version"
-	queued_task = task.autopkg_verb_parser.apply_async((autopkg_cmd.dict(),), queue="autopkg")
+
+	queued_task = task.autopkg_verb_parser.apply_async(
+		kwargs = { "autopkg_cmd": autopkg_cmd.dict() },
+		queue="autopkg"
+	)
+
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
@@ -254,7 +278,13 @@ async def autopkg_repo_add(repo: str,
 	autopkg_cmd.verb = "repo-add"
 
 	queued_task = task.autopkg_verb_parser.apply_async(
-		(autopkg_cmd.dict(), repo), queue="autopkg", priority=6)
+		kwargs = {
+			"repos": repo,
+			"autopkg_cmd": autopkg_cmd.dict()
+		},
+		queue="autopkg",
+		priority=6
+	)
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
