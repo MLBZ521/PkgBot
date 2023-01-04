@@ -452,11 +452,11 @@ async def handle_exception(**kwargs):
 			"Event ID:": event_id,
 			"Success:": success,
 			"Called By:": {
-				"ingress": autopkg_cmd.get("ingress"),
-				"egress": autopkg_cmd.get("egress"),
-				"channel": autopkg_cmd.get("channel"),
-				"start": autopkg_cmd.get("start"),
-				"completed": autopkg_cmd.get("completed")
+				"ingress": autopkg_cmd.ingress,
+				"egress": autopkg_cmd.egress,
+				"channel": autopkg_cmd.channel,
+				"start": autopkg_cmd.start,
+				"completed": autopkg_cmd.completed
 			},
 			"Exception:": exception
 		}
