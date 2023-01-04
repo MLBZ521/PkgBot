@@ -373,7 +373,7 @@ def autopkg_run(self, recipes: list, autopkg_cmd: dict):
 					run_recipe.signature(
 						(recipe_id, autopkg_cmd),
 						queue="autopkg",
-						priority=determine_priority(4, autopkg_cmd.get("ingress"))
+						priority=determine_priority(3, autopkg_cmd.get("ingress"))
 					)
 				)()
 
