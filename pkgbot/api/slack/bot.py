@@ -508,9 +508,11 @@ async def slashcmd(request: Request):
 
 		else:
 
+			incoming_options = {"verb": verb, "ingress": "Slack", "egress": username, "channel": channel}
+
 			if " " not in options:
 				target = options
-				autopkg_cmd = models.AutoPkgCMD()
+				autopkg_cmd = models.AutoPkgCMD(**incoming_options)
 			else:
 				target, cmd_options = await utility.split_string(options)
 
@@ -521,8 +523,7 @@ async def slashcmd(request: Request):
 
 				autopkg_cmd = models.AutoPkgCMD(**options)
 
-			autopkg_cmd.__dict__.update({
-				"verb": verb, "ingress": "Slack", "egress": username, "channel": channel})
+			autopkg_cmd.__dict__.update(incoming_options)
 
 			log.debug(f"[ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ]")
 

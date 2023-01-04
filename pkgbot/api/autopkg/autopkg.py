@@ -131,12 +131,7 @@ async def autopkg_run_recipes(autopkg_cmd: models.AutoPkgCMD = Depends(models.Au
 	log.info("Running all recipes")
 
 	if not isinstance(autopkg_cmd, models.AutoPkgCMD):
-		autopkg_cmd = models.AutoPkgCMD()
-
-	elif isinstance(autopkg_cmd, models.AutoPkgCMD):
-		autopkg_cmd = models.AutoPkgCMD(**autopkg_cmd)
-
-	autopkg_cmd.verb = "run"
+		autopkg_cmd = models.AutoPkgCMD(**{"verb": "run"})
 
 	recipe_filter = models.Recipe_Filter(**{"enabled": True, "manual_only": False})
 	recipes = (await api.recipe.get_recipes(recipe_filter)).get("recipes")

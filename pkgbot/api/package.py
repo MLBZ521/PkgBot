@@ -70,6 +70,7 @@ async def promote_package(id: int, autopkg_cmd: models.AutoPkgCMD | None = Depen
 	recipe = await api.recipe.get_by_recipe_id(pkg_object.recipe_id)
 
 	autopkg_options = {
+		"verb": "run",
 		"promote": True,
 		"match_pkg": pkg_object.pkg_name,
 		"pkg_id": pkg_object.id
@@ -77,7 +78,6 @@ async def promote_package(id: int, autopkg_cmd: models.AutoPkgCMD | None = Depen
 
 	if not isinstance(autopkg_cmd, models.AutoPkgCMD):
 		autopkg_cmd = models.AutoPkgCMD(**autopkg_cmd, **autopkg_options)
-	autopkg_cmd.verb = "run"
 
 	queued_task = task.autopkg_verb_parser.apply_async(
 		kwargs = {
