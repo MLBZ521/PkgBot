@@ -526,20 +526,22 @@ async def slashcmd(request: Request):
 
 			log.debug(f"[ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ]")
 
-			if verb == "run":
-				results = await api.autopkg.autopkg_run_recipe(target, autopkg_cmd)
+			match verb:
 
-			elif verb == "verify-trust-info":
-				results = await api.autopkg.autopkg_verify_recipe(target, autopkg_cmd)
+				case "run":
+					results = await api.autopkg.autopkg_run_recipe(target, autopkg_cmd)
 
-			elif verb == "update-trust-info":
-				results = await api.recipe.recipe_trust_update(target, autopkg_cmd)
+				case "verify-trust-info":
+					results = await api.autopkg.autopkg_verify_recipe(target, autopkg_cmd)
 
-			elif verb == "repo-add":
-				results = await api.autopkg.autopkg_repo_add(target, autopkg_cmd)
+				case "update-trust-info":
+					results = await api.recipe.recipe_trust_update(target, autopkg_cmd)
 
-			elif verb == "version":
-				results = await api.autopkg.get_version(autopkg_cmd)
+				case "repo-add":
+					results = await api.autopkg.autopkg_repo_add(target, autopkg_cmd)
+
+				case "version":
+					results = await api.autopkg.get_version(autopkg_cmd)
 
 			if results.get("result") == "Queued background task":
 				return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results.get('task_id')}"

@@ -274,41 +274,35 @@ def autopkg_verb_parser(self, **kwargs):
 	event_id = kwargs.get("event_id")
 	verb = autopkg_cmd.get("verb")
 
-	if verb in { "repo-add", "update-trust-info", "verify-trust-info", "version"}:
+	match verb:
 
-		if verb == "update-trust-info":
-			return autopkg_update_trust(recipes, autopkg_cmd, event_id, self.request.id)
-
-		if verb == "verify-trust-info":
-			# if recipes == None:
-			# if isinstance(recipes, list) and len(recipes) == 1:
-			# if isinstance(recipes, str):
+		case "verify-trust-info":
 			return autopkg_verify_trust(recipes, autopkg_cmd, task_id=self.request.id)
 
-		elif verb == "repo-add":
+		case "update-trust-info":
+			return autopkg_update_trust(recipes, autopkg_cmd, event_id, self.request.id)
+
+		case "repo-add":
 			return autopkg_repo_add(repos, autopkg_cmd, task_id=self.request.id)
 
-		elif verb == "version":
+		case "version":
 			return autopkg_version(autopkg_cmd, task_id=self.request.id)
 
-		# queued_tasks.append(queued_task.id)
+		case "run":
 
-	else:
+			if not autopkg_cmd.get("promote"):
+				# Run pre-checks if not promoting a pkg
+				results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
 
-		if not autopkg_cmd.get("promote"):
-			# Run pre-checks if not promoting a pkg
-			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
+				if isinstance(results_pre_check, dict):
+					# An error occurred in a pre-check
+					return results_pre_check
 
-			if isinstance(results_pre_check, dict):
-				# An error occurred in a pre-check
-				return results_pre_check
+				queued_tasks.extend(results_pre_check)
 
-			queued_tasks.extend(results_pre_check)
-
-		results = autopkg_run(recipes, autopkg_cmd)
-		queued_tasks.extend(results)
-
-	return { "Queued background tasks": queued_tasks }
+			results = autopkg_run(recipes, autopkg_cmd)
+			queued_tasks.extend(results)
+			return { "Queued background tasks": queued_tasks }
 
 
 @celery.task(name="autopkg:run", bind=True)

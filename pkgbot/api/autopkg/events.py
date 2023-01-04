@@ -40,32 +40,34 @@ async def event_handler(task_id, loop_count=0):
 		time.sleep(1)
 		await event_handler(task_id, loop_count + 1)
 
-	if event == "verify_trust_info":
-		await event_verify_trust_info(task_results)
+	match event:
 
-	elif event == "update_trust_info":
-		await event_update_trust_info(task_results)
+		case "verify_trust_info":
+			await event_verify_trust_info(task_results)
 
-	elif event in {"autopkg_repo_update", "disk_space_critical", "private_git_pull"}:
-		await event_failed_pre_checks(task_results)
+		case "update_trust_info":
+			await event_update_trust_info(task_results)
 
-	elif event == "disk_space_warning":
-		await event_disk_space_warning(task_results)
+		case event if event in {"autopkg_repo_update", "disk_space_critical", "private_git_pull"}:
+			await event_failed_pre_checks(task_results)
 
-	elif event == "failed_pre_checks":
-		await event_failed_pre_checks(task_results)
+		case "disk_space_warning":
+			await event_disk_space_warning(task_results)
 
-	elif event == "error" or not task_results.result.get("success"):
-		await event_error(task_results)
+		case "failed_pre_checks":
+			await event_failed_pre_checks(task_results)
 
-	elif event in ("recipe_run_dev", "recipe_run_prod"):
-		await event_recipe_run(task_results)
+		case "error" | "error" if not task_results.result.get("success"):
+			await event_error(task_results)
 
-	elif event == "autopkg_version":
-		await event_autopkg_version(task_results)
+		case event if event in ("recipe_run_dev", "recipe_run_prod"):
+			await event_recipe_run(task_results)
 
-	elif event == "repo-add":
-		await event_autopkg_repo_add(task_results)
+		case "autopkg_version":
+			await event_autopkg_version(task_results)
+
+		case "repo-add":
+			await event_autopkg_repo_add(task_results)
 
 
 async def event_details(task_results):
@@ -224,6 +226,10 @@ async def event_error(task_results):
 async def event_recipe_run(task_results):
 
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
+
+	if not success:
+		return await event_error(task_results)
+
 	plist_contents = await utility.find_receipt_plist(stdout)
 
 	# Get the log info for PackageUploader
