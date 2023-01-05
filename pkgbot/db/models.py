@@ -102,7 +102,7 @@ TrustUpdate_In = pydantic_model_creator(
 
 class CallBack(BaseModel):
 	egress: Optional[str]# | None #= "PkgBot"
-	ingress: Literal["Schedule", "API", "Slack"]
+	ingress: Literal["Schedule", "API", "Slack"] = "Schedule"
 	channel: Optional[str]
 	start: datetime = asyncio.run(utility.get_timestamp())
 	completed: Optional[datetime]
