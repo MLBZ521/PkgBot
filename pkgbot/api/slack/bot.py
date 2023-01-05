@@ -329,17 +329,8 @@ async def receive(request: Request):
 
 	user_that_clicked = await api.user.get_user(slack_user_object)
 
-##### Disabled for testing
-##### Actually don't think this is needed........
-	# try:
-	# 	if user_that_clicked.full_admin:
-	# 		full_admin = True
-
-	# except:
-	# 		full_admin = False
-
 	# Verify and perform action only if a PkgBotAdmin clicked the button
-	if user_that_clicked: # and full_admin:
+	if user_that_clicked and user_that_clicked.full_admin:
 
 		await SlackBot.reaction(
 			action = "add",
