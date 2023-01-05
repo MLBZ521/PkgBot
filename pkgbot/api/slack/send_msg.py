@@ -63,8 +63,27 @@ async def promote_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	description="Sends an 'error' message to Slack after a recipe has returned an error.")
 async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
-	blocks = await api.build_msg.recipe_error_msg(recipe_id, id, error)
-	return await api.bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
+	redacted_error = await utility.replace_sensitive_strings(error)
+
+	if len(redacted_error) > max_content_size:
+		# blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id)
+		blocks = await api.build_msg.recipe_error_msg(recipe_id, id, "_See thread for details..._")
+	else:
+		blocks = await api.build_msg.recipe_error_msg(recipe_id, id, f"```{redacted_error}```")
+
+	response = await api.bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
+
+	if len(redacted_error) > max_content_size:
+		upload_response = await api.bot.SlackBot.file_upload(
+			content = redacted_error,
+			filename = f"{recipe_id}_error.txt",
+			filetype = "json",
+			title = recipe_id,
+			text = f"Error in {recipe_id}",
+			thread_ts = response.get('ts')
+		)
+
+	return response
 
 
 @router.post("/trust-diff-msg", summary="Send trust diff message",

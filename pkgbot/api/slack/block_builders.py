@@ -133,7 +133,7 @@ async def brick_error(recipe_id, error):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"```{error}```",
+				"text": f"{error}",
 				"verbatim": True
 			},
 			"accessory": {
