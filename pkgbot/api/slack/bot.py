@@ -473,7 +473,7 @@ async def slashcmd(request: Request):
 
 	supported_options = {
 		"pkgbot_admin": ["update-trust-info", "repo-add", "enable", "disable" ],
-		"pkgbot_user": [ "run", "verify-trust-info", "version" ]
+		"pkgbot_user": [ "help", "run", "verify-trust-info", "version" ]
 	}
 
 	if not user_that_clicked.full_admin and verb not in supported_options.get("pkgbot_user"):
@@ -486,7 +486,52 @@ async def slashcmd(request: Request):
 
 	try:
 
-		if verb in { "enable", "disable" }:
+		if verb == "help":
+
+			help_text = f"""Hello {username}!
+
+I support a variety of commands to help run AutoPkg on your behalf.  Please see the below options and examples:
+
+*PkgBot Users are able to utilize the following commands:*
+>`/pkgbot help`
+>	Prints this help info.
+>
+>`/pkgbot version`
+>	Returns the current version of the AutoPkg framework installed on the AutoPkg runner.
+>
+>`/pkgbot verify-trust-info <recipe>`
+>	Checks the trust-info of the provided recipe.
+>
+>`/pkgbot run <recipe> [options]`
+>	Runs the passed recipe against `autopkg run`.  Several customizable options are supported:
+>		`--ignore-parent-trust-verification-errors`
+>		`--verbose | -[v+]` (default is `-vvv`)
+>		`--key | -k '<OVERRIDE_VARIABLE>=<value>'`
+
+*PkgBot Admins are able to utilize the following commands:*
+>`/pkgbot update-trust-info <recipe>`
+>	Updates the trust-info of the provided recipe.
+>
+>`/pkgbot repo-add <repo>`
+>	Adds the passed recipe repo(s) to the available parent search repos.
+>		`<repo>` can be one or more of a path (URL or [GitHub] user/repo) of an AutoPkg recipe repo.
+>
+>`/pkgbot enable <recipe>`
+>	Enables the recipe in the PkgBot database.
+>
+>`/pkgbot disable <recipe>`
+>	Disables the recipe in the PkgBot database."""
+
+			await api.send_msg.ephemeral_msg(
+				user = user_id,
+				text = help_text,
+				alt_text = "PkgBot Help Info...",
+				channel = channel,
+				image = None,
+				alt_image_text = None
+			)
+
+		elif verb in { "enable", "disable" }:
 
 			updates = {"enabled": verb == "enable"}
 

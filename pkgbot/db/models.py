@@ -121,7 +121,7 @@ class CallBack(BaseModel):
 
 ##### May make this a Tortoise Model, to support tracking who/what generated each command
 class AutoPkgCMD(CallBack):
-	verb: Literal["disable", "enable", "repo-add", "run",
+	verb: Literal["help", "disable", "enable", "repo-add", "run",
 		"update-trust-info", "verify-trust-info", "version"]
 	ignore_parent_trust: bool = False
 	overrides: Optional[str]
