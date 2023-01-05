@@ -34,6 +34,13 @@ app = FastAPI(
 	docs_url="/api"
 )
 
+register_tortoise(
+	app,
+	config = settings.db.TORTOISE_CONFIG,
+	generate_schemas = True,
+	add_exception_handlers = True
+)
+
 app.mount("/static", StaticFiles(directory="/Library/AutoPkg/PkgBot/pkgbot/static"), name="static")
 app.include_router(api.views.router)
 app.include_router(api.auth.router)
@@ -44,13 +51,6 @@ app.include_router(api.bot.router)
 app.include_router(api.build_msg.router)
 app.include_router(api.send_msg.router)
 app.include_router(api.user.router)
-
-register_tortoise(
-	app,
-	config = settings.db.TORTOISE_CONFIG,
-	generate_schemas = True,
-	add_exception_handlers = True
-)
 
 # Add an exception handler to the app instance
 # Used for the login/auth logic for the HTTP views
