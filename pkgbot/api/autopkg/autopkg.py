@@ -4,7 +4,7 @@ import json
 
 from datetime import datetime
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, status
 
 from fastapi_utils.tasks import repeat_every
 
@@ -171,7 +171,10 @@ async def autopkg_run_recipe(recipe_id: str,
 
 	if not a_recipe:
 		log.warning(f"Unknown recipe id:  '{recipe_id}'")
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
+		return HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail=f"Unknown recipe id:  '{recipe_id}'"
+		)
 
 	if autopkg_cmd.promote:
 
@@ -296,12 +299,15 @@ async def receive(request: Request, task_id = Body()):
 	# 	return {"result": "Content too long"}
 
 	if not await verify_pkgbot_webhook(request):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to authenticate webhook.")
+		return HTTPException(
+			status_code=status.HTTP_511_NETWORK_AUTHENTICATION_REQUIRED,
+			detail="Failed to authenticate webhook."
+		)
 
 	task_id = task_id.get("task_id")
 	log.debug(f"Receiving notification for task_id:  {task_id}")
 	await events.event_handler(task_id)
-	return { "result":  200 }
+	return Response(status_code=status.HTTP_200_OK)
 
 
 async def verify_pkgbot_webhook(request: Request):

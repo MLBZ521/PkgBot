@@ -5,7 +5,7 @@ import re
 import ssl
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
@@ -297,7 +297,10 @@ async def receive(request: Request):
 
 	if not await validate_slack_request(request):
 		log.warning("PkgBot received an invalid request!")
-		return { "result":  500 }
+		return HTTPException(
+			status_code=status.HTTP_511_NETWORK_AUTHENTICATION_REQUIRED,
+			detail="Failed to authenticate request."
+		)
 
 	form_data = await request.form()
 	payload = form_data.get("payload")
@@ -425,7 +428,7 @@ async def receive(request: Request):
 		await SlackBot.post_ephemeral_message(
 			user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
 
-	return { "result":  200 }
+	return Response(status_code=status.HTTP_200_OK)
 
 
 @router.post("/slashcmd", summary="Handles incoming slash commands from Slack",
@@ -435,7 +438,10 @@ async def slashcmd(request: Request):
 
 	if not await validate_slack_request(request):
 		log.warning("PkgBot received an invalid request!")
-		return { "result":  500 }
+		return HTTPException(
+			status_code=status.HTTP_511_NETWORK_AUTHENTICATION_REQUIRED,
+			detail="Failed to authenticate request."
+		)
 
 	form_data = await request.form()
 	user_id = form_data.get("user_id")
@@ -530,6 +536,8 @@ I support a variety of commands to help run AutoPkg on your behalf.  Please see 
 				image = None,
 				alt_image_text = None
 			)
+
+			return Response(status_code=status.HTTP_200_OK)
 
 		elif verb in { "enable", "disable" }:
 
