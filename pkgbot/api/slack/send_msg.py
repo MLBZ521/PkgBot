@@ -69,7 +69,8 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 		# blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id)
 		blocks = await api.build_msg.recipe_error_msg(recipe_id, id, "_See thread for details..._")
 	else:
-		blocks = await api.build_msg.recipe_error_msg(recipe_id, id, f"```{redacted_error}```")
+		formatted_error = await api.build_msg.format_json(redacted_error)
+		blocks = await api.build_msg.recipe_error_msg(recipe_id, id, f"```{formatted_error}```")
 
 	response = await api.bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
 
