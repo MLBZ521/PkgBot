@@ -65,8 +65,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	redacted_error = await utility.replace_sensitive_strings(error)
 
-	if len(redacted_error) > max_content_size:
-		# blocks = await api.build_msg.trust_diff_msg(trust_object.id, trust_object.recipe_id)
+	if len(str(redacted_error)) > max_content_size:
 		blocks = await api.build_msg.recipe_error_msg(recipe_id, id, "_See thread for details..._")
 	else:
 		formatted_error = await api.build_msg.format_json(redacted_error)
@@ -74,7 +73,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	response = await api.bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
 
-	if len(redacted_error) > max_content_size:
+	if len(str(redacted_error)) > max_content_size:
 		upload_response = await api.bot.SlackBot.file_upload(
 			content = redacted_error,
 			filename = f"{recipe_id}_error.txt",
