@@ -75,11 +75,11 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	if len(str(redacted_error)) > max_content_size:
 		upload_response = await api.bot.SlackBot.file_upload(
-			content = redacted_error,
-			filename = f"{recipe_id}_error.txt",
+			content = str(redacted_error),
+			filename = f"{recipe_id}_error",
 			filetype = "json",
 			title = recipe_id,
-			text = f"Error in {recipe_id}",
+			text = f"Error from `{recipe_id}`",
 			thread_ts = response.get('ts')
 		)
 
