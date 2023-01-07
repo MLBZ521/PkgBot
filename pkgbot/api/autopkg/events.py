@@ -97,7 +97,7 @@ async def event_verify_trust_info(task_results):
 
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
-	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
+	if autopkg_cmd.ingress in [ "Schedule", "API" ]:
 
 		if success:
 			# This shouldn't ever be called?
@@ -323,7 +323,7 @@ async def event_autopkg_version(task_results):
 
 	event, event_id, autopkg_cmd, target, success, stdout, stderr = await event_details(task_results)
 
-	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
+	if autopkg_cmd.ingress in [ "Schedule", "API" ]:
 
 		if success:
 			# This shouldn't ever be called?
@@ -362,7 +362,7 @@ async def event_autopkg_repo_add(task_results):
 
 	event, event_id, autopkg_cmd, repo, success, stdout, stderr = await event_details(task_results)
 
-	if autopkg_cmd.ingress in [ "PkgBot", "api" ]:
+	if autopkg_cmd.ingress in [ "Schedule", "API" ]:
 
 		if success:
 			# This shouldn't ever be called?

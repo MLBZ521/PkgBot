@@ -70,8 +70,8 @@ def perform_pre_checks(task_id: str, ignore_parent_trust: bool):
 	return queued_tasks
 
 
-@celery.task(name="pkgbot:send_webhook", namebind=True)
-def send_webhook(task_id):
+@celery.task(name="pkgbot:send_webhook", bind=True)
+def send_webhook(self, task_id):
 	""" Sends webhook after a task is complete. """
 
 	pkgbot_server, headers = task_utils.api_url_helper()
