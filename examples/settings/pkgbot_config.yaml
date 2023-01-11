@@ -27,7 +27,7 @@ Celery:
 
 
 Database:
-  location: "/Database/db.sqlite3"
+  location: "/Library/AutoPkg/PkgBot/Database/db.sqlite3"
 
 
 JamfPro_Dev:
