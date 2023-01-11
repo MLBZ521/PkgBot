@@ -73,7 +73,10 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	response = await api.bot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
 
-	if len(str(redacted_error)) > max_content_size:
+	if (
+		response.get("result") != "Failed to post message"
+		and len(str(redacted_error)) > max_content_size
+	):
 		upload_response = await api.bot.SlackBot.file_upload(
 			content = str(redacted_error),
 			filename = f"{recipe_id}_error",
@@ -106,7 +109,10 @@ async def trust_diff_msg(
 	trust_object.slack_ts = response.get('ts')
 	await trust_object.save()
 
-	if len(diff_msg) > max_content_size:
+	if (
+		response.get("result") != "Failed to post message"
+		and len(diff_msg) > max_content_size
+	):
 		response = await api.bot.SlackBot.file_upload(
 			content = diff_msg,
 			filename = f"{trust_object.recipe_id}.diff",
