@@ -29,7 +29,7 @@ app = FastAPI(
 	title="PkgBot API",
 	description="A framework to manage software packaging, testing, and promoting from a "
 		"development to production environment.",
-	version="0.2.0",
+	version="0.3.0",
 	openapi_tags=settings.api.tags_metadata,
 	docs_url="/api"
 )
