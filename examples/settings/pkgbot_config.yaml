@@ -119,13 +119,13 @@ PkgBot:
     disable_existing_loggers: False
     formatters:
       default:
-        (): 'uvicorn._logging.DefaultFormatter'
+        (): 'uvicorn.logging.DefaultFormatter'
         fmt: '%(asctime)s | %(name)s | %(levelname)s | %(message)s'
       debug:
-        (): 'uvicorn._logging.DefaultFormatter'
+        (): 'uvicorn.logging.DefaultFormatter'
         fmt: '%(asctime)s | %(name)s | %(levelname)s | %(filename)s:%(lineno)s - %(funcName)20s() | %(message)s'
       access:
-        (): 'uvicorn._logging.AccessFormatter'
+        (): 'uvicorn.logging.AccessFormatter'
         fmt: '%(asctime)s | %(name)s | %(levelname)s | %(client_addr)s - "%(request_line)s" %(status_code)s'
     handlers:
       default:
