@@ -15,5 +15,5 @@ TORTOISE_CONFIG = {
 		}
 	},
 	"use_tz": False,
-	"timezone": "America/Phoenix"
+	"timezone": config.Common.get("timezone")
 }

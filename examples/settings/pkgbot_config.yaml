@@ -178,3 +178,5 @@ Common:
   # These values will be parsed as *Regex*
   # redaction_strings: <some_internal_string>|\b<username>\b
   # additional_sensitive_key_names: _id|_hash
+  # Local timezone
+  timezone: America/Phoenix
