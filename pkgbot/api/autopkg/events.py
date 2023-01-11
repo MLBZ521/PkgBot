@@ -38,7 +38,7 @@ async def event_handler(task_id, loop_count=0):
 		log.debug(f"task_results.result:  {task_results.result}")
 		log.debug("Sleeping for one second...")
 		time.sleep(1)
-		await event_handler(task_id, loop_count + 1)
+		return await event_handler(task_id, loop_count + 1)
 
 	match event:
 
