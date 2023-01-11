@@ -97,20 +97,10 @@ async def event_verify_trust_info(task_results):
 
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
-	if autopkg_cmd.ingress in [ "Schedule", "API" ]:
-
-		if success:
-			# This shouldn't ever be called?
-			log.info(f"Trust info verified for:  {recipe_id}")
-
-		else:
-			# Send message that recipe_id failed verify-trust-info
-			redacted_error = await utility.replace_sensitive_strings(stderr)
-			await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
-
-	elif autopkg_cmd.ingress == "Slack":
+	if autopkg_cmd.ingress == "Slack":
 		# Post ephemeral msg to Slack user
-		log.debug("Recipe trust info was checked via Slack command.")
+		log.debug(
+			f"`{recipe_id}`'s trust info was checked via Slack command by {autopkg_cmd.egress}.")
 
 		if success:
 			text = f"Recipe trust info passed for `{recipe_id}`!  :link-success:"
@@ -125,6 +115,11 @@ async def event_verify_trust_info(task_results):
 			image = None,
 			alt_image_text = None
 		)
+
+	if not success:
+		# Send message that recipe_id failed verify-trust-info
+		redacted_error = await utility.replace_sensitive_strings(stderr)
+		await api.recipe.recipe_trust_verify_failed(recipe_id, redacted_error)
 
 
 async def event_update_trust_info(task_results):
