@@ -139,19 +139,19 @@ async def update_trust_error_msg(msg: str,
 @router.get("/unauthorized-msg", summary="Build unauthorized message",
 	description="Builds a 'unauthorized' message for Slack when a user attempts to "
 	"perform a Slack interaction with PkgBot that they're not authorized to perform.")
-async def unauthorized_msg(user):
+async def unauthorized_msg(user: str):
 
 	return await format_json(await api.block_builders.unauthorized(user))
 
 
 @router.get("/basic-msg", summary="Build generic message",
 	description="Builds a simple message for Slack.")
-async def basic_msg(text, image: str | None = None, alt_text: str | None = None):
+async def basic_msg(text, image: str | None = None, alt_image_text: str | None = None):
 
 	blocks = await api.block_builders.brick_section_text(text)
 
 	if image:
-		blocks = blocks | await api.block_builders.brick_accessory_image(image, alt_text)
+		blocks = blocks | await api.block_builders.brick_accessory_image(image, alt_image_text)
 
 	return await format_json([blocks])
 

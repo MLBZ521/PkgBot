@@ -48,14 +48,12 @@ async def event_handler(task_id, loop_count=0):
 		case "update_trust_info":
 			await event_update_trust_info(task_results)
 
-		case event if event in {"autopkg_repo_update", "disk_space_critical", "private_git_pull"}:
+		case event if event in {
+			"autopkg_repo_update", "disk_space_critical", "failed_pre_checks", "private_git_pull"}:
 			await event_failed_pre_checks(task_results)
 
 		case "disk_space_warning":
 			await event_disk_space_warning(task_results)
-
-		case "failed_pre_checks":
-			await event_failed_pre_checks(task_results)
 
 		case "error" | "error" if not task_results.result.get("success"):
 			await event_error(task_results)

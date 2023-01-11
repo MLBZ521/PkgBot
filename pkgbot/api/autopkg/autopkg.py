@@ -265,7 +265,7 @@ async def autopkg_repo_add(repo: str,
 	"""Adds the passed recipe repo to the available parent search repos.
 
 	Args:
-		repo (str): Path (URL or [GitHub] user/repo) of an AutoPkg recipe repo
+		repo (str): Path (URL or [GitHub] user/repo) of (an) AutoPkg recipe repo(s)
 		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
 			and details on response method
 

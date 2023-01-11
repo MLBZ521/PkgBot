@@ -218,9 +218,9 @@ async def disk_space_msg(header: str, msg: str, image: str):
 	return await api.bot.SlackBot.post_message(blocks, text=f"Disk Space {header}")
 
 
-@router.post("/ephemeral_msg", summary="Send ephemeral message", 
-	description="Sends a a ephemeral message to the specified user.")
-async def ephemeral_msg(user, text, channel: str | None = None, image: str | None = None, 
+@router.post("/ephemeral_msg", summary="Send ephemeral message",
+	description="Sends a ephemeral message to the specified user.")
+async def ephemeral_msg(user, text, channel: str | None = None, image: str | None = None,
 	alt_text: str | None = None, alt_image_text: str | None = None):
 
 	blocks = await api.build_msg.basic_msg(text, image, alt_image_text)
