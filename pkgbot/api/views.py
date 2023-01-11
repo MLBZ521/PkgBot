@@ -57,7 +57,7 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 	table_headers = [
 		"", "", "Name", "Version", "Status", "Updated By",
-		"Packaged", "Promoted", "COMMON", "Flags", "Notes"
+		"Packaged", "Promoted", "Flags", "Notes"
 	]
 
 	return templates.TemplateResponse("packages.html",
@@ -90,7 +90,7 @@ async def recipe_list(request: Request, user = Depends(auth.login_manager)):
 	session["logged_in"] = True
 	pkgs = await recipe.get_recipes()
 
-	table_headers = [ "ID", "Recipe ID", "Name", "Enable", "Manual Only", 
+	table_headers = [ "ID", "Recipe ID", "Name", "Enable", "Manual Only",
 		"Pkg Only", "Last Ran", "Schedule",  "Notes" ]
 
 	return templates.TemplateResponse("recipes.html",

@@ -41,9 +41,7 @@ async def new_pkg_msg(pkg_object: models.Package_In = Depends(models.Package_In)
 	description="Builds an 'error' message for Slack after a recipe has returned an error.")
 async def recipe_error_msg(recipe_id: str, id: int, error: dict):
 
-	redacted_error = await utility.replace_sensitive_strings(error)
-	blocks = await api.block_builders.brick_error(recipe_id, await format_json(redacted_error))
-	return await format_json(blocks)
+	return await format_json(await api.block_builders.brick_error(recipe_id, error))
 
 
 @router.get("/trust-diff-msg", summary="Build trust diff message",
@@ -133,20 +131,33 @@ async def update_trust_success_msg(
 async def update_trust_error_msg(msg: str,
 	trust_object: models.TrustUpdate_In = Depends(models.TrustUpdate_In)):
 
-	return await format_json([await api.block_builders.brick_update_trust_error_msg(trust_object, msg)])
+	blocks = await api.block_builders.brick_update_trust_error_msg(trust_object, msg)
+	blocks.append(await api.block_builders.brick_trust_diff_button(trust_object.dict().get('id')))
+	return await format_json(blocks)
 
 
 @router.get("/unauthorized-msg", summary="Build unauthorized message",
 	description="Builds a 'unauthorized' message for Slack when a user attempts to "
 	"perform a Slack interaction with PkgBot that they're not authorized to perform.")
-async def unauthorized_msg(user):
+async def unauthorized_msg(user: str):
 
 	return await format_json(await api.block_builders.unauthorized(user))
 
 
-@router.get("/missing-recipe-msg", summary="Build unauthorized message",
-	description="Builds a 'missing recipe' message for Slack when unable to locate "
-	"a recipe for a requested action.")
-async def missing_recipe_msg(recipe_id, text):
+@router.get("/basic-msg", summary="Build generic message",
+	description="Builds a simple message for Slack.")
+async def basic_msg(text, image: str | None = None, alt_image_text: str | None = None):
 
-	return await format_json(await api.block_builders.missing_recipe_msg(recipe_id, text))
+	blocks = await api.block_builders.brick_section_text(text)
+
+	if image:
+		blocks = blocks | await api.block_builders.brick_accessory_image(image, alt_image_text)
+
+	return await format_json([blocks])
+
+
+@router.get("/disk-space-msg", summary="Build message regarding disk usage",
+	description="Builds a message for Slack when there is a disk space size issue.")
+async def disk_space_msg(header, msg, image):
+
+	return await format_json(await api.block_builders.brick_disk_space_msg(header, msg, image))

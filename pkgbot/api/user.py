@@ -27,7 +27,7 @@ async def create_or_update_user(user: models.PkgBotAdmin_In):
 
 async def get_user(user: models.PkgBotAdmin_In):
 
-	return await models.PkgBotAdmins.filter(**user.dict(exclude_unset=True, exclude_none=True))
+	return await models.PkgBotAdmins.filter(**user.dict(exclude_unset=True, exclude_none=True)).first()
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):

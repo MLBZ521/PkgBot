@@ -41,7 +41,9 @@ async def get_by_id(id: int):
 	dependencies=[Depends(api.user.get_current_user)], response_model=models.Recipe_Out)
 async def get_by_recipe_id(recipe_id: str):
 
-	return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
+	if recipe_object := await models.Recipes.filter(recipe_id__iexact=recipe_id).first():
+		return await models.Recipe_Out.from_tortoise_orm(recipe_object)
+	return recipe_object
 
 
 @router.post("/", summary="Create a recipe", description="Create a recipe.",
@@ -58,7 +60,7 @@ async def create(recipe_object: models.Recipe_In = Body()):
 	dependencies=[Depends(api.user.verify_admin)], response_model=models.Recipe_Out)
 async def update_by_id(id: int, recipe_object: models.Recipe_In = Depends(models.Recipe_In)):
 
-	if type(recipe_object) != dict:
+	if not isinstance(recipe_object, dict):
 		recipe_object = recipe_object.dict(exclude_unset=True, exclude_none=True)
 
 	await models.Recipes.filter(id=id).update(**recipe_object)
@@ -69,14 +71,15 @@ async def update_by_id(id: int, recipe_object: models.Recipe_In = Depends(models
 	description="Update a recipe by recipe_id.",
 	dependencies=[Depends(api.user.verify_admin)], response_model=models.Recipe_Out)
 async def update_by_recipe_id(recipe_id: str,
-	# recipe_object: models.Recipe_In = Body(..., recipe_object=Depends(models.Recipe_In))):
-	recipe_object: models.Recipe_In = Body()):
+	recipe_object: models.Recipe_In = Depends(models.Recipe_In)):
 
-	if type(recipe_object) != dict:
+	if not isinstance(recipe_object, dict):
 		recipe_object = recipe_object.dict(exclude_unset=True, exclude_none=True)
 
-	await models.Recipes.filter(recipe_id=recipe_id).update(**recipe_object)
-	return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
+	if await models.Recipes.filter(recipe_id__iexact=recipe_id).update(**recipe_object):
+		return await models.Recipe_Out.from_queryset_single(models.Recipes.get(recipe_id=recipe_id))
+
+	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
 
 
 @router.delete("/id/{id}", summary="Delete recipe by id", description="Delete a recipe by id.",
@@ -86,7 +89,7 @@ async def delete_by_id(id: int):
 	delete_object = await models.Recipes.filter(id=id).delete()
 
 	if not delete_object:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe does not exist.")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"A recipe does not exist with id:  '{id}'")
 	else:
 		return { "result":  f"Successfully deleted recipe id:  {id}" }
 
@@ -95,10 +98,10 @@ async def delete_by_id(id: int):
 	description="Delete a recipe by recipe_id.", dependencies=[Depends(api.user.verify_admin)])
 async def delete_by_recipe_id(recipe_id: str):
 
-	delete_object = await models.Recipes.filter(recipe_id=recipe_id).delete()
+	delete_object = await models.Recipes.filter(recipe_id__iexact=recipe_id).delete()
 
 	if not delete_object:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe does not exist.")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
 	else:
 		return { "result":  f"Successfully deleted recipe id:  {recipe_id}" }
 
@@ -109,7 +112,7 @@ async def delete_by_recipe_id(recipe_id: str):
 async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 
 	# Create DB entry in errors table
-	error_message = await models.ErrorMessages.create( recipe_id=recipe_id )
+	error_message = await models.ErrorMessages.create(type=f"recipe: {recipe_id}")
 
 	# Post Slack Message
 	try:
@@ -124,8 +127,9 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 	results = await api.send_msg.recipe_error_msg(recipe_id, error_message.id, error_dict)
 
 	updates = {
+		"slack_channel": results.get('channel'),
 		"slack_ts": results.get('ts'),
-		"slack_channel": results.get('channel')
+		"status": "Notified"
 	}
 
 	await models.ErrorMessages.update_or_create(updates, id=error_message.id)
@@ -135,6 +139,7 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 
 	if recipe_object:
 		recipe_object.enabled = False
+		recipe_object.notes = "Disabled due to error during run."
 		recipe_object.recurring_fail_count = recipe_object.recurring_fail_count + 1
 		await recipe_object.save()
 
@@ -144,27 +149,49 @@ async def recipe_error(recipe_id: str, error: str, task_id: str = None):
 @router.post("/trust/update", summary="Update recipe trust info",
 	description="Update a recipe's trust information.  Runs `autopkg update-trust-info`.",
 	dependencies=[Depends(api.user.verify_admin)])
-async def recipe_trust_update(trust_object: models.TrustUpdate_In):
+async def recipe_trust_update(
+	recipe_id: str | None = None,
+	autopkg_cmd: models.AutoPkgCMD = Depends(models.AutoPkgCMD),
+	trust_object: models.TrustUpdate_In | None = Depends(models.TrustUpdate_In)
+):
 
 	# Get recipe object
-	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
+	if recipe_object := await models.Recipes.filter(recipe_id__iexact=recipe_id).first():
+		log.debug(f"recipe_object:  {recipe_object}")
+		event_id = None
+		recipe_id = recipe_object.recipe_id
 
-##### May need to create a trust_object db entry if one doesn't exist.
-	# Would be needed for a direct call to endpoint (API/Slack command)
-	# as those would not generate a failure first.
+	elif isinstance(trust_object, (models.TrustUpdates, models.TrustUpdate_In)):
 
-	if recipe_object:
-		queued_task = task.autopkg_update_trust.apply_async(
-			(trust_object.recipe_id, trust_object.id), queue='autopkg', priority=6)
-		return { "result": "Queued background task" , "task_id": queued_task.id }
+		if isinstance(trust_object, models.TrustUpdate_In):
+			# If object is not a ORM model, get an ORM model
+			trust_object = await models.TrustUpdates.filter(
+				**trust_object.dict(exclude_unset=True, exclude_none=True)).first()
+
+		event_id = trust_object.id
+		recipe_id = trust_object.recipe_id
 
 	else:
-		blocks = await api.build_msg.missing_recipe_msg(trust_object.recipe_id, "update trust for")
-		await api.bot.SlackBot.post_ephemeral_message(
-			trust_object.status_updated_by, blocks,
-			channel=trust_object.slack_channel,
-			text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
+
+		await api.slack.send_msg.ephemeral_msg(
+			user = autopkg_cmd.egress,
+			text = f":no_good: Unable to update trust info.  Unknown recipe id:  `{recipe_id}`",
+			alt_text = ":no_good: Failed to update trust info for...",
+			channel = autopkg_cmd.channel
 		)
+		return { "result": f"Unknown recipe id:  `{recipe_id}'" }
+
+	queued_task = task.autopkg_verb_parser.apply_async(
+		kwargs = {
+			"recipes": recipe_id,
+			"event_id":  event_id,
+			"autopkg_cmd": autopkg_cmd.dict()
+		},
+		queue="autopkg",
+		priority=6
+	)
+
+	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
 @router.post("/trust/deny", summary="Do not approve trust changes",
@@ -186,7 +213,7 @@ async def recipe_trust_update_success(trust_id: int):
 	trust_object = await models.TrustUpdate_Out.from_queryset_single(models.TrustUpdates.get(id=trust_id))
 
 	# Re-enable the recipe
-	await update_by_recipe_id(trust_object.recipe_id, {"enabled": True})
+	await update_by_recipe_id(trust_object.recipe_id, {"enabled": True, "notes": ""})
 
 	if trust_object:
 		return await api.send_msg.update_trust_success_msg(trust_object)
@@ -194,7 +221,7 @@ async def recipe_trust_update_success(trust_id: int):
 	# else:
 ##### Post message to whomever requested the update?
 		# await bot.SlackBot.post_ephemeral_message(
-		# 	trust_object.status_updated_by, blocks,
+		# 	trust_object.updated_by, blocks,
 		# 	channel=trust_object.slack_channel,
 		# 	text=f"Encountered error attempting to update trust for `{trust_object.recipe_id}`"
 		# )
@@ -233,5 +260,6 @@ async def recipe_trust_verify_failed(recipe_id: str, diff_msg: str = Body()):
 	# Mark the recipe disabled
 	recipe_object = await models.Recipes.filter(recipe_id=trust_object.recipe_id).first()
 	recipe_object.enabled = False
+	recipe_object.notes = "Disabled due to failing parent recipe trust verification."
 	await recipe_object.save()
 	return { "result": "Success" }

@@ -6,12 +6,13 @@ import os
 # import pickle
 import plistlib
 import re
-import shlex
-import subprocess
+# import shlex
+import shutil
 import yaml
 
 from datetime import datetime, timezone
 from distutils.util import strtobool
+from typing import List, Union
 
 # from sqlalchemy import create_engine
 # from sqlalchemy.orm import sessionmaker
@@ -45,7 +46,7 @@ def log_setup(name="PkgBot"):
 log = log_setup()
 
 
-async def run_process_async(command, input=None):
+async def execute_process(command, input=None):
 	"""
 	A helper function for asyncio's subprocess.
 
@@ -72,42 +73,6 @@ async def run_process_async(command, input=None):
 		(stdout, stderr) = await process.communicate(input=bytes(input, "utf-8"))
 	else:
 		(stdout, stderr) = await process.communicate()
-
-	return {
-		"stdout": (stdout.decode()).strip(),
-		"stderr": (stderr.decode()).strip() if stderr != None else None,
-		"status": process.returncode,
-		"success": True if process.returncode == 0 else False
-	}
-
-
-def execute_process(command, input=None):
-	"""
-	A helper function for subprocess.
-
-	Args:
-		command (str):  The command line level syntax that would be
-			written in shell or a terminal window.
-	Returns:
-		Results in a dictionary.
-	"""
-
-	# Validate that command is not a string
-	if not isinstance(command, str):
-		raise TypeError('Command must be a str type')
-
-	# Format the command
-	# command = shlex.quote(command)
-
-	# Run the command
-	process = subprocess.Popen(
-		command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-		stderr=subprocess.PIPE)
-
-	if input:
-		(stdout, stderr) = process.communicate(input=bytes(input, "utf-8"))
-	else:
-		(stdout, stderr) = process.communicate()
 
 	return {
 		"stdout": (stdout.decode()).strip(),
@@ -167,9 +132,16 @@ async def datetime_to_string(datetime_string: str, format_string: str = "%Y-%m-%
 	return converted.strftime(format_string)
 
 
-async def compute_hex_digest(key: bytes,
-	message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
+async def get_timestamp(format_string: str = None):
 
+	if format_string:
+		return await datetime_to_string(str(datetime.now()), format_string)
+	return await datetime_to_string(str(datetime.now()))
+
+
+async def compute_hex_digest(key: bytes,
+
+	message: bytes, hash: hashlib._hashlib.HASH = hashlib.sha256):
 	return hmac.new(key, message, hash).hexdigest()
 
 
@@ -244,7 +216,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 						message[key] = parse_dict(value, all_sensitive_strings)
 
 					else:
-						message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', value)
+						message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', str(value))
 
 		return message
 
@@ -321,3 +293,125 @@ async def parse_recipe_receipt(content: dict, key: str):
 			return step.get(key)
 		elif re.search(key, step.get("Processor"), re.IGNORECASE):
 			return step
+
+
+async def split_string(string: str, split_on: str = " ", split_index: int = 1):
+
+	return string.split(split_on, split_index)
+
+
+async def parse_slash_cmd_options(cmd_text: str, verb: str):
+
+	if " " not in cmd_text:
+		return cmd_text
+
+	final_options = {}
+
+	if verb in { "run", "verify-trust-info" }:
+
+		if v_count := re.search(r"-vv+", cmd_text, flags=re.IGNORECASE):
+			v_count = re.subn("v", '', v_count[0])[1]
+			final_options["verbose"] = f"{'v' * v_count}"
+
+		elif v_count := re.subn(r"--verbose|-v", '', cmd_text)[1]:
+			final_options["verbose"] = f"{'v' * v_count}"
+
+	options_to_parse = await split_string(cmd_text, split_index = -1)
+	indexes_to_ignore = []
+	overrides = ""
+
+	for index, option in enumerate(options_to_parse):
+
+		if index not in indexes_to_ignore and option in { "-k", "--key" }:
+
+			indexes_to_ignore.append(index + 1)
+			override_pair = options_to_parse[index + 1]
+
+			(key, sep, value) = override_pair.partition("=")
+			key = re.sub(r'[“”"]', "", key)
+			value = re.sub(r'[“”"]', "", value)
+
+			if sep != "=":
+				raise Exception(f"Error processing override --key `{override_pair}`")
+
+			overrides = f"{overrides} --key '{key}={value}'"
+
+		if option == "--ignore-parent-trust-verification-errors":
+			final_options["ignore_parent_trust"] = True
+
+	final_options["overrides"] = overrides.lstrip()
+	return final_options
+
+
+class HumanBytes:
+    """
+    HumanBytes returns a string of the supplied file size in human friendly format.
+    Credit:  Mitch McMabers
+    Source:  https://stackoverflow.com/a/63839503
+    Notes:  Slightly modified from source
+    Returns:
+        str: Formatted string
+    """
+
+    METRIC_LABELS: List[str] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+    BINARY_LABELS: List[str] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+    PRECISION_OFFSETS: List[float] = [0.5, 0.05, 0.005, 0.0005] # PREDEFINED FOR SPEED.
+    PRECISION_FORMATS: List[str] = ["{}{:.0f} {}", "{}{:.1f} {}", "{}{:.2f} {}", "{}{:.3f} {}"] # PREDEFINED FOR SPEED.
+
+    @staticmethod
+    def format(num: Union[int, float], metric: bool=False, precision: int=1) -> str:
+        """
+        Human-readable formatting of bytes, using binary (powers of 1024)
+        or metric (powers of 1000) representation.
+        """
+
+        assert isinstance(num, (int, float)), "num must be an int or float"
+        assert isinstance(metric, bool), "metric must be a bool"
+        assert isinstance(precision, int) and precision >= 0 and precision <= 3, "precision must be an int (range 0-3)"
+
+        unit_labels = HumanBytes.METRIC_LABELS if metric else HumanBytes.BINARY_LABELS
+        last_label = unit_labels[-1]
+        unit_step = 1000 if metric else 1024
+        unit_step_thresh = unit_step - HumanBytes.PRECISION_OFFSETS[precision]
+
+        is_negative = num < 0
+        if is_negative: # Faster than ternary assignment or always running abs().
+            num = abs(num)
+
+        for unit in unit_labels:
+            if num < unit_step_thresh:
+                # VERY IMPORTANT:
+                # Only accepts the CURRENT unit if we're BELOW the threshold where
+                # float rounding behavior would place us into the NEXT unit: F.ex.
+                # when rounding a float to 1 decimal, any number ">= 1023.95" will
+                # be rounded to "1024.0". Obviously we don't want ugly output such
+                # as "1024.0 KiB", since the proper term for that is "1.0 MiB".
+                break
+            if unit != last_label:
+                # We only shrink the number if we HAVEN'T reached the last unit.
+                # NOTE: These looped divisions accumulate floating point rounding
+                # errors, but each new division pushes the rounding errors further
+                # and further down in the decimals, so it doesn't matter at all.
+                num /= unit_step
+
+        return HumanBytes.PRECISION_FORMATS[precision].format("-" if is_negative else "", num, unit)
+
+
+async def get_disk_usage(disk: str = "/"):
+    """Gets the current disk usage properties and returns them.
+
+    Args:
+        disk (str):  Which disk to check
+
+    Returns:
+        (tuple): Results in a tuple format (total, used, free)
+    """
+
+    # Get the disk usage
+    total, used, free = shutil.disk_usage(disk)
+
+    total_human = HumanBytes.format(total, metric=False, precision=1)
+    used_human = HumanBytes.format(used, metric=False, precision=1)
+    free_human = HumanBytes.format(free, metric=False, precision=1)
+
+    return (total_human, used_human, free_human)

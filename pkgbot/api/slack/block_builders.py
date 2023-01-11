@@ -133,7 +133,7 @@ async def brick_error(recipe_id, error):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"```{error}```",
+				"text": f"{error}",
 				"verbatim": True
 			},
 			"accessory": {
@@ -332,20 +332,66 @@ async def unauthorized(user):
 	]
 
 
-async def missing_recipe_msg(recipe_id, text):
+async def brick_section_text(text):
+
+	return {
+		"type": "section",
+		"text": {
+			"type": "mrkdwn",
+			"text": text,
+			"verbatim": True
+		}
+	}
+
+
+async def brick_accessory_image(image, alt_text=":notification:"):
+
+	return {
+		"accessory": {
+			"type": "image",
+			"image_url": f"{pkgbot_server}/static/icons/{image}",
+			"alt_text": alt_text
+		}
+	}
+
+
+async def brick_disk_space_msg(header, msg, image):
 
 	return [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": f"Disk Usage {header}",
+				"emoji": True
+			}
+		},
 		{
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"Failed to {text} `{recipe_id}`",
+				"text": msg,
 				"verbatim": True
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
-				"alt_text": ":x:"
+				"image_url": f"{pkgbot_server}/static/icons/{image}",
+				"alt_text": ":warning:"
 			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": True,
+						"text": "Acknowledge"
+					},
+					"style": "danger",
+					"value": "Error:ack"
+				}
+			]
 		}
 	]

@@ -27,8 +27,8 @@ def get_user_context():
 def get_console_user():
 
 	# Get the Console User
-	results_console_user = utility.execute_process(
-		"/usr/sbin/scutil", "show State:/Users/ConsoleUser")
+	results_console_user = asyncio.run(utility.execute_process(
+		"/usr/sbin/scutil", "show State:/Users/ConsoleUser"))
 	return re.sub(
 		"(Name : )|(\n)", "", ( re.search("Name : .*\n", results_console_user["stdout"])[0] ))
 
@@ -87,6 +87,12 @@ def generate_autopkg_args(**kwargs):
 
 	if kwargs.get("pkg_only"):
 		options = f"{options} --key \'PKG_ONLY=True\'"
+
+	if kwargs.get("overrides"):
+		options = f"{options} {kwargs.get('overrides')}"
+
+	if kwargs.get("quiet"):
+		options = f"{options} --quiet"
 
 	return options.lstrip()
 

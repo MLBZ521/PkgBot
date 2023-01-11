@@ -1,9 +1,8 @@
 # PkgBot
 
-PkgBot is an automation framework for the open source project [AutoPkg](https://www.github.com/autopkg) that provides a web-based front end and a Slack Bot to send notifications and receive commands.  It helps manage the lifecycle of software packaging through package and version validation and then provides an interactive method to "promote" a specific package version from "development" (or "test") to production environments.
+PkgBot is an automation framework for the open source project [AutoPkg](https://www.github.com/autopkg/autopkg) that provides a web-based front end and a Slack Bot to send notifications and receive commands.  It helps manage the lifecycle of software packaging through package and version validation and then provides an interactive method to "promote" a specific package version from "development" (or "test") to production environments.
 
-<img src="examples/images/New Software Version Available.png" />
-
+![New Software Version Available](/examples/images/New%20Software%20Version%20Available.png)
 
 ## About
 
@@ -13,9 +12,9 @@ To "promote" a package to a production Jamf Pro instance without re-running the 
 
 A web-based front end is available to review the status and history of all packages as well as the _known_ `AutoPkg` recipe configurations and statuses.
 
-PkgBot has been running in my production environment for over a year now and is working quite well.  I've been ironing out the kinks and making improvements to the overall processes and workflows to streamline everything.
+PkgBot has been running in my production environment for over a year now and is working quite well.  During this time, I've been ironing out any kinks and making improvements to the overall processes and workflows to streamline everything.
 
-<img src="examples/images/Approved packages.png" />
+![New Software Version Available](/examples/images/Approved%20packages.png)
 
 
 ## Backend Design
@@ -24,40 +23,32 @@ This project is built around FastAPI, Celery, the Slack SDK, and several other c
 
 The project has a fully asynchronous code base and utilizes numerous popular Python libraries.
 
-<img src="examples/images/Trust Verification Failure.png" />
+![New Software Version Available](/examples/images/Trust%20Verification%20Failure.png)
 
 
 ## Planned Features
 
-  * ~~Moving to a proper "backend" system for executing tasks~~
-  * (More) Streamlining (of) workflows
-  * ~~"Hosting" the icons within PkgBot instead of Jamf Pro~~
-  * Slack slash commands for executing recipes
-  * Support for "cleaning up" old notifications
-    * e.g. when an app version has been "retired"
-  * Code Improvements
-    * ~~Better config loading~~
-    * ~~Better log loading/usage~~
-  * A "setup/install" script
+Check out the [PkgBot Project Board](https://github.com/users/MLBZ521/projects/1) for a list of planned features.
 
-<img src="examples/images/Encountered an Error.png" />
+![New Software Version Available](/examples/images/Encountered%20an%20Error.png)
 
 
 ## Requirements
 
-PkgBot will be written to support the Python3 framework that is shipped with `AutoPkg` (currently supporting AutoPkg 2.6.0's bundled Python 3.10).  It needs additional libraries that are not included with `AutoPkg`'s bundled Python3 that need to be installed separately.  It also requires RabbitMQ.
+PkgBot will typically be written to support the Python3 framework that is shipped with `AutoPkg` (currently supporting AutoPkg 2.6.0's (and newer) bundled Python 3.10.x).  Additional libraries will need to be installed separately that are not included with `AutoPkg`'s bundled Python3.  RabbitMQ is also required.
 
 The major Python libraries are:
   * FastAPI
+  * Slack SDK
+    * For Notifications
   * Celery
   * Jinja2
     * For the web front-end
-  * Slack SDK
-    * For Notifications
   * Tortoise ORM
+  * Pydantic
   * Uvicorn
 
-See the requirements.txt file for additional libraries and dependencies.
+See the [requirements.txt](requirements.txt) file for additional libraries and dependencies.
 
 
 ## How to Setup

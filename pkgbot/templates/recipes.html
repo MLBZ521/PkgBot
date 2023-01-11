@@ -8,26 +8,32 @@
                 table-layout: auto;
                 width: 100%;
                 /* padding: 8px; */
-                white-space: nowrap;
+                /* white-space: nowrap; */
                 text-align: left;
             }
             td {
                 /* border: 1px solid black; */
                 padding: 5px;
             }
-            td:nth-child(2) {
+            /* td:nth-child(2) {
                 text-align: center;
-            }
+            } */
             td:first-child {
+                /* ID Column */
+                text-align: center;
                 border: 0px;
+                width: 0px;
             }
             tr:nth-child(even) td:not(:first-child) {
+                /* Even Rows */
                 background-color: #f2f2f2;
             }
             tr:hover td:not(:first-child) {
+                /* Hover On Row */
                 background-color: #FFC627;
             }
             th:nth-child(n+1) {
+                /* Header */
                 padding-top: 12px;
                 padding-bottom: 12px;
                 background-color: #8C1D40;

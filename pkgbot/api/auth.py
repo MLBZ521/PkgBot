@@ -58,11 +58,11 @@ async def authenticate_user(username: str, password: str):
 		user_model = models.PkgBotAdmin_In(username=username)
 		user_exists = await user.get_user(user_model)
 
-		if len(user_exists) <= 1:
+		if user_exists:
 
 			user_details = models.PkgBotAdmin_In(
 				username = username,
-				full_admin = user_exists[0].full_admin if user_exists else False,
+				full_admin = user_exists.full_admin if user_exists else False,
 				jps_token = response_json["token"],
 				jps_token_expires = await utility.string_to_datetime(
 					response_json["expires"], "%Y-%m-%dT%H:%M:%S.%fZ"),

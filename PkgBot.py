@@ -29,9 +29,16 @@ app = FastAPI(
 	title="PkgBot API",
 	description="A framework to manage software packaging, testing, and promoting from a "
 		"development to production environment.",
-	version="0.2.0",
+	version="0.3.0",
 	openapi_tags=settings.api.tags_metadata,
 	docs_url="/api"
+)
+
+register_tortoise(
+	app,
+	config = settings.db.TORTOISE_CONFIG,
+	generate_schemas = True,
+	add_exception_handlers = True
 )
 
 app.mount("/static", StaticFiles(directory="/Library/AutoPkg/PkgBot/pkgbot/static"), name="static")
@@ -44,13 +51,6 @@ app.include_router(api.bot.router)
 app.include_router(api.build_msg.router)
 app.include_router(api.send_msg.router)
 app.include_router(api.user.router)
-
-register_tortoise(
-	app,
-	config = settings.db.TORTOISE_CONFIG,
-	generate_schemas = True,
-	add_exception_handlers = True
-)
 
 # Add an exception handler to the app instance
 # Used for the login/auth logic for the HTTP views

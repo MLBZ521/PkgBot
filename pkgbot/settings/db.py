@@ -9,11 +9,11 @@ TORTOISE_CONFIG = {
 		"default": f"sqlite:{config.Database.get('location')}"
 	},
 	"apps": {
-		"app": {
+		"pkgbot": {
 			"models": [ "pkgbot.db.models" ],
 			"default_connection": "default"
 		}
 	},
 	"use_tz": False,
-	"timezone": "America/Phoenix"
+	"timezone": config.Common.get("timezone")
 }
