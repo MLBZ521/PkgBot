@@ -163,79 +163,44 @@ class SlackClient(object):
 			return { "result": f"Failed to upload {file}", "error": error.response["error"] }
 
 
-	async def invoke_reaction(self, **kwargs):
-
-		kwargs |= {
-			"channel": kwargs.get("channel", self.channel),
-			"timestamp": str(kwargs.get("ts"))
-		}
-
-		if "ts" in kwargs:
-			del kwargs["ts"]
+	async def reaction(self, action: str = None, emoji: str = None, ts: str = None, **kwargs):
 
 		try:
-			return await self.client.api_call(
-				f"reactions.{kwargs.get('action')}",
-				params = kwargs
-			)
+
+			match action:
+
+				case "get":
+					return await self.client.reactions_get(
+						channel = self.channel,
+						timestamp= ts
+					)
+
+				case "add":
+					return await self.client.reactions_add(
+						channel = self.channel,
+						name = emoji,
+						timestamp = ts
+					)
+
+				case "remove":
+					return await self.client.reactions_remove(
+						channel = self.channel,
+						name = emoji,
+						timestamp = ts
+					)
 
 		except SlackApiError as error:
+
 			error_key = error.response["error"]
 
 			if not (
-				kwargs.get("action") == "add" and error_key == "already_reacted" or
-				kwargs.get("action") == "remove" and error_key == "no_reaction"
+				action == "add" and error_key == "already_reacted" or
+				action == "remove" and error_key == "no_reaction"
 			):
-				result = { "result": f"Failed to invoke reaction on {kwargs.get('timestamp')}", "error": error_key }
+
+				result = { "result": f"Failed to {action} reaction on {ts}", "error": error_key }
 				log.error(result)
 				return result
-
-			else:
-				log.debug("Unable to perform the specified reaction action")
-
-
-	async def reaction(self, action: str = None, emoji: str = None, ts: str = None, **kwargs):
-
-		# log.debug("Args:\n\taction:  {}\n\temoji:  {}\n\tts:  {}\n\tkwargs:  {}".format(
-		# 	action, emoji, ts, kwargs))
-
-		# log.debug("Checking current reactions")
-
-		# Force checking if this works or not.....
-		# It's not....
-		# response = await self.client.api_call(
-		# 	"reactions.get",
-		# 	http_verb = "GET",
-		# 	params = {
-		# 		'channel': 'C0266ANUEJZ',
-		# 		'timestamp': '1646121180.754269'
-		# 	}
-		# )
-
-##### This is currently not working....
-		# # Check if reaction exists or not...
-		# response = await self.invoke_reaction(action="get", ts=ts, http_verb="GET")
-		# # log.debug("forced get response:\n{}".format(response))
-		# reactions = response.get("message").get("reactions")
-
-		# for reaction in reactions:
-			# if (
-			# 	reaction.get("name") == kwargs.get("emoji") and
-			# 	elf.slack_id in reaction.get("users")
-			# ):
-		# 		log.debug("Reaction already exists")
-		# 		exists = True
-		# 		break
-
-		# 	log.debug("Reaction doesn't exist")
-		# 	exists = False
-
-		# if (
-		# 	action == "add" and exists == False or
-		# 	action == "remove" and exists == True
-		# ):
-
-		return await self.invoke_reaction(action=action, name=emoji, ts=ts, **kwargs)
 
 
 async def validate_request(request: Request):
