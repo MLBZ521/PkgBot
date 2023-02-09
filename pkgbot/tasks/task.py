@@ -5,22 +5,48 @@ import os
 import requests
 
 import git
-from celery import Celery, group, chain
 
-from pkgbot import config, settings
+from celery import chain, group, shared_task
+
+from pkgbot import config
 from pkgbot.tasks import task_utils
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
 log = utility.log
-celery = Celery()
-celery.config_from_object(settings.celery.settings)
+
+
+##################################################
+# Helper Tasks/Functions
 
 
 def determine_priority(default: int, ingress: str):
 
 	return default + 1 if ingress == "Slack" else default
+
+
+@shared_task(name="pkgbot:send_webhook", bind=True)
+def send_webhook(self, task_id):
+	""" Sends webhook after a task is complete. """
+
+	pkgbot_server, headers = task_utils.api_url_helper()
+	data = { "task_id": task_id }
+
+	headers["x-pkgbot-signature"] = asyncio.run(utility.compute_hex_digest(
+		config.PkgBot.get("webhook_secret").encode("UTF-8"),
+		str(data).encode("UTF-8"),
+		hashlib.sha512
+	))
+
+	requests.post(f"{pkgbot_server}/autopkg/receive",
+		headers=headers,
+		data=json.dumps(data),
+	)
+
+
+##################################################
+# Pre-check Tasks
 
 
 def perform_pre_checks(task_id: str, ignore_parent_trust: bool):
@@ -70,26 +96,49 @@ def perform_pre_checks(task_id: str, ignore_parent_trust: bool):
 	return queued_tasks
 
 
-@celery.task(name="pkgbot:send_webhook", bind=True)
-def send_webhook(self, task_id):
-	""" Sends webhook after a task is complete. """
+@shared_task(name="pkgbot:check_space", bind=True)
+def check_space(self):
+	"""Checks free space on PkgBot storage volume"""
 
-	pkgbot_server, headers = task_utils.api_url_helper()
-	data = { "task_id": task_id }
+	minimum_free_space = config.AutoPkg.get("minimum_free_space")
+	warning_free_space = config.AutoPkg.get("warning_free_space")
+	cache_volume = config.AutoPkg.get("cache_volume")
+	log.debug(f"Checking available free space on:  {cache_volume}")
+	current_free_space = asyncio.run(utility.get_disk_usage(cache_volume))[2]
+	current_free_space_int, current_free_space_unit = current_free_space.split(" ")
+	log.debug(f"Free space:  {current_free_space}")
+	success = True
+	status = 0
 
-	headers["x-pkgbot-signature"] = asyncio.run(utility.compute_hex_digest(
-		config.PkgBot.get("webhook_secret").encode("UTF-8"),
-		str(data).encode("UTF-8"),
-		hashlib.sha512
-	))
+	if current_free_space_unit in {"B", "KB", "MB"} or float(current_free_space_int) <= minimum_free_space:
+		event = "disk_space_critical"
+		msg = f"Not enough free space available to execute an AutoPkg run:  {current_free_space}"
+		success = False
+		status = 2
+		log.error(msg)
 
-	requests.post(f"{pkgbot_server}/autopkg/receive",
-		headers=headers,
-		data=json.dumps(data),
-	)
+	elif float(current_free_space_int) <= warning_free_space:
+		event = "disk_space_warning"
+		msg = f"AutoPkg cache volume is running low on disk space:  {current_free_space}"
+		status = 1
+		log.warning(msg)
+		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
+
+	else:
+		event = "disk_space_passed"
+		msg = "Disk Check:  Passed"
+
+	return {
+		"event": event,
+		"stdout": msg,
+		"stderr": msg,
+		"status": status,
+		"success": success,
+		"task_id": self.request.id
+	}
 
 
-@celery.task(name="git:pull_private_repo", bind=True)
+@shared_task(name="git:pull_private_repo", bind=True)
 def git_pull_private_repo(self):
 	"""Perform a `git pull` for the local private repo"""
 
@@ -180,75 +229,11 @@ def git_pull_private_repo(self):
 	return results_git_pull_command
 
 
-@celery.task(name="autopkg:repo_update", bind=True)
-def autopkg_repo_update(self):
-	"""Performs an `autopkg repo-update all`"""
-
-	log.info("Updating parent recipe repos...")
-	autopkg_repo_update_command = f"{config.AutoPkg.get('binary')} repo-update all --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
-
-	if task_utils.get_user_context():
-		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
-
-	results_autopkg_repo_update = asyncio.run(utility.execute_process(autopkg_repo_update_command))
-
-##### This if statement can be removed after further real world testing...
-	if not results_autopkg_repo_update["success"]:
-		log.error("Failed to update parent recipe repos")
-		log.error(f"stdout:\n{results_autopkg_repo_update['stdout']}")
-		log.error(f"stderr:\n{results_autopkg_repo_update['stderr']}")
-
-	results_autopkg_repo_update |= {
-		"event": "autopkg_repo_update",
-		"task_id": self.request.id
-	}
-
-	return results_autopkg_repo_update
+##################################################
+#  AutoPkg Tasks
 
 
-@celery.task(name="pkgbot:check_space", bind=True)
-def check_space(self):
-	"""Checks free space on PkgBot storage volume"""
-
-	minimum_free_space = config.AutoPkg.get("minimum_free_space")
-	warning_free_space = config.AutoPkg.get("warning_free_space")
-	cache_volume = config.AutoPkg.get("cache_volume")
-	log.debug(f"Checking available free space on:  {cache_volume}")
-	current_free_space = asyncio.run(utility.get_disk_usage(cache_volume))[2]
-	current_free_space_int, current_free_space_unit = current_free_space.split(" ")
-	log.debug(f"Free space:  {current_free_space}")
-	success = True
-	status = 0
-
-	if current_free_space_unit in {"B", "KB", "MB"} or float(current_free_space_int) <= minimum_free_space:
-		event = "disk_space_critical"
-		msg = f"Not enough free space available to execute an AutoPkg run:  {current_free_space}"
-		success = False
-		status = 2
-		log.error(msg)
-
-	elif float(current_free_space_int) <= warning_free_space:
-		event = "disk_space_warning"
-		msg = f"AutoPkg cache volume is running low on disk space:  {current_free_space}"
-		status = 1
-		log.warning(msg)
-		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
-
-	else:
-		event = "disk_space_passed"
-		msg = "Disk Check:  Passed"
-
-	return {
-		"event": event,
-		"stdout": msg,
-		"stderr": msg,
-		"status": status,
-		"success": success,
-		"task_id": self.request.id
-	}
-
-
-@celery.task(name="autopkg:verb_parser", bind=True)
+@shared_task(name="autopkg:verb_parser", bind=True)
 def autopkg_verb_parser(self, **kwargs):
 	"""Handles `autopkg` tasks.
 
@@ -300,13 +285,39 @@ def autopkg_verb_parser(self, **kwargs):
 
 				queued_tasks.extend(results_pre_check)
 
-			results = autopkg_run(recipes, autopkg_cmd)
+			results = autopkg_run(recipes, autopkg_cmd, event_id=event_id)
 			queued_tasks.extend(results)
 			return { "Queued background tasks": queued_tasks }
 
 
-@celery.task(name="autopkg:run", bind=True)
-def autopkg_run(self, recipes: list, autopkg_cmd: dict):
+@shared_task(name="autopkg:repo_update", bind=True)
+def autopkg_repo_update(self):
+	"""Performs an `autopkg repo-update all`"""
+
+	log.info("Updating parent recipe repos...")
+	autopkg_repo_update_command = f"{config.AutoPkg.get('binary')} repo-update all --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
+
+	if task_utils.get_user_context():
+		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
+
+	results_autopkg_repo_update = asyncio.run(utility.execute_process(autopkg_repo_update_command))
+
+##### This if statement can be removed after further real world testing...
+	if not results_autopkg_repo_update["success"]:
+		log.error("Failed to update parent recipe repos")
+		log.error(f"stdout:\n{results_autopkg_repo_update['stdout']}")
+		log.error(f"stderr:\n{results_autopkg_repo_update['stderr']}")
+
+	results_autopkg_repo_update |= {
+		"event": "autopkg_repo_update",
+		"task_id": self.request.id
+	}
+
+	return results_autopkg_repo_update
+
+
+@shared_task(name="autopkg:run", bind=True)
+def autopkg_run(self, recipes: list, autopkg_cmd: dict, **kwargs):
 	"""Creates parent and individual recipe tasks.
 
 	Args:
@@ -340,7 +351,6 @@ def autopkg_run(self, recipes: list, autopkg_cmd: dict):
 
 			_ = autopkg_cmd.pop("match_pkg", None)
 			_ = autopkg_cmd.pop("pkg_only", None)
-			_ = autopkg_cmd.pop("pkg_id", None)
 
 			# If ignore parent trust, don't run autopkg_verify_trust
 			if autopkg_cmd.get("ignore_parent_trust"):
@@ -391,7 +401,7 @@ def autopkg_run(self, recipes: list, autopkg_cmd: dict):
 				recipe_id = config.JamfPro_Prod.get("recipe_template")
 
 			queued_task = run_recipe.apply_async(
-				({"event": "promote", "id": autopkg_cmd.pop("pkg_id")},
+				({"event": "promote", "id": kwargs.get("event_id")},
 					recipe_id,
 					autopkg_cmd),
 				queue="autopkg", priority=4
@@ -402,7 +412,7 @@ def autopkg_run(self, recipes: list, autopkg_cmd: dict):
 	return queued_tasks
 
 
-@celery.task(name="autopkg:run_recipe", bind=True)
+@shared_task(name="autopkg:run_recipe", bind=True)
 def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dict):
 	"""Runs the passed recipe id against `autopkg run`.
 
@@ -423,8 +433,6 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 		and parent_task_results
 		and not parent_task_results["success"]
 	):
-
-		# event_id = ""
 
 		if f"{recipe_id}: FAILED" in parent_task_results["stderr"]:
 			log_msg = "Failed to verify trust info for"
@@ -480,7 +488,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 		}
 
 
-@celery.task(name="autopkg:verify-trust", bind=True)
+@shared_task(name="autopkg:verify-trust", bind=True)
 def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str | None = None):
 	"""Runs the passed recipe id against `autopkg verify-trust-info`.
 
@@ -529,7 +537,7 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	return results
 
 
-@celery.task(name="autopkg:update-trust", bind=True)
+@shared_task(name="autopkg:update-trust", bind=True)
 def autopkg_update_trust(
 	self, recipe_id: str, autopkg_cmd: dict, trust_id: int = None, task_id: str | None = None):
 	"""Runs the passed recipe id against `autopkg update-trust-info`.
@@ -620,7 +628,7 @@ def autopkg_update_trust(
 	}
 
 
-@celery.task(name="autopkg:version", bind=True)
+@shared_task(name="autopkg:version", bind=True)
 def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
 	"""Runs `autopkg version`.
 
@@ -654,7 +662,7 @@ def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
 	return results
 
 
-@celery.task(name="autopkg:repo-add", bind=True)
+@shared_task(name="autopkg:repo-add", bind=True)
 def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = None):
 	"""Runs the passed recipe id against `autopkg verify-trust-info`.
 

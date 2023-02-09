@@ -1,10 +1,58 @@
+import hashlib
+import hmac
+import json
+
+from fastapi import Request
+
 from . import auth
 from . import package
 from . import recipe
 from . import user
 from . import views
-from .autopkg import autopkg
-from .slack import block_builders
-from .slack import bot
-from .slack import build_msg
-from .slack import send_msg
+from . import autopkg
+from . import build_msg
+from . import send_msg
+
+from pkgbot import config
+from pkgbot.utilities import common as utility
+
+
+log = utility.log
+config = config.load_config()
+
+if config.Slack:
+	from . import slackbot as chatbot
+
+
+async def verify_pkgbot_webhook(request: Request):
+
+	try:
+##### Add a timestamp check
+		# slack_timestamp = request.headers.get("X-Slack-Request-Timestamp")
+
+		# if abs(time.time() - int(slack_timestamp)) > 60 * 5:
+		# 	# The request timestamp is more than five minutes from local time.
+		# 	# It could be a replay attack, so let's ignore it.
+		# 	return False
+
+		body = json.loads(await request.body())
+
+		digest = await utility.compute_hex_digest(
+			config.PkgBot.get("webhook_secret").encode("UTF-8"),
+			str(body).encode("UTF-8"),
+			hashlib.sha512
+		)
+
+		if hmac.compare_digest(
+			digest.encode("UTF-8"),
+			(request.headers.get("x-pkgbot-signature")).encode("UTF-8")
+		):
+			# log.debug("Valid PkgBot Webhook message")
+			return True
+
+		log.warning("Invalid PkgBot Webhook message!")
+		return False
+
+	except Exception:
+		log.error("Exception attempting to validate PkgBot Webhook!")
+		return False

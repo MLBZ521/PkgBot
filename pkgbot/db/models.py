@@ -42,6 +42,7 @@ class Recipes(Model):
 	last_ran = fields.DatetimeField(null=True, default=None)
 	recurring_fail_count = fields.IntField(null=True, default=0)
 	schedule = fields.IntField(default=0)
+	status = fields.CharField(1024, null=True)
 	notes = fields.CharField(4096, null=True)
 
 Recipe_Out = pydantic_model_creator(Recipes, name="Recipe_Out")
@@ -101,7 +102,7 @@ TrustUpdate_In = pydantic_model_creator(
 
 
 class CallBack(BaseModel):
-	egress: Optional[str]# | None #= "PkgBot"
+	egress: Optional[str]
 	ingress: Literal["Schedule", "API", "Slack"] = "Schedule"
 	channel: Optional[str]
 	start: datetime = asyncio.run(utility.get_timestamp())
@@ -137,6 +138,26 @@ class AutoPkgCMD(CallBack):
 		if v == "promote" and "egress" in values:
 			assert "match_pkg" in values and values["match_pkg"] is not None, 'match_pkg may not be None'
 		return v
+
+
+class AutoPkgCMD_Run(AutoPkgCMD):
+	verb: Literal["run"] = "run"
+
+
+class AutoPkgCMD_UpdateTrustInfo(AutoPkgCMD):
+	verb: Literal["update-trust-info"] = "update-trust-info"
+
+
+class AutoPkgCMD_VerifyTrustInfo(AutoPkgCMD):
+	verb: Literal["verify-trust-info"] = "verify-trust-info"
+
+
+class AutoPkgCMD_RepoAdd(AutoPkgCMD):
+	verb: Literal["repo-add"] = "repo-add"
+
+
+class AutoPkgCMD_Version(AutoPkgCMD):
+	verb: Literal["version"] = "version"
 
 
 # Not currently used

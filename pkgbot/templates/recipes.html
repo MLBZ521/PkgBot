@@ -47,8 +47,6 @@
         <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
 
 
-
-
         <table id="recipes" class="recipes">
             <thead>
                 <tr>
@@ -63,12 +61,12 @@
                 <tr>
                     <td><a href="{{ url_for(name='get_recipe', id=recipe.id) }}"><span class="badge badge-warning">{{ recipe.id }}</span></a></td>
                     <td>{{ recipe.recipe_id }}</td>
-                    <td>{{ recipe.name }}</td>
                     <td>{{ recipe.enabled }}</td>
                     <td>{{ recipe.manual_only }}</td>
                     <td>{{ recipe.pkg_only }}</td>
                     <td>{{ recipe.last_ran | strftime }}</td>
                     <td>{{ recipe.schedule }}</td>
+                    <td>{{ recipe.status }}</td>
                     <td>{{ recipe.notes }}</td>
                 </tr>
                 {% endfor %}
@@ -76,9 +74,9 @@
         </table>
         <script type="text/javascript">
             $(document).ready(
-                function() { 
-                $('#recipes').DataTable(); 
-                } 
+                function() {
+                $('#recipes').DataTable();
+                }
             );
         </script>
 {% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
 
@@ -8,7 +8,12 @@
 
         <div class="alert alert-danger alert-dismissible">
             <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-            <strong>Access Denied:</strong>  You must login before accessing this page!
+            <strong>Access Denied:</strong>  
+                {% if session["access_denied"] %}
+                    {{ session["access_denied"] }}
+                {% else %}
+                    You must login before accessing this page!
+                {% endif %}
         </div>
 
     {% endif %}

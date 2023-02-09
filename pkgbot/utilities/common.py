@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from distutils.util import strtobool
 from typing import List, Union
 
+from celery.result import AsyncResult
+
 # from sqlalchemy import create_engine
 # from sqlalchemy.orm import sessionmaker
 
@@ -194,7 +196,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 		return found_sensitive_strings
 
 
-	def parse_dict(message: dict, all_sensitive_strings: str):
+	async def parse_dict(message: dict, all_sensitive_strings: str):
 		"""Parse a dict object and replace sensitive strings if required.
 
 		Args:
@@ -212,8 +214,22 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 					if isinstance(value, (bool, int)):
 						message[key] = value
 
+					elif isinstance(value, (list, set, tuple)):
+
+						if isinstance(value, list):
+							new_obj = []
+						elif isinstance(value, set):
+							new_obj = set()
+						elif isinstance(value, tuple):
+							new_obj = ()
+
+						for item in value:
+							new_obj.append(re.sub(rf"{all_sensitive_strings}", '<redacted>', item))
+
+						message[key] = new_obj
+
 					elif isinstance(value, dict):
-						message[key] = parse_dict(value, all_sensitive_strings)
+						message[key] = await parse_dict(value, all_sensitive_strings)
 
 					else:
 						message[key] = re.sub(rf"{all_sensitive_strings}", '<redacted>', str(value))
@@ -260,7 +276,7 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 
 	elif isinstance(message, dict):
 
-		return parse_dict(message, all_sensitive_strings)
+		return await parse_dict(message, all_sensitive_strings)
 
 	else:
 		log.warning(
@@ -344,74 +360,119 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 
 
 class HumanBytes:
-    """
-    HumanBytes returns a string of the supplied file size in human friendly format.
-    Credit:  Mitch McMabers
-    Source:  https://stackoverflow.com/a/63839503
-    Notes:  Slightly modified from source
-    Returns:
-        str: Formatted string
-    """
+	"""
+	HumanBytes returns a string of the supplied file size in human friendly format.
+	Credit:  Mitch McMabers
+	Source:  https://stackoverflow.com/a/63839503
+	Notes:  Slightly modified from source
+	Returns:
+		str: Formatted string
+	"""
 
-    METRIC_LABELS: List[str] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
-    BINARY_LABELS: List[str] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
-    PRECISION_OFFSETS: List[float] = [0.5, 0.05, 0.005, 0.0005] # PREDEFINED FOR SPEED.
-    PRECISION_FORMATS: List[str] = ["{}{:.0f} {}", "{}{:.1f} {}", "{}{:.2f} {}", "{}{:.3f} {}"] # PREDEFINED FOR SPEED.
+	METRIC_LABELS: List[str] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+	BINARY_LABELS: List[str] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+	PRECISION_OFFSETS: List[float] = [0.5, 0.05, 0.005, 0.0005] # PREDEFINED FOR SPEED.
+	PRECISION_FORMATS: List[str] = ["{}{:.0f} {}", "{}{:.1f} {}", "{}{:.2f} {}", "{}{:.3f} {}"] # PREDEFINED FOR SPEED.
 
-    @staticmethod
-    def format(num: Union[int, float], metric: bool=False, precision: int=1) -> str:
-        """
-        Human-readable formatting of bytes, using binary (powers of 1024)
-        or metric (powers of 1000) representation.
-        """
+	@staticmethod
+	def format(num: Union[int, float], metric: bool=False, precision: int=1) -> str:
+		"""
+		Human-readable formatting of bytes, using binary (powers of 1024)
+		or metric (powers of 1000) representation.
+		"""
 
-        assert isinstance(num, (int, float)), "num must be an int or float"
-        assert isinstance(metric, bool), "metric must be a bool"
-        assert isinstance(precision, int) and precision >= 0 and precision <= 3, "precision must be an int (range 0-3)"
+		assert isinstance(num, (int, float)), "num must be an int or float"
+		assert isinstance(metric, bool), "metric must be a bool"
+		assert isinstance(precision, int) and precision >= 0 and precision <= 3, "precision must be an int (range 0-3)"
 
-        unit_labels = HumanBytes.METRIC_LABELS if metric else HumanBytes.BINARY_LABELS
-        last_label = unit_labels[-1]
-        unit_step = 1000 if metric else 1024
-        unit_step_thresh = unit_step - HumanBytes.PRECISION_OFFSETS[precision]
+		unit_labels = HumanBytes.METRIC_LABELS if metric else HumanBytes.BINARY_LABELS
+		last_label = unit_labels[-1]
+		unit_step = 1000 if metric else 1024
+		unit_step_thresh = unit_step - HumanBytes.PRECISION_OFFSETS[precision]
 
-        is_negative = num < 0
-        if is_negative: # Faster than ternary assignment or always running abs().
-            num = abs(num)
+		is_negative = num < 0
+		if is_negative: # Faster than ternary assignment or always running abs().
+			num = abs(num)
 
-        for unit in unit_labels:
-            if num < unit_step_thresh:
-                # VERY IMPORTANT:
-                # Only accepts the CURRENT unit if we're BELOW the threshold where
-                # float rounding behavior would place us into the NEXT unit: F.ex.
-                # when rounding a float to 1 decimal, any number ">= 1023.95" will
-                # be rounded to "1024.0". Obviously we don't want ugly output such
-                # as "1024.0 KiB", since the proper term for that is "1.0 MiB".
-                break
-            if unit != last_label:
-                # We only shrink the number if we HAVEN'T reached the last unit.
-                # NOTE: These looped divisions accumulate floating point rounding
-                # errors, but each new division pushes the rounding errors further
-                # and further down in the decimals, so it doesn't matter at all.
-                num /= unit_step
+		for unit in unit_labels:
+			if num < unit_step_thresh:
+				# VERY IMPORTANT:
+				# Only accepts the CURRENT unit if we're BELOW the threshold where
+				# float rounding behavior would place us into the NEXT unit: F.ex.
+				# when rounding a float to 1 decimal, any number ">= 1023.95" will
+				# be rounded to "1024.0". Obviously we don't want ugly output such
+				# as "1024.0 KiB", since the proper term for that is "1.0 MiB".
+				break
+			if unit != last_label:
+				# We only shrink the number if we HAVEN'T reached the last unit.
+				# NOTE: These looped divisions accumulate floating point rounding
+				# errors, but each new division pushes the rounding errors further
+				# and further down in the decimals, so it doesn't matter at all.
+				num /= unit_step
 
-        return HumanBytes.PRECISION_FORMATS[precision].format("-" if is_negative else "", num, unit)
+		return HumanBytes.PRECISION_FORMATS[precision].format("-" if is_negative else "", num, unit)
 
 
 async def get_disk_usage(disk: str = "/"):
-    """Gets the current disk usage properties and returns them.
+	"""Gets the current disk usage properties and returns them.
 
-    Args:
-        disk (str):  Which disk to check
+	Args:
+		disk (str):  Which disk to check
 
-    Returns:
-        (tuple): Results in a tuple format (total, used, free)
-    """
+	Returns:
+		(tuple): Results in a tuple format (total, used, free)
+	"""
 
-    # Get the disk usage
-    total, used, free = shutil.disk_usage(disk)
+	# Get the disk usage
+	total, used, free = shutil.disk_usage(disk)
 
-    total_human = HumanBytes.format(total, metric=False, precision=1)
-    used_human = HumanBytes.format(used, metric=False, precision=1)
-    free_human = HumanBytes.format(free, metric=False, precision=1)
+	total_human = HumanBytes.format(total, metric=False, precision=1)
+	used_human = HumanBytes.format(used, metric=False, precision=1)
+	free_human = HumanBytes.format(free, metric=False, precision=1)
 
-    return (total_human, used_human, free_human)
+	return (total_human, used_human, free_human)
+
+
+def _get_task_results(task_id):
+	""" Return task info for the given task_id """
+
+	return AsyncResult(task_id)
+
+
+async def get_task_results(task_id:  str):
+
+	log.debug(f"Checking results for task_id:  {task_id}")
+	task_results = _get_task_results(task_id)
+
+	if task_results.status != "SUCCESS":
+		return { "current_status":  task_results.status,
+				 "current_result": task_results.result }
+
+	elif task_results.result != None:
+
+		if sub_task_ids := (task_results.result).get("Queued background tasks", None):
+			sub_tasks = []
+
+			if len(sub_task_ids) == 1:
+				return {
+					"task_results": await replace_sensitive_strings(
+						_get_task_results(sub_task_ids[0]).result)
+				}
+
+			for sub_task in sub_task_ids:
+
+				if isinstance(sub_task, AsyncResult):
+					sub_task_result = _get_task_results(sub_task.task_id)
+
+				if isinstance(sub_task, str):
+					sub_task_result = _get_task_results(sub_task)
+
+				sub_tasks.append({sub_task_result.task_id: sub_task_result.status})
+
+			return { "sub_task_results": sub_tasks }
+
+		elif isinstance(task_results.result, dict):
+			return { "task_results": await replace_sensitive_strings(task_results.result) }
+
+	else:
+		return { "task_completion_status":  task_results.status }
