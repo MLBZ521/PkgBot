@@ -1,4 +1,3 @@
-from . import auth
 from . import autopkg
 from . import error
 from . import jamf_pro
