@@ -1,17 +1,14 @@
 import os
 from datetime import timedelta
 
-import httpx
-
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
-from pkgbot import config, settings
-from pkgbot.api import user
+from pkgbot import config, core, settings
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
 
@@ -19,8 +16,6 @@ from pkgbot.utilities import common as utility
 config = config.load_config()
 log = utility.log
 LOGIN_SECRET = os.urandom(1024).hex()
-jps_url = config.JamfPro_Prod.get("jps_url")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 login_manager = LoginManager(LOGIN_SECRET, token_url="/auth/login", use_cookie=True)
 login_manager.cookie_name = "PkgBot_Cookie"
 templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
@@ -44,83 +39,33 @@ async def exc_handler(request, exc):
 	return templates.TemplateResponse("index.html", { "request": request, "session": session })
 
 
-async def authenticate_user(username: str, password: str):
-
-	# Request a token based on the provided credentials
-	async with httpx.AsyncClient() as client:
-		response_get_token = await client.post(
-			f"{jps_url}/api/v1/auth/token", auth=(username, password))
-
-	if response_get_token.status_code == 200:
-
-		response_json = response_get_token.json()
-		sites = await user_authorizations(response_json["token"])
-		user_model = models.PkgBotAdmin_In(username=username)
-		user_exists = await user.get_user(user_model)
-
-		if user_exists:
-
-			user_details = models.PkgBotAdmin_In(
-				username = username,
-				full_admin = user_exists.full_admin if user_exists else False,
-				jps_token = response_json["token"],
-				jps_token_expires = await utility.string_to_datetime(
-					response_json["expires"], "%Y-%m-%dT%H:%M:%S.%fZ"),
-				site_access = ', '.join(sites)
-			)
-
-			return await user.create_or_update_user(user_details)
-
-	return False
-
-
-async def user_authorizations(token: str = Depends(oauth2_scheme)):
-
-	# Get all user details
-	async with httpx.AsyncClient() as client:
-		response_user_details = await client.get(
-			f"{jps_url}/api/v1/auth", headers={ "Authorization": f"jamf-token {token}" })
-
-	# Get the response content from the API
-	user_details = response_user_details.json()
-
-	try:
-
-		site_ids = []
-		site_names = []
-
-		for group in user_details["accountGroups"]:
-			for privilege in group["privileges"]:
-				if privilege == "Enroll Computers and Mobile Devices":
-					site_ids.append(group["siteId"])
-
-		for site in user_details["sites"]:
-			if int(site["id"]) in site_ids:
-				site_names.append(site["name"])
-
-	except Exception:
-		pass
-
-	return site_names
-
-
 @login_manager.user_loader()
 async def load_user(username: str):
-##### This can be improved ^^^
-	user_model = models.PkgBotAdmin_In(username=username)
+
 	# Return the user object otherwise None if a user was not found
-	return await user.get_user(user_model) or None
+	return await core.user.get({"username": username}) or None
 
 
 @router.post("/login", summary="Login to web views",
 	description="Handles authentication on web views.")
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(
+	request: Request, form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm)):
 
-	user = await authenticate_user(form_data.username, form_data.password)
+	user = await core.user.authenticate(form_data.username, form_data.password)
 
 	if not user:
+		log.debug("Invalid credentials or not a Jamf Pro Admin")
 		return templates.TemplateResponse(
-			"index.html", { "request": request, "session": { "logged_in": False } })
+			"index.html",
+			{
+				"request": request,
+				"session": {
+					"access_denied": "You are not authorized to access this page!" ,
+					"logged_in": False,
+					"protected_page": True
+				}
+			}
+		)
 
 	access_token = login_manager.create_access_token(
 		data = { "sub": form_data.username },
@@ -143,17 +88,17 @@ async def logout(response: HTMLResponse):
 
 @router.post("/token", summary="Request a JWT",
 	description="Handles acquiring a JSON Web Token for use with the PkgBot API.")
-async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def create_token(form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm)):
 
-	user = await authenticate_user(form_data.username, form_data.password)
+	user_object = await core.user.authenticate(form_data.username, form_data.password)
 
-	if not user:
+	if not user_object:
 		raise HTTPException(
 			status_code = status.HTTP_401_UNAUTHORIZED,
 			detail = "Invalid credentials or not a Site Admin"
 		)
 
-	return { "access_token": user.jps_token, "token_type": "bearer" }
+	return { "access_token": user_object.jps_token, "token_type": "bearer" }
 
 
 # @router.get("/test", summary="Return user's JWT",
@@ -165,6 +110,6 @@ async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @router.get("/authorizations", summary="Check user permissions",
 	description="Returns the authenticated user's permissions (e.g. Site access).")
-async def authorizations(user: models.PkgBotAdmin_In = Depends(user.get_current_user)):
+async def authorizations(user_object: models.PkgBotAdmin_In = Depends(core.user.get_current)):
 
-	return { "sites": await user_authorizations(user.jps_token) }
+	return { "sites": await core.user.authorizations(user_object.jps_token) }

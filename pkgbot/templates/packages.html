@@ -71,7 +71,7 @@
                     <td>{{ app.name }}</td>
                     <td>{{ app.version }}</td>
                     <td>{{ app.status }}</td>
-                    <td>{{ app.status_updated_by }}</td>
+                    <td>{{ app.updated_by }}</td>
                     <td>{{ app.packaged_date | strftime }}</td>
                     <td>{{ app.promoted_date | strftime }}</td>
                     <td>{{ app.special_flags }}</td>
@@ -82,9 +82,9 @@
         </table>
         <script type="text/javascript">
             $(document).ready(
-                function() { 
-                $('#packages').DataTable(); 
-                } 
+                function() {
+                $('#packages').DataTable();
+                }
             );
         </script>
 {% endblock %}

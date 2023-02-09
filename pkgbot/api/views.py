@@ -7,13 +7,15 @@ from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from pkgbot import config
-from pkgbot.utilities import common as utility
-from pkgbot.api import auth, package, recipe
+from pkgbot import api, config, core
 
 
-log = utility.log
 config = config.load_config()
+
+router = APIRouter(
+	tags = ["view"],
+	include_in_schema = False
+)
 
 
 def template_filter_datetime(date, date_format="%Y-%m-%d %I:%M:%S"):
@@ -26,20 +28,12 @@ def template_filter_datetime(date, date_format="%Y-%m-%d %I:%M:%S"):
 session = { "logged_in": False }
 templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
 templates.env.filters["strftime"] = template_filter_datetime
-router = APIRouter(
-	tags = ["view"],
-	include_in_schema = False
-)
 
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
 
-	if request.state.user:
-		session["logged_in"] = True
-	else:
-		session["logged_in"] = False
-
+	session["logged_in"] = bool(request.state.user)
 	return templates.TemplateResponse("index.html", { "request": request, "session": session })
 
 
@@ -49,11 +43,12 @@ async def index(request: Request):
 #	return templates.TemplateResponse("login.html", { "request": request, "session": session })
 
 
-@router.get("/packages", response_class=HTMLResponse)
-async def package_history(request: Request, user = Depends(auth.login_manager)):
+@router.get("/packages", response_class=HTMLResponse,
+	dependencies=[Depends(api.auth.login_manager)])
+async def package_history(request: Request):
 
 	session["logged_in"] = True
-	pkgs = await package.get_packages()
+	packages = await core.package.get()
 
 	table_headers = [
 		"", "", "Name", "Version", "Status", "Updated By",
@@ -62,54 +57,58 @@ async def package_history(request: Request, user = Depends(auth.login_manager)):
 
 	return templates.TemplateResponse("packages.html",
 		{ "request": request, "session": session,
-			"table_headers": table_headers, "packages": pkgs.get("packages") })
+			"table_headers": table_headers, "packages": packages })
 
 
-@router.get("/package/{id}", response_class=HTMLResponse)
-async def get_package(request: Request, user = Depends(auth.login_manager)):
+@router.get("/package/{id}", response_class=HTMLResponse,
+	dependencies=[Depends(api.auth.login_manager)])
+async def get_package(request: Request):
 
 	session["logged_in"] = True
-	pkg = await package.get_package_by_id(request.path_params['id'])
+	pkg = await core.package.get({"id": request.path_params['id']})
 
 	return templates.TemplateResponse("package.html",
 		{ "request": request, "session": session, "package": pkg })
 
 
-@router.get("/edit/{id}", response_class=HTMLResponse)
-async def edit(request: Request, user = Depends(auth.login_manager)):
+@router.get("/edit/{id}", response_class=HTMLResponse,
+	dependencies=[Depends(api.auth.login_manager)])
+async def edit(request: Request):
 
-	pkg = await package.get_package_by_id(request.path_params['id'])
+	pkg = await core.package.get({"id": request.path_params['id']})
 
 	return templates.TemplateResponse("edit.html",
 		{ "request": request, "session": session, "package": pkg })
 
 
-@router.get("/recipes", response_class=HTMLResponse)
-async def recipe_list(request: Request, user = Depends(auth.login_manager)):
+@router.get("/recipes", response_class=HTMLResponse,
+	dependencies=[Depends(api.auth.login_manager)])
+async def recipe_list(request: Request):
 
 	session["logged_in"] = True
-	pkgs = await recipe.get_recipes()
+	recipes = await core.recipe.get()
 
-	table_headers = [ "ID", "Recipe ID", "Name", "Enable", "Manual Only",
-		"Pkg Only", "Last Ran", "Schedule",  "Notes" ]
+	table_headers = [ "ID", "Recipe ID", "Enable", "Manual Only",
+		"Pkg Only", "Last Ran", "Schedule", "Status", "Notes" ]
 
 	return templates.TemplateResponse("recipes.html",
 		{ "request": request, "session": session,
-			"table_headers": table_headers, "recipes": pkgs.get("recipes") })
+			"table_headers": table_headers, "recipes": recipes })
 
 
-@router.get("/recipe/{id}", response_class=HTMLResponse)
-async def get_recipe(request: Request, user = Depends(auth.login_manager)):
+@router.get("/recipe/{id}", response_class=HTMLResponse,
+	dependencies=[Depends(api.auth.login_manager)])
+async def get_recipe(request: Request):
 
 	session["logged_in"] = True
-	pkg = await recipe.get_by_id(request.path_params['id'])
+	pkg = await core.recipe.get({"id": request.path_params['id']})
 
 	return templates.TemplateResponse("recipe.html",
 		{ "request": request, "session": session, "recipe": pkg })
 
 
-@router.post("/icons")
-async def upload_icon(icon: UploadFile, user = Depends(auth.login_manager)):
+@router.post("/icons", dependencies=[Depends(api.auth.login_manager)])
+async def upload_icon(icon: UploadFile):
 
 	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
 

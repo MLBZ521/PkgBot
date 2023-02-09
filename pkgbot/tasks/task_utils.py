@@ -4,19 +4,11 @@ import re
 
 from datetime import datetime, timedelta
 
-from celery.result import AsyncResult
-
 from pkgbot import config
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
-
-
-def get_task_results(task_id):
-	""" Return task info for the given task_id """
-
-	return AsyncResult(task_id)
 
 
 def get_user_context():

@@ -7,39 +7,21 @@ import sys
 import secure
 import uvicorn
 
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
-from tortoise.contrib.fastapi import register_tortoise
-
-from pkgbot import config, settings
+from pkgbot import config
 
 config = config.load_config(cli_args=tuple(sys.argv[1:]))
 
 from pkgbot.utilities import common as utility
 from pkgbot.db import models
-from pkgbot import api
+from pkgbot import api, core, create_pkgbot
 
 
 log = utility.log
-
-app = FastAPI(
-	title="PkgBot API",
-	description="A framework to manage software packaging, testing, and promoting from a "
-		"development to production environment.",
-	version="0.3.0",
-	openapi_tags=settings.api.tags_metadata,
-	docs_url="/api"
-)
-
-register_tortoise(
-	app,
-	config = settings.db.TORTOISE_CONFIG,
-	generate_schemas = True,
-	add_exception_handlers = True
-)
+app = create_pkgbot()
+celery = app.celery_app
 
 app.mount("/static", StaticFiles(directory="/Library/AutoPkg/PkgBot/pkgbot/static"), name="static")
 app.include_router(api.views.router)
@@ -47,7 +29,7 @@ app.include_router(api.auth.router)
 app.include_router(api.autopkg.router)
 app.include_router(api.package.router)
 app.include_router(api.recipe.router)
-app.include_router(api.bot.router)
+app.include_router(api.chatbot.router)
 app.include_router(api.build_msg.router)
 app.include_router(api.send_msg.router)
 app.include_router(api.user.router)
@@ -97,7 +79,7 @@ async def startup_event():
 			slack_id = pkgbot_admins.get(admin),
 			full_admin =  True
 		)
-		await api.user.create_or_update_user(user_object)
+		await core.user.create_or_update(user_object)
 
 
 if __name__ == "__main__":

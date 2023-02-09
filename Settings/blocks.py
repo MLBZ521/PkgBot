@@ -1,18 +1,14 @@
-from fastapi import Depends
-
 from pkgbot import config
-from pkgbot.utilities import common as utility
 from pkgbot.db import models
 
 
-log = utility.log
 config = config.load_config()
 
 secure = "s" if config.PkgBot.get("enable_ssl") else ""
 pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
 
 
-async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_header(pkg_object: models.Package_In):
 
 	return {
 		"type": "header",
@@ -23,7 +19,7 @@ async def brick_header(pkg_object: models.Package_In = Depends(models.Package_In
 	}
 
 
-async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_main(pkg_object: models.Package_In):
 
 	return {
 		"type": "section",
@@ -39,7 +35,7 @@ async def brick_main(pkg_object: models.Package_In = Depends(models.Package_In))
 	}
 
 
-async def brick_footer_dev(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_footer_dev(pkg_object: models.Package_In):
 
 	return {
 			"type": "context",
@@ -52,19 +48,19 @@ async def brick_footer_dev(pkg_object: models.Package_In = Depends(models.Packag
 		}
 
 
-async def brick_footer_promote(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_footer_promote(pkg_object: models.Package_In):
 
 	return {
 			"type": "mrkdwn",
-			"text": f"*Prod*:  {pkg_object.dict().get('promoted_date')}\t*Approved by*:  @{pkg_object.dict().get('status_updated_by')}"
+			"text": f"*Prod*:  {pkg_object.dict().get('promoted_date')}\t*Approved by*:  @{pkg_object.dict().get('updated_by')}"
 		}
 
 
-async def brick_footer_denied(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_footer_denied(pkg_object: models.Package_In):
 
 	return {
 			"type": "mrkdwn",
-			"text": f"*Denied by*: @{pkg_object.dict().get('status_updated_by')}\t*On*:  {pkg_object.dict().get('last_update')}"
+			"text": f"*Denied by*: @{pkg_object.dict().get('updated_by')}\t*On*:  {pkg_object.dict().get('last_update')}"
 		}
 
 
@@ -75,13 +71,13 @@ async def brick_footer_denied_trust(trust_object):
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Denied by*:  @{trust_object.dict().get('status_updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
+					"text": f"*Denied by*:  @{trust_object.dict().get('updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
 				}
 			]
 		}
 
 
-async def brick_button(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_button(pkg_object: models.Package_In):
 
 	return	(
 		{
@@ -178,7 +174,7 @@ async def brick_footer_update_trust_success_msg(trust_object):
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Updated by*:  @{trust_object.dict().get('status_updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
+					"text": f"*Updated by*:  @{trust_object.dict().get('updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
 				}
 			]
 		}
@@ -208,7 +204,7 @@ async def brick_update_trust_error_msg(trust_object, msg):
 		}]
 
 
-async def brick_deny_pkg(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def brick_deny_pkg(pkg_object: models.Package_In):
 
 	return {
 		"type": "header",
