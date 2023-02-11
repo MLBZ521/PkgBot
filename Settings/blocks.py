@@ -7,8 +7,8 @@ from pkgbot.db import models
 
 config = config.load_config()
 
-secure = "s" if config.PkgBot.get("enable_ssl") else ""
-pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
+SECURE = "s" if config.PkgBot.get("enable_ssl") else ""
+PKGBOT_SERVER = f"http{SECURE}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
 
 
 async def brick_header(pkg_object: models.Package_In):
@@ -32,7 +32,7 @@ async def brick_main(pkg_object: models.Package_In):
 		},
 		"accessory": {
 			"type": "image",
-			"image_url": f"{pkgbot_server}/static/icons/{pkg_object.dict().get('icon')}",
+			"image_url": f"{PKGBOT_SERVER}/static/icons/{pkg_object.dict().get('icon')}",
 			"alt_text": ":new:"
 		}
 	}
@@ -137,7 +137,7 @@ async def brick_error(recipe_id, error):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
+				"image_url": f"{PKGBOT_SERVER}/static/icons/{config.PkgBot.get('icon_error')}",
 				"alt_text": ":x:"
 			}
 		},
@@ -201,7 +201,7 @@ async def brick_update_trust_error_msg(trust_object, msg):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_error')}",
+				"image_url": f"{PKGBOT_SERVER}/static/icons/{config.PkgBot.get('icon_error')}",
 				"alt_text": ":x:"
 			}
 		}]
@@ -229,7 +229,7 @@ async def brick_deny_trust(trust_object):
 		},
 		"accessory": {
 			"type": "image",
-			"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_denied')}",
+			"image_url": f"{PKGBOT_SERVER}/static/icons/{config.PkgBot.get('icon_denied')}",
 			"alt_text": ":denied:"
 		}
 	}
@@ -257,7 +257,7 @@ async def brick_trust_diff_main(recipe):
 		},
 		"accessory": {
 			"type": "image",
-			"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_warning')}",
+			"image_url": f"{PKGBOT_SERVER}/static/icons/{config.PkgBot.get('icon_warning')}",
 			"alt_text": ":warning:"
 		}
 	}
@@ -324,7 +324,7 @@ async def unauthorized(user):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": f"{pkgbot_server}/static/icons/{config.PkgBot.get('icon_permission_denied')}",
+				"image_url": f"{PKGBOT_SERVER}/static/icons/{config.PkgBot.get('icon_permission_denied')}",
 				"alt_text": ":denied:"
 			}
 		}
@@ -350,7 +350,7 @@ async def brick_accessory_image(image, alt_text):
 	return {
 		"accessory": {
 			"type": "image",
-			"image_url": f"{pkgbot_server}/static/icons/{image}",
+			"image_url": f"{PKGBOT_SERVER}/static/icons/{image}",
 			"alt_text": alt_text
 		}
 	}
@@ -376,7 +376,7 @@ async def brick_disk_space_msg(header, msg, image):
 			},
 			"accessory": {
 				"type": "image",
-				"image_url": f"{pkgbot_server}/static/icons/{image}",
+				"image_url": f"{PKGBOT_SERVER}/static/icons/{image}",
 				"alt_text": ":warning:"
 			}
 		},

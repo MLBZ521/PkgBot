@@ -15,7 +15,7 @@ from Settings import messages, blocks as block
 
 
 log = utility.log
-max_content_size = 1500
+MAX_CONTENT_SIZE = 1500
 
 
 async def new_pkg_msg(pkg_object: models.Package_In):
@@ -56,7 +56,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	redacted_error = await utility.replace_sensitive_strings(error)
 
-	if len(str(redacted_error)) > max_content_size:
+	if len(str(redacted_error)) > MAX_CONTENT_SIZE:
 		blocks = await core.chatbot.build.recipe_error_msg(recipe_id, id, "_See thread for details..._")
 	else:
 		formatted_error = await core.chatbot.build.format_json(redacted_error)
@@ -66,7 +66,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	if (
 		response.get("result") != "Failed to post message"
-		and len(str(redacted_error)) > max_content_size
+		and len(str(redacted_error)) > MAX_CONTENT_SIZE
 	):
 		upload_response = await core.chatbot.SlackBot.file_upload(
 			content = str(redacted_error),
@@ -82,7 +82,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
 
-	if len(diff_msg) > max_content_size:
+	if len(diff_msg) > MAX_CONTENT_SIZE:
 		blocks = await core.chatbot.build.trust_diff_msg(trust_object.id, trust_object.recipe_id)
 	else:
 		blocks = await core.chatbot.build.trust_diff_msg(
@@ -98,7 +98,7 @@ async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
 
 	if (
 		response.get("result") != "Failed to post message"
-		and len(diff_msg) > max_content_size
+		and len(diff_msg) > MAX_CONTENT_SIZE
 	):
 		response = await core.chatbot.SlackBot.file_upload(
 			content = diff_msg,
