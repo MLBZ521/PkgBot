@@ -8,7 +8,7 @@ import git
 
 from celery import chain, group, shared_task
 
-from pkgbot import config
+from pkgbot import config, core
 from pkgbot.tasks import task_utils
 from pkgbot.utilities import common as utility
 
@@ -43,6 +43,22 @@ def send_webhook(self, task_id):
 		headers=headers,
 		data=json.dumps(data),
 	)
+
+
+##################################################
+# Scheduled Tasks
+
+
+@shared_task
+def test(arg):
+	log.debug(arg)
+
+
+@shared_task(name="pkgbot:cache_policies", bind=True)
+def cache_policies(sender, **kwargs):
+
+	log.debug("Nightly policy cache...")
+	asyncio.run(core.policy.cache_policies())
 
 
 ##################################################

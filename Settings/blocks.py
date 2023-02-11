@@ -1,3 +1,6 @@
+from itertools import groupby
+from operator import itemgetter
+
 from pkgbot import config
 from pkgbot.db import models
 
@@ -340,7 +343,9 @@ async def brick_section_text(text):
 	}
 
 
-async def brick_accessory_image(image, alt_text=":notification:"):
+async def brick_accessory_image(image, alt_text):
+
+	alt_text = alt_text or ":notification:"
 
 	return {
 		"accessory": {
@@ -391,3 +396,122 @@ async def brick_disk_space_msg(header, msg, image):
 			]
 		}
 	]
+
+
+async def modal_notification(title_txt: str, button_text: str):
+	# An undocumented limitation:  maximum 26 characters in the `title.text` string
+
+	return {
+		"type": "modal",
+		"callback_id": "notification",
+		# "private_metadata": f"{private_metadata}",
+		"title": {
+			"type": "plain_text",
+			"text": f"{title_txt}",
+			"emoji": True
+		},
+		"close": {
+			"type": "plain_text",
+			"text": f"{button_text}",
+			"emoji": True
+		}
+	}
+
+
+async def modal_promote_pkg(pkg_name: str):
+
+	return {
+		"type": "modal",
+		"callback_id": "promote_pkg",
+		"private_metadata": f"{pkg_name}",
+		"title": {
+			"type": "plain_text",
+			"text": "Promote pkg to Jamf Pro"
+		},
+		"submit": {
+			"type": "plain_text",
+			"text": "Promote  :rocket:",
+			"emoji": True
+		},
+		"close": {
+			"type": "plain_text",
+			"text": "Cancel"
+		},
+		"blocks": [
+			{
+				"type": "section",
+				"text": {
+					"type": "mrkdwn",
+					"text": "Select Policy to add or update the existing version of the selected pkg."
+				}
+			},
+			{
+				"type": "divider"
+			},
+			{
+				"type": "section",
+				"text": {
+					"type": "mrkdwn",
+					"text": f"Pkg to promote:  `{pkg_name}`"
+				}
+			},
+			{
+				"type": "input",
+				"element": {
+					"type": "external_select",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select a Policy",
+						"emoji": True
+					},
+					"min_query_length": 5,
+					"action_id": "policy_list"
+				},
+				"label": {
+					"type": "plain_text",
+					"text": "Select a Policy and :ship_it_parrot:",
+					"emoji": True
+				}
+			}
+		]
+	}
+
+
+async def policy_list(policies: str):
+
+	option_groups = []
+	policies = sorted(policies, key=itemgetter("site"))
+
+	# This _is_ a documented limitation:  maximum of 100 options can be included in a list
+	for site, value in groupby(policies[:99], key=itemgetter("site")):
+		options = []
+
+		for policy in value:
+			options.append(await create_static_option(policy))
+
+		if options:
+			option_groups.append({
+				"label": {
+					"type": "plain_text",
+					"text": f"Site:  {site}"
+				},
+				"options": options
+			})
+
+	return {
+		"option_groups": option_groups
+	}
+
+
+async def create_static_option(policy):
+
+	return {
+		"text": {
+			"type": "plain_text",
+			# This seems to be an undocumented limitation:
+				# maximum of 76 characters in the `text` string
+			"text": policy.get("name")[:75],
+			"emoji": True
+		},
+		"value": f"{policy.get('policy_id')}"
+	}

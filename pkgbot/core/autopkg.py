@@ -127,7 +127,7 @@ async def run_recipe(recipe_id: str, autopkg_cmd: models.AutoPkgCMD_Run):
 
 	if a_recipe.enabled:
 
-		queued_task = pkgbot_celery_app.send_task(
+		return pkgbot_celery_app.send_task(
 			"autopkg:verb_parser",
 			kwargs = {
 				"recipes": [ a_recipe.dict() ],
@@ -136,8 +136,7 @@ async def run_recipe(recipe_id: str, autopkg_cmd: models.AutoPkgCMD_Run):
 			queue="autopkg",
 			priority=4
 		)
-
-		return { "result": "Queued background task" , "task_id": queued_task.id }
+		# return { "result": "Queued background task" , "task_id": queued_task.id }
 
 	log.info(f"Recipe '{recipe_id}' is disabled.")
 	return { "result": "Recipe is disabled" }

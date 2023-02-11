@@ -111,12 +111,12 @@ class SlackClient(object):
 		except SlackApiError as error:
 			log.error(
 				f"Failed to update {response_url}\nFull Error:\n{error}\nerror.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
-			return { "result": f"Failed to update {response_url}", "error": error.response["error"] }
+			return response
 
 		except asyncio.exceptions.TimeoutError as error:
 			log.error(
-				f"Failed to post message due to timeout.  Blocks:\n{blocks}\nFull error:  {error}")
-			return { "result": "Failed to post message", "error": error }
+				f"Failed to post message due to timeout.\nFull error:  {error}")
+			return response
 
 
 	async def post_ephemeral_message(
@@ -201,6 +201,24 @@ class SlackClient(object):
 				result = { "result": f"Failed to {action} reaction on {ts}", "error": error_key }
 				log.error(result)
 				return result
+
+
+	async def open_modal(self, trigger_id, blocks: str):
+
+		try:
+			return await self.client.views_open(
+				trigger_id = trigger_id,
+				view = blocks
+			)
+
+		except SlackApiError as error:
+			log.error(f"Failed to post message:  {error.response['error']}\n{error}")
+			return { "result": "Failed to post message", "error": error.response["error"] }
+
+		except asyncio.exceptions.TimeoutError as error:
+			log.error(
+				f"Failed to post message due to timeout.  Blocks:\n{blocks}\nFull error:  {error}")
+			return { "result": "Failed to post message", "error": error }
 
 
 async def validate_request(request: Request):

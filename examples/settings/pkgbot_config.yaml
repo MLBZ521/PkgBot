@@ -91,7 +91,8 @@ Slack:
   bot_name: PkgBot
   slack_id: 
   channel: 
-
+  slash_cmds_enabled: False
+  shortcuts_enabled: False
 
 PkgBot:
   # enable_ssl: True

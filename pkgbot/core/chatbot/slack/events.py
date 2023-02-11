@@ -17,6 +17,7 @@ async def button_click(payload):
 	username = payload.get("user").get("username")
 	channel = payload.get("channel").get("id")
 	message_ts = payload.get("message").get("ts")
+	trigger_id = payload.get("trigger_id")
 	response_url = payload.get("response_url")
 	button_text = payload.get("actions")[0].get("text").get("text")
 	button_value_type, button_value = (payload.get("actions")[0].get("value")).split(":")
@@ -114,9 +115,14 @@ async def button_click(payload):
 	else:
 		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
 
-		blocks = await core.chatbot.build.unauthorized_msg(username)
-		await core.chatbot.SlackBot.post_ephemeral_message(
-			user_id, blocks, channel=channel, text="WARNING:  Unauthorized access attempted")
+		return await core.chatbot.send.modal_notification(
+			trigger_id,
+			"PERMISSION DENIED",
+			"WARNING:  Unauthorized access attempted!\n\nOnly PkgBot Admins are authorized to "
+				f"perform this action.\n\n`{username}` will be reported to the robot overloads.",
+			"Ok",
+			image = f"{config.PkgBot.get('icon_permission_denied')}"
+		)
 
 
 async def slash_cmd(incoming_cmd):
@@ -124,6 +130,7 @@ async def slash_cmd(incoming_cmd):
 	user_id = incoming_cmd.get("user_id")
 	username = incoming_cmd.get("user_name")
 	channel = incoming_cmd.get("channel_id")
+	trigger_id = incoming_cmd.get("trigger_id")
 	command = incoming_cmd.get("command")
 	cmd_text = incoming_cmd.get("text")
 	response_url = incoming_cmd.get("response_url")
@@ -132,15 +139,16 @@ async def slash_cmd(incoming_cmd):
 	log.debug("Incoming details:\n"
 		f"channel:  {channel}\nuser id:  {user_id}\nusername:  {username}\n"
 		f"full admin:  {user_that_clicked.full_admin}\ncommand:  {command}\ncmd_text:  {cmd_text}"
-		f"\nresponse_url:  {response_url}\n"
+		f"\nresponse_url:  {response_url}\ntrigger_id:  {trigger_id}"
 	)
 
-##### TO DO:
-	# Update below return statements to use an appropriate Slack message type
-		# Current returns are simply place holders for verbosity and development work
-
-	if not user_that_clicked.full_admin:
-		return "Slash commands are in development and not available for public consumption at this time."
+	if not user_that_clicked.full_admin and not config.Slack.get("slash_cmds_enabled"):
+		return await core.chatbot.send.modal_notification(
+			trigger_id,
+			"PkgBot Slash Commands",
+			"Slash commands are in development and not available for public consumption at this time.",
+			"Ok.... :disappointed:"
+		)
 
 	if " " in cmd_text:
 		verb, options = await utility.split_string(cmd_text)
@@ -154,12 +162,23 @@ async def slash_cmd(incoming_cmd):
 	}
 
 	if not user_that_clicked.full_admin and verb not in supported_options.get("pkgbot_user"):
-		return f"The autopkg verb `{verb}` is not supported by PkgBot users or is invalid."
+		return await core.chatbot.send.direct_msg(
+			username,
+			f"The autopkg verb `{verb}` is not supported by PkgBot users or is invalid.",
+			channel,
+			alt_text = "Unsupported autopkg verb..."
+		)
+
 	elif (
 		user_that_clicked.full_admin and
 		verb not in supported_options.get("pkgbot_admin") + supported_options.get("pkgbot_user")
 	):
-		return f"The autopkg verb `{verb}` is not supported at this time by PkgBot or is invalid."
+		return await core.chatbot.send.direct_msg(
+			username,
+			f"The autopkg verb `{verb}` is not supported at this time by PkgBot or is invalid.",
+			channel,
+			alt_text = "Unsupported autopkg verb..."
+		)
 
 	try:
 
@@ -229,7 +248,13 @@ I support a variety of commands to help run AutoPkg on your behalf.  Please see 
 			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ]{debug_status}")
 
 			results = await core.recipe.update({"recipe_id": recipe_id}, updates)
-			return f"Successfully {verb}d recipe id:  {recipe_id}"
+
+			return await core.chatbot.send.direct_msg(
+				username,
+				f"Successfully {verb}d recipe id:  {recipe_id}",
+				channel,
+				alt_text = f"Successfully {verb}d recipe..."
+			)
 
 		else:
 
@@ -243,22 +268,164 @@ I support a variety of commands to help run AutoPkg on your behalf.  Please see 
 
 				try:
 					options = await utility.parse_slash_cmd_options(cmd_options, verb)
+
 				except Exception as error:
-					return f"Error processing override --key | Error:  {error}"
+					return await core.chatbot.send.direct_msg(
+						username,
+						f"Error processing override --key | Error:  {error}",
+						channel,
+						alt_text = "Error processing override keys..."
+					)
 
 				autopkg_cmd = models.AutoPkgCMD(**options)
 
 			autopkg_cmd.__dict__.update(incoming_options)
 
-			log.debug(f"[ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ]")
+			if target:
+				target_type = "recipe" if verb == "run" else "repo"
+				verbose_target = f"*{target_type}*:  `{target}`\n"
+			else:
+				verbose_target = ""
 
+			# log.debug(f"{verbose_target}[ autopkg_cmd:  {autopkg_cmd} ]")
 			results = await core.autopkg.execute(autopkg_cmd, target)
 
 			# if results.get("result") == "Queued background task":
-			return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | task_id:  {results}"
+			return await core.chatbot.send.direct_msg(
+				username,
+				f"*Queued task_id*:  `{results}`\n{verbose_target}*autopkg_cmd*:  {autopkg_cmd}",
+				channel,
+				alt_text = "Queued task..."
+			)
 
 			# else:
-			# 	return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | result: {results.get('result')}"
+				# return await core.chatbot.send.direct_msg(
+				# 	username,
+				# 	f"Queue task_id:  {verbose_target}[ autopkg_cmd:  {autopkg_cmd} ] | result: {results.get('result')}",
+				# 	channel,
+				# 	alt_text = "Queued task..."
+				# )
 
 	except HTTPException as error:
-		return f"Queue task:  [ target:  {target} ] | [ autopkg_cmd:  {autopkg_cmd} ] | Unknown target:  '{target}' "
+
+		return await core.chatbot.send.direct_msg(
+			username,
+			f"Failed to queue task due to unknown target:  '{target}'\n*autopkg_cmd*:  {autopkg_cmd}",
+			channel,
+			alt_text = "Failed to queue task..."
+		)
+
+
+async def message_shortcut(payload):
+
+	action_ts = payload.get("action_ts")
+	user_id = payload.get("user").get("id")
+	username = payload.get("user").get("username")
+	channel = payload.get("channel").get("id")
+	callback_id = payload.get("callback_id")
+	trigger_id = payload.get("trigger_id")
+	response_url = payload.get("response_url")
+	message_ts = payload.get("message").get("ts")
+	incoming_blocks = payload.get("message").get("blocks")
+
+	log.debug("Incoming details:\n"
+		f"action_ts:  {action_ts}\ncallback_id:  {callback_id}\ntrigger_id:  {trigger_id}\n"
+		f"user id:  {user_id}\nusername:  {username}\nchannel:  {channel}\n"
+		f"message_ts:  {message_ts}\nresponse_url:  {response_url}"
+	)
+
+	user_object = await core.user.get({"username": username})
+
+	if not user_object.full_admin and not config.Slack.get("shortcuts_enabled"):
+		return await core.chatbot.send.modal_notification(
+			trigger_id,
+			"PkgBot Shortcuts :jamf:",
+			"Shortcuts are in development and not available for public consumption at this time.",
+			"Ok.... :disappointed:"
+		)
+
+	if callback_id == "promote_pkg":
+
+		if channel != config.Slack.get("channel"):
+			return await core.chatbot.send.modal_notification(
+				trigger_id,
+				"PkgBot Shortcuts :jamf:",
+				"This Shortcut is not supported in this channel!",
+				"Ok.... :disappointed:"
+			)
+
+		for in_block in incoming_blocks:
+			if in_block.get("type") == "section":
+				message_text = in_block.get("text").get("text")
+				package_name = re.findall(r"\*Package Name:\*\s\s`(.+)`", message_text)[0]
+				break
+
+		log.debug(f"\npackage_name:  {package_name}")
+		pkg_object = await core.package.get({"pkg_name": package_name})
+
+		# Ensure the pkg has been promoted first
+		if pkg_object.status == "dev":
+			return await core.chatbot.send.modal_notification(
+				trigger_id,
+				"PkgBot Shortcuts :jamf:",
+				"The pkg must be promoted to production before you can use this option!",
+				"Oh... :looking:"
+			)
+
+		return await core.chatbot.send.modal_promote_pkg(trigger_id, package_name)
+
+
+async def external_lists(payload):
+
+	action_id = payload.get("action_id")
+	filter_value = payload.get("value")
+	# private_metadata = payload.get("private_metadata")
+	user_id = payload.get("user").get("id")
+	username = payload.get("user").get("username")
+
+	log.debug("Incoming details:\n"
+		f"action_id:  {action_id}\nfilter_value:  {filter_value}\n"
+		f"user id:  {user_id}\nusername:  {username}"
+	)
+
+	if action_id == "policy_list":
+		return await core.chatbot.send.policy_list(filter_value, username)
+
+
+async def view_submission(payload):
+
+	action_ts = payload.get("action_ts")
+	user_id = payload.get("user").get("id")
+	username = payload.get("user").get("username")
+	# channel = payload.get("channel").get("id")
+	# callback_id = payload.get("callback_id")
+	trigger_id = payload.get("trigger_id")
+	private_metadata = payload.get("private_metadata")
+	# response_url = payload.get("response_url")
+	submission = payload.get("view").get("state").get("values")
+	incoming_blocks = payload.get("view").get("blocks")
+
+	selected_option = await utility.dict_parser(submission, "selected_option")
+
+	for in_block in incoming_blocks:
+
+		if in_block.get("type") == "section":
+			message_text = in_block.get("text").get("text")
+
+		if match := re.findall(r"^Pkg to promote:\s\s`(.+)`", message_text):
+			package_name = match[0]
+			break
+
+	policy_name = selected_option.get("text").get("text")
+	policy_id = selected_option.get("value")
+
+	log.debug("Incoming details:\n"
+		f"action_ts:  {action_ts}\nuser id:  {user_id}\nusername:  {username}\n"
+		f"policy_name:  {policy_name}\npolicy_id:  {policy_id}\n"
+		f"package_name:  {package_name}\nprivate_metadata:  {private_metadata}"
+	)
+
+	policy_object = await core.policy.get({"name": policy_name, "policy_id": policy_id})
+	pkg_object = await core.package.get({"pkg_name": package_name})
+
+	await core.policy.update_policy(policy_object, pkg_object, username, trigger_id)

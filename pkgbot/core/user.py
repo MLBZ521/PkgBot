@@ -79,7 +79,12 @@ async def authenticate(username: str, password: str):
 async def authorizations(token: str = Depends(oauth2_scheme)):
 
 	# Get user details
-	user_details = await core.jamf_pro.api("get", "api/v1/auth", api_token=token)
+	user_details_response = await core.jamf_pro.api("get", "api/v1/auth", api_token=token)
+
+	if user_details_response.status_code != 200:
+		raise("Failed to get user authorizations!")
+
+	user_details = user_details_response.json()
 	site_ids = []
 	site_names = []
 

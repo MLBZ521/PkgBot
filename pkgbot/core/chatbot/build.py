@@ -69,3 +69,15 @@ async def basic_msg(text: str, image: str | None = None, alt_image_text: str | N
 async def disk_space_msg(header: str, msg: str, image: str | None = None):
 
 	return await messages.disk_space(header, msg, image)
+
+
+async def modal_notification(title_txt: str, msg_text: str,
+	button_text: str, image: str | None = None, alt_image_text: str | None = None):
+
+	return await messages.modal_notification(
+		title_txt, msg_text, button_text, image, alt_image_text)
+
+
+async def modal_promote_pkg(pkg_name: str):
+
+	return await messages.modal_promote_pkg(pkg_name)

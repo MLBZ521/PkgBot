@@ -101,6 +101,16 @@ TrustUpdate_In = pydantic_model_creator(
 	TrustUpdates, name="TrustUpdate_In", exclude_readonly=True)
 
 
+class Policies(Model):
+	id = fields.IntField(pk=True)
+	policy_id = fields.IntField(unique=True)
+	name = fields.CharField(256)
+	site = fields.CharField(128)
+
+Policy_Out = pydantic_model_creator(Policies, name="Policy_Out")
+Policy_In = pydantic_model_creator(Policies, name="Policy_In", exclude_readonly=True)
+
+
 class CallBack(BaseModel):
 	egress: Optional[str]
 	ingress: Literal["Schedule", "API", "Slack"] = "Schedule"

@@ -13,6 +13,8 @@ import yaml
 from datetime import datetime, timezone
 from distutils.util import strtobool
 from typing import List, Union
+from xml.etree import ElementTree
+from xml.sax.saxutils import escape
 
 from celery.result import AsyncResult
 
@@ -476,3 +478,45 @@ async def get_task_results(task_id:  str):
 
 	else:
 		return { "task_completion_status":  task_results.status }
+
+
+async def dict_parser(a_dict, key):
+
+	if isinstance(a_dict, dict):
+
+		for k, v in a_dict.items():
+			if k == key:
+				return v
+
+			if isinstance(v, dict):
+				return await dict_parser(v, key)
+
+	elif isinstance(a_dict, list):
+		for v in a_dict:
+			return await dict_parser(v, key)
+
+
+async def build_xml(root, parent, child, values, sub_element = None):
+
+	# Create a root element
+	root_element = ElementTree.Element(root)
+
+	# Create a parent element in the root element
+	parent_element = ElementTree.SubElement(root_element, parent)
+
+	# Create a sub element in the parent element
+	if sub_element:
+		parent_element = ElementTree.SubElement(parent_element, sub_element)
+
+	# Insert list into child elements
+	for item in values:
+
+		# Create a child element
+		child_element = ElementTree.SubElement(parent_element, child)
+
+		# Add elements (i.e. attributes) to the child element
+		for key, value in item.items():
+			name_element = ElementTree.SubElement(child_element, key)
+			name_element.text = str(escape(value))
+
+	return root_element
