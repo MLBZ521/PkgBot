@@ -118,3 +118,21 @@ async def basic(text: str, image: str | None = None, alt_image_text: str | None 
 async def disk_space(header: str, msg: str, image: str | None = None):
 
 	return await format_json(await block.brick_disk_space_msg(header, msg, image))
+
+
+async def modal_notification(title_txt: str, msg_text: str,
+	button_text: str, image: str | None = None, alt_image_text: str | None = None):
+
+	blocks = await block.brick_section_text(msg_text)
+
+	if image:
+		blocks = blocks | await block.brick_accessory_image(image, alt_image_text)
+
+	blocks = await block.modal_notification(title_txt, button_text) | {"blocks": [blocks]}
+
+	return await format_json(blocks)
+
+
+async def modal_promote_pkg(pkg_name: str):
+
+	return await format_json(await block.modal_promote_pkg(pkg_name))

@@ -111,12 +111,12 @@ class SlackClient(object):
 		except SlackApiError as error:
 			log.error(
 				f"Failed to update {response_url}\nFull Error:\n{error}\nerror.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
-			return { "result": f"Failed to update {response_url}", "error": error.response["error"] }
+			return response
 
 		except asyncio.exceptions.TimeoutError as error:
 			log.error(
-				f"Failed to post message due to timeout.  Blocks:\n{blocks}\nFull error:  {error}")
-			return { "result": "Failed to post message", "error": error }
+				f"Failed to post message due to timeout.\nFull error:  {error}")
+			return response
 
 
 	async def post_ephemeral_message(
@@ -163,79 +163,62 @@ class SlackClient(object):
 			return { "result": f"Failed to upload {file}", "error": error.response["error"] }
 
 
-	async def invoke_reaction(self, **kwargs):
-
-		kwargs |= {
-			"channel": kwargs.get("channel", self.channel),
-			"timestamp": str(kwargs.get("ts"))
-		}
-
-		if "ts" in kwargs:
-			del kwargs["ts"]
+	async def reaction(self, action: str = None, emoji: str = None, ts: str = None, **kwargs):
 
 		try:
-			return await self.client.api_call(
-				f"reactions.{kwargs.get('action')}",
-				params = kwargs
-			)
+
+			match action:
+
+				case "get":
+					return await self.client.reactions_get(
+						channel = self.channel,
+						timestamp= ts
+					)
+
+				case "add":
+					return await self.client.reactions_add(
+						channel = self.channel,
+						name = emoji,
+						timestamp = ts
+					)
+
+				case "remove":
+					return await self.client.reactions_remove(
+						channel = self.channel,
+						name = emoji,
+						timestamp = ts
+					)
 
 		except SlackApiError as error:
+
 			error_key = error.response["error"]
 
 			if not (
-				kwargs.get("action") == "add" and error_key == "already_reacted" or
-				kwargs.get("action") == "remove" and error_key == "no_reaction"
+				action == "add" and error_key == "already_reacted" or
+				action == "remove" and error_key == "no_reaction"
 			):
-				result = { "result": f"Failed to invoke reaction on {kwargs.get('timestamp')}", "error": error_key }
+
+				result = { "result": f"Failed to {action} reaction on {ts}", "error": error_key }
 				log.error(result)
 				return result
 
-			else:
-				log.debug("Unable to perform the specified reaction action")
 
+	async def open_modal(self, trigger_id, blocks: str):
 
-	async def reaction(self, action: str = None, emoji: str = None, ts: str = None, **kwargs):
+		try:
+			return await self.client.views_open(
+				trigger_id = trigger_id,
+				view = blocks
+			)
 
-		# log.debug("Args:\n\taction:  {}\n\temoji:  {}\n\tts:  {}\n\tkwargs:  {}".format(
-		# 	action, emoji, ts, kwargs))
+		except SlackApiError as error:
+			log.error(f"Failed to post message:  {error.response['error']}\n{error}")
+			return { "result": "Failed to post message", "error": error.response["error"] }
 
-		# log.debug("Checking current reactions")
-
-		# Force checking if this works or not.....
-		# It's not....
-		# response = await self.client.api_call(
-		# 	"reactions.get",
-		# 	http_verb = "GET",
-		# 	params = {
-		# 		'channel': 'C0266ANUEJZ',
-		# 		'timestamp': '1646121180.754269'
-		# 	}
-		# )
-
-##### This is currently not working....
-		# # Check if reaction exists or not...
-		# response = await self.invoke_reaction(action="get", ts=ts, http_verb="GET")
-		# # log.debug("forced get response:\n{}".format(response))
-		# reactions = response.get("message").get("reactions")
-
-		# for reaction in reactions:
-			# if (
-			# 	reaction.get("name") == kwargs.get("emoji") and
-			# 	elf.slack_id in reaction.get("users")
-			# ):
-		# 		log.debug("Reaction already exists")
-		# 		exists = True
-		# 		break
-
-		# 	log.debug("Reaction doesn't exist")
-		# 	exists = False
-
-		# if (
-		# 	action == "add" and exists == False or
-		# 	action == "remove" and exists == True
-		# ):
-
-		return await self.invoke_reaction(action=action, name=emoji, ts=ts, **kwargs)
+		except asyncio.exceptions.TimeoutError as error:
+			log.error(
+				f"Failed to post message due to timeout.  Blocks:\n{blocks}\nFull error:  {error}")
+			return { "result": "Failed to post message", "error": error }
 
 
 async def validate_request(request: Request):

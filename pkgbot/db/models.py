@@ -24,7 +24,7 @@ class Packages(Model):
 	status = fields.CharField(64, default="dev")
 	updated_by = fields.CharField(64, default="PkgBot")
 	special_flags = fields.JSONField(null=True)
-	notes = fields.CharField(4096, null=True)
+	notes = fields.CharField(4096, default="", null=True)
 	slack_channel = fields.CharField(32, null=True)
 	slack_ts = fields.CharField(32, null=True)
 	response_url = fields.CharField(1024, null=True)
@@ -42,8 +42,8 @@ class Recipes(Model):
 	last_ran = fields.DatetimeField(null=True, default=None)
 	recurring_fail_count = fields.IntField(null=True, default=0)
 	schedule = fields.IntField(default=0)
-	status = fields.CharField(1024, null=True)
-	notes = fields.CharField(4096, null=True)
+	status = fields.CharField(1024, default="", null=True)
+	notes = fields.CharField(4096, default="", null=True)
 
 Recipe_Out = pydantic_model_creator(Recipes, name="Recipe_Out")
 Recipe_In = pydantic_model_creator(Recipes, name="Recipe_In", exclude_readonly=True)
@@ -99,6 +99,16 @@ class TrustUpdates(Model):
 TrustUpdate_Out = pydantic_model_creator(TrustUpdates, name="TrustUpdate_Out")
 TrustUpdate_In = pydantic_model_creator(
 	TrustUpdates, name="TrustUpdate_In", exclude_readonly=True)
+
+
+class Policies(Model):
+	id = fields.IntField(pk=True)
+	policy_id = fields.IntField(unique=True)
+	name = fields.CharField(256)
+	site = fields.CharField(128)
+
+Policy_Out = pydantic_model_creator(Policies, name="Policy_Out")
+Policy_In = pydantic_model_creator(Policies, name="Policy_In", exclude_readonly=True)
 
 
 class CallBack(BaseModel):

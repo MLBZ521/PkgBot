@@ -2,6 +2,8 @@ import json
 import os
 import sys
 
+from tortoise.expressions import Q
+
 from pkgbot import core
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
@@ -13,7 +15,7 @@ from Settings import messages, blocks as block
 
 
 log = utility.log
-max_content_size = 1500
+MAX_CONTENT_SIZE = 1500
 
 
 async def new_pkg_msg(pkg_object: models.Package_In):
@@ -54,7 +56,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	redacted_error = await utility.replace_sensitive_strings(error)
 
-	if len(str(redacted_error)) > max_content_size:
+	if len(str(redacted_error)) > MAX_CONTENT_SIZE:
 		blocks = await core.chatbot.build.recipe_error_msg(recipe_id, id, "_See thread for details..._")
 	else:
 		formatted_error = await core.chatbot.build.format_json(redacted_error)
@@ -64,7 +66,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 	if (
 		response.get("result") != "Failed to post message"
-		and len(str(redacted_error)) > max_content_size
+		and len(str(redacted_error)) > MAX_CONTENT_SIZE
 	):
 		upload_response = await core.chatbot.SlackBot.file_upload(
 			content = str(redacted_error),
@@ -80,7 +82,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 
 async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
 
-	if len(diff_msg) > max_content_size:
+	if len(diff_msg) > MAX_CONTENT_SIZE:
 		blocks = await core.chatbot.build.trust_diff_msg(trust_object.id, trust_object.recipe_id)
 	else:
 		blocks = await core.chatbot.build.trust_diff_msg(
@@ -96,7 +98,7 @@ async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
 
 	if (
 		response.get("result") != "Failed to post message"
-		and len(diff_msg) > max_content_size
+		and len(diff_msg) > MAX_CONTENT_SIZE
 	):
 		response = await core.chatbot.SlackBot.file_upload(
 			content = diff_msg,
@@ -204,3 +206,37 @@ async def basic_msg(text, image: str | None = None,
 
 	blocks = await core.chatbot.build.basic_msg(text, image, alt_image_text)
 	return await core.chatbot.SlackBot.post_message(blocks, text=alt_text)
+
+
+async def modal_notification(trigger_id: str, title_txt: str, msg_text: str,
+	button_text: str, image: str | None = None, alt_image_text: str | None = None):
+
+	blocks = await core.chatbot.build.modal_notification(title_txt, msg_text, button_text, image, alt_image_text)
+	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
+
+
+async def modal_promote_pkg(trigger_id: str, pkg_name: str):
+
+	blocks = await core.chatbot.build.modal_promote_pkg(pkg_name)
+	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
+
+
+async def policy_list(filter_values: str, username: str):
+
+	user_object = await core.user.get({"username": username})
+	q_expression = Q()
+
+	for filter_value in filter_values.split(" "):
+		q_expression &= Q(name__icontains=filter_value)
+
+	if not user_object.full_admin:
+		sites = user_object.site_access.split(", ")
+		q_expression &= Q(site__in=sites)
+
+	policies_object = await core.policy.get(q_expression)
+
+	if not isinstance(policies_object, list):
+		policies_object = [policies_object]
+
+	policies = [ policy.dict() for policy in policies_object ]
+	return await block.policy_list(policies)

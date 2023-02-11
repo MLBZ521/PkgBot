@@ -42,14 +42,20 @@ async def receive(request: Request):
 	payload_type = payload_object.get("type")
 	# log.debug(f"Received Payload Type:  {payload_type}")
 
-	if payload_type == "message_action":
-		await core.chatbot.events.message_shortcut(payload_object)
+	match payload_type:
 
-	elif (
-		payload_type == "block_actions" and
-		payload_object.get("actions")[0].get("type") == "button"
-	):
-		await core.chatbot.events.button_click(payload_object)
+		case "block_actions":
+			if payload_object.get("actions")[0].get("type") == "button":
+				await core.chatbot.events.button_click(payload_object)
+
+		case "block_suggestion":
+			return await core.chatbot.events.external_lists(payload_object)
+
+		case "message_action":
+			await core.chatbot.events.message_shortcut(payload_object)
+
+		case "view_submission":
+			await core.chatbot.events.view_submission(payload_object)
 
 	return Response(status_code=status.HTTP_200_OK)
 
