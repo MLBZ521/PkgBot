@@ -102,7 +102,7 @@ async def button_click(payload):
 
 				log.info(
 					f"PkgBotAdmin `{username}` has acknowledged error message: {message_ts}")
-				await core.chatbot.SlackBot.delete_message(str(message_ts))
+				await core.chatbot.SlackBot.delete_message(str(message_ts), channel)
 
 				updates = {
 					"response_url": response_url,
