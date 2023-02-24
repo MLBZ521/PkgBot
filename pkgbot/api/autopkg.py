@@ -29,7 +29,7 @@ async def results(task_id:  str):
 @router.post("/workflow/dev", summary="Dev Workflow",
 	description="The Dev workflow will create a new package and post to chat.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_dev(pkg_object: models.Package_In = Body(models.Package_In)):
+async def workflow_dev(pkg_object: models.Package_In = Depends(models.Package_In)):
 	"""Workflow to create a new package in the database and then post a message to chat.
 
 	Args:
@@ -46,7 +46,7 @@ async def workflow_dev(pkg_object: models.Package_In = Body(models.Package_In)):
 @router.post("/workflow/prod", summary="Production Workflow",
 	description="Workflow to move a package into production and update the Slack message.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body(models.Package_In)):
+async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Depends(models.Package_In)):
 
 	return await core.autopkg.workflow_prod(promoted_id, pkg_object)
 
