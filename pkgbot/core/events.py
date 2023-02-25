@@ -7,7 +7,6 @@ from fastapi import UploadFile
 
 from pkgbot import api, config, core
 from pkgbot.db import models
-from pkgbot.tasks import task_utils
 from pkgbot.utilities import common as utility
 
 
@@ -43,7 +42,7 @@ async def event_handler(task_id, loop_count=0):
 		return await event_handler(task_id, loop_count + 1)
 
 	log.debug(f"event: {event}")
-	task_results |= { "task_id": task_id}
+	task_results |= { "task_id": task_id }
 
 	match event:
 
@@ -180,7 +179,7 @@ async def event_failed_pre_checks(task_results):
 
 	for task_id in task_results.get("task_id"):
 
-		task_results = task_utils.get_task_results(task_id)
+		task_results = await utility.get_task_results(task_id)
 		event = task_results.get("event")
 
 		if event == "autopkg_repo_update":
