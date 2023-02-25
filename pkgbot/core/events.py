@@ -42,7 +42,11 @@ async def event_handler(task_id, loop_count=0):
 		return await event_handler(task_id, loop_count + 1)
 
 	log.debug(f"event: {event}")
-	task_results |= { "task_id": task_id }
+	if not task_results.get("task_id"):
+		log.warning("WHAT IS THIS THAT ISN'T PASSING A task_id?!?!?")
+		log.warning(f"task_id: {task_id}")
+		log.warning(f"task_results: {task_results}")
+		task_results |= { "task_id": task_id }
 
 	match event:
 
@@ -180,11 +184,12 @@ async def event_failed_pre_checks(task_results):
 	for task_id in task_results.get("task_id"):
 
 		task_results = await utility.get_task_results(task_id)
-		event = task_results.get("event")
+		event = task_results.get("task_results").get("event")
 
 		if event == "autopkg_repo_update":
 ##### TODO:
-			pass
+	# Sent message to ChatBot
+			log.warning("Failure during event:  autopkg_repo_update")
 
 		if event == "disk_space_critical":
 			""" If cache volume has insufficient disk space """
@@ -205,7 +210,8 @@ async def event_failed_pre_checks(task_results):
 
 		if event == "private_git_pull":
 ##### TODO:
-			pass
+	# Sent message to ChatBot
+			log.warning("Failure during event:  private_git_pull")
 
 
 async def event_error(task_results):
