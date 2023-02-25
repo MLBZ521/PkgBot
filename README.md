@@ -2,7 +2,20 @@
 
 PkgBot is an automation framework for the open source project [AutoPkg](https://www.github.com/autopkg/autopkg) that provides a web-based front end and a Slack Bot to send notifications and receive commands.  It helps manage the lifecycle of software packaging through package and version validation and then provides an interactive method to "promote" a specific package version from "development" (or "test") to production environments.
 
-**Now with support for Slack Slash Commands!**
+<br>
+
+# **Now with support for Slack Slash Commands _AND_ Shortcuts!**
+
+## **New Features**
+
+  * Slack Slash Commands
+    * Run AutoPkg from a Slash Command!
+    * Enable/Disable recipes
+    * And more!
+  * Slack Message Shortcuts
+    * Promote packages to Policies from a Slack message!
+
+<br>
 
 ![New Software Version Available](/examples/images/New%20Software%20Version%20Available.png)
 
