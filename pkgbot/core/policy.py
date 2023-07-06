@@ -40,7 +40,7 @@ async def cache_policies():
 
 	for policy in all_policies.get("policies"):
 
-		if datetime.utcnow() > (datetime.fromisoformat(api_token_expires.replace('Z', '')) - timedelta(minutes=5)):
+		if datetime.utcnow() > (datetime.fromisoformat(api_token_expires) - timedelta(minutes=5)):
 			log.debug("Replacing API Token...")
 			api_token, api_token_expires = await core.jamf_pro.get_token()
 

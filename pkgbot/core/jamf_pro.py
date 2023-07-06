@@ -20,9 +20,16 @@ async def get_token(username: str = API_USER, password: str = API_PASSWORD):
 	if response_get_token.status_code == 200:
 
 		response_json = response_get_token.json()
-		return response_json["token"], response_json["expires"]
+		return response_json["token"], fixup_token_expiration(response_json["expires"])
 
 	return False
+
+
+async def fixup_token_expiration(token_expires: str):
+
+	token_expires.rsplit(".", maxsplit=1)[0]
+	# datetime.fromisoformat(token_expires.rsplit(".", maxsplit=1)[0])
+	# expires = datetime.strptime(token_expires, "%Y-%m-%dT%H:%M:%S")
 
 
 async def api(method: str, endpoint: str, in_content_type: str = "json", out_content_type = "xml",
