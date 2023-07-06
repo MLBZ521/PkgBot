@@ -521,6 +521,7 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	# Not overriding verbose when verifying trust info
 	_ = autopkg_cmd.pop("quiet", None)
 	_ = autopkg_cmd.pop("verbose", None)
+	_ = autopkg_cmd.pop("overrides", None)
 
 	autopkg_cmd |= {
 		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),

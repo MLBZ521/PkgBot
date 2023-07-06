@@ -18,6 +18,8 @@ from xml.sax.saxutils import escape
 
 from celery.result import AsyncResult
 
+from fastapi import UploadFile
+
 # from sqlalchemy import create_engine
 # from sqlalchemy.orm import sessionmaker
 
@@ -520,3 +522,14 @@ async def build_xml(root, parent, child, values, sub_element = None):
 			name_element.text = str(escape(value))
 
 	return root_element
+
+
+async def save_icon(icon: UploadFile):
+
+	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
+
+	try:
+		with open(f"{pkg_dir}/static/icons/{icon.filename}", "wb") as icon_obj:
+			shutil.copyfileobj(icon.file, icon_obj)
+	finally:
+		await icon.close()

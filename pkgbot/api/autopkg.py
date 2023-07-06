@@ -3,7 +3,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, 
 from fastapi_utils.tasks import repeat_every
 
 from pkgbot import api, config, core, settings
-from pkgbot.core import events
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
 
@@ -29,7 +28,7 @@ async def results(task_id:  str):
 @router.post("/workflow/dev", summary="Dev Workflow",
 	description="The Dev workflow will create a new package and post to chat.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_dev(pkg_object: models.Package_In = Body(models.Package_In)):
+async def workflow_dev(pkg_object: models.Package_In = Depends(models.Package_In)):
 	"""Workflow to create a new package in the database and then post a message to chat.
 
 	Args:
@@ -46,7 +45,7 @@ async def workflow_dev(pkg_object: models.Package_In = Body(models.Package_In)):
 @router.post("/workflow/prod", summary="Production Workflow",
 	description="Workflow to move a package into production and update the Slack message.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Body(models.Package_In)):
+async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Depends(models.Package_In)):
 
 	return await core.autopkg.workflow_prod(promoted_id, pkg_object)
 
@@ -174,7 +173,7 @@ async def receive(request: Request, task_id = Body()):
 
 	task_id = task_id.get("task_id")
 	log.debug(f"Receiving notification for task_id:  {task_id}")
-	await events.event_handler(task_id)
+	await core.events.event_handler(task_id)
 	return Response(status_code=status.HTTP_200_OK)
 
 

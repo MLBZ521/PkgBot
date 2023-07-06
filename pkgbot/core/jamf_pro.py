@@ -20,9 +20,16 @@ async def get_token(username: str = API_USER, password: str = API_PASSWORD):
 	if response_get_token.status_code == 200:
 
 		response_json = response_get_token.json()
-		return response_json["token"], response_json["expires"]
+		return response_json["token"], fixup_token_expiration(response_json["expires"])
 
 	return False
+
+
+async def fixup_token_expiration(token_expires: str):
+
+	token_expires.rsplit(".", maxsplit=1)[0]
+	# datetime.fromisoformat(token_expires.rsplit(".", maxsplit=1)[0])
+	# expires = datetime.strptime(token_expires, "%Y-%m-%dT%H:%M:%S")
 
 
 async def api(method: str, endpoint: str, in_content_type: str = "json", out_content_type = "xml",
@@ -40,7 +47,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.get(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={
+					headers = {
 						"Authorization": f"jamf-token {api_token}",
 						"Accept": f"application/{in_content_type}"
 					}
@@ -50,7 +57,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.post(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={
+					headers = {
 						"Authorization": f"jamf-token {api_token}",
 						"Content_type": f"application/{out_content_type}"
 					},
@@ -61,7 +68,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.put(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={
+					headers = {
 						"Authorization": f"jamf-token {api_token}",
 						"Content_type": f"application/{out_content_type}"
 					},
@@ -72,7 +79,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.delete(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={ "Authorization": f"jamf-token {api_token}" }
+					headers = { "Authorization": f"jamf-token {api_token}" }
 				)
 
 	return False

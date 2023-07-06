@@ -2,13 +2,31 @@
 
 PkgBot is an automation framework for the open source project [AutoPkg](https://www.github.com/autopkg/autopkg) that provides a web-based front end and a Slack Bot to send notifications and receive commands.  It helps manage the lifecycle of software packaging through package and version validation and then provides an interactive method to "promote" a specific package version from "development" (or "test") to production environments.
 
-**Now with support for Slack Slash Commands!**
+<br>
 
-![New Software Version Available](/examples/images/New%20Software%20Version%20Available.png)
+### **Now with support for Slack Slash Commands _AND_ Shortcuts!**
+
+#### **New Features**
+
+  * Slack Slash Commands ([Help example](/examples/images/Slash%20Command%20-%20Help.png))
+    * Run AutoPkg from a Slash Command!  
+    * Enable/Disable recipes
+    * And more!
+
+    ![Slash Command](/examples/images/Slash%20Command.png)
+
+  * Slack Message Shortcuts
+    * Promote packages to Policies from a Slack message!
+    
+    ![Slack Shortcut - Promote Package](/examples/images/Slack%20Shortcut%20-%20Promote%20Package.png)
+
+<br>
 
 ## About
 
 PkgBot provides this workflow utilizing Jamf Pro and the [JamfUploader](https://github.com/grahampugh/jamf-upload) line of Processors.  A Slack Bot is used to send new build notifications and allows a `PkgBot Admin` to interact with those notifications.
+
+![New Software Version Available](/examples/images/New%20Software%20Version%20Available.png)
 
 To "promote" a package to a production Jamf Pro instance without re-running the entire recipe chain, a custom Post Processor (inspired by Graham Pugh's [JSSRecipeReceiptChecker](https://github.com/autopkg/grahampugh-recipes/blob/master/CommonProcessors/JSSRecipeReceiptChecker.py)) is used to find and acquire the matching recipe dev run details.  The values are passed to a "production recipe template" that performs the JamfUploader steps which can be configured to upload the package and optionally, update other various items (e.g. Policies, Groups, Scripts, etc.) _without_ re-downloading nor re-packaging.
 

@@ -115,8 +115,8 @@ class SlackClient(object):
 
 		except asyncio.exceptions.TimeoutError as error:
 			log.error(
-				f"Failed to post message due to timeout.\nFull error:  {error}")
-			return response
+				f"Failed to post message due to timeout.  Blocks:\n{blocks}\nFull error:  {error}")
+			return { "result": "Failed to post message", "error": error }
 
 
 	async def post_ephemeral_message(
@@ -140,6 +140,11 @@ class SlackClient(object):
 			log.error(
 				f"Failed to post ephemeral message:  {error.response['error']}\nFull Error:\n{error}")
 			return { "result": "Failed to post ephemeral message", "error": error.response["error"] }
+
+		except asyncio.exceptions.TimeoutError as error:
+			log.error(
+				f"Failed to post message due to timeout.  Blocks:\n{blocks}\nFull error:  {error}")
+			return { "result": "Failed to post message", "error": error }
 
 
 	async def file_upload(self, content=None, file=None, filename=None, filetype=None,
