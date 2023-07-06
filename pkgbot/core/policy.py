@@ -1,6 +1,6 @@
 import re
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree
 
 from tortoise.expressions import Q
@@ -30,7 +30,8 @@ async def cache_policies():
 
 	log.debug("Caching Policies from Jamf Pro...")
 	api_token, api_token_expires = await core.jamf_pro.get_token()
-	all_policies_response = await core.jamf_pro.api("get", "JSSResource/policies", api_token=api_token)
+	all_policies_response = await core.jamf_pro.api(
+		"get", "JSSResource/policies", api_token=api_token)
 
 	if all_policies_response.status_code != 200:
 		raise("Failed to get list of Policies!")
@@ -40,11 +41,13 @@ async def cache_policies():
 
 	for policy in all_policies.get("policies"):
 
-		if datetime.utcnow() > (datetime.fromisoformat(api_token_expires) - timedelta(minutes=5)):
+		if datetime.now(timezone.utc) > (
+			datetime.fromisoformat(api_token_expires) - timedelta(minutes=5)):
 			log.debug("Replacing API Token...")
 			api_token, api_token_expires = await core.jamf_pro.get_token()
 
-		policy_details_response = await core.jamf_pro.api("get", f"JSSResource/policies/id/{policy.get('id')}", api_token=api_token)
+		policy_details_response = await core.jamf_pro.api(
+			"get", f"JSSResource/policies/id/{policy.get('id')}", api_token=api_token)
 
 		if policy_details_response.status_code != 200:
 			raise(f"Failed to get policy details for:  {policy.get('id')}:{policy.get('name')}!")

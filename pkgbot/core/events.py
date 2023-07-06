@@ -45,7 +45,7 @@ async def event_handler(task_id, loop_count=0):
 	if not task_results.get("task_id"):
 		log.warning("WHAT IS THIS THAT ISN'T PASSING A task_id?!?!?")
 		log.warning(f"task_id: {task_id}")
-		log.warning(f"task_results: {task_results}")
+		# log.warning(f"task_results: {task_results}")
 		task_results |= { "task_id": task_id }
 
 	match event:

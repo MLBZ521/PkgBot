@@ -47,7 +47,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.get(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={
+					headers = {
 						"Authorization": f"jamf-token {api_token}",
 						"Accept": f"application/{in_content_type}"
 					}
@@ -57,7 +57,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.post(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={
+					headers = {
 						"Authorization": f"jamf-token {api_token}",
 						"Content_type": f"application/{out_content_type}"
 					},
@@ -68,7 +68,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.put(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={
+					headers = {
 						"Authorization": f"jamf-token {api_token}",
 						"Content_type": f"application/{out_content_type}"
 					},
@@ -79,7 +79,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.delete(
 					url = f"{JPS_URL}/{endpoint}",
-					headers={ "Authorization": f"jamf-token {api_token}" }
+					headers = { "Authorization": f"jamf-token {api_token}" }
 				)
 
 	return False
