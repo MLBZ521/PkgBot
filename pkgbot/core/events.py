@@ -5,7 +5,7 @@ from tempfile import SpooledTemporaryFile
 
 from fastapi import UploadFile
 
-from pkgbot import api, config, core
+from pkgbot import config, core
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
 
@@ -264,7 +264,7 @@ async def event_recipe_run(task_results):
 				icon_data.write(icon_path.read())
 			_ = icon_data.seek(0)
 			icon = UploadFile(filename=pkg_data["icon"], file=icon_data)
-			await api.views.upload_icon(icon)
+			await utility.save_icon(icon)
 
 		except Exception:
 			log.info(

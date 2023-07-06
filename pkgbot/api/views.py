@@ -1,6 +1,3 @@
-import os
-import shutil
-
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request, UploadFile
@@ -8,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from pkgbot import api, config, core
+from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
@@ -110,12 +108,5 @@ async def get_recipe(request: Request):
 @router.post("/icons", dependencies=[Depends(api.auth.login_manager)])
 async def upload_icon(icon: UploadFile):
 
-	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
-
-	try:
-		with open(f"{pkg_dir}/static/icons/{icon.filename}", "wb") as icon_obj:
-			shutil.copyfileobj(icon.file, icon_obj)
-	finally:
-		await icon.close()
-
-	return { "results":  200, "icon": icon.filename }
+	await utility.save_icon(icon)
+	return { "result":  "Successfully uploaded icon", "filename": icon.filename }
