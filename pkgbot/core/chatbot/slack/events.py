@@ -277,6 +277,7 @@ I support a variety of commands to help run AutoPkg on your behalf.  Please see 
 						alt_text = "Error processing override keys..."
 					)
 
+				options["verb"] = verb
 				autopkg_cmd = models.AutoPkgCMD(**options)
 
 			autopkg_cmd.__dict__.update(incoming_options)
