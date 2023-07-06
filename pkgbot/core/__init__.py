@@ -1,5 +1,6 @@
 from . import autopkg
 from . import error
+from . import events
 from . import jamf_pro
 from . import package
 from . import policy

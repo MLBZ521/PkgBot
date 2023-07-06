@@ -3,7 +3,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, 
 from fastapi_utils.tasks import repeat_every
 
 from pkgbot import api, config, core, settings
-from pkgbot.core import events
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
 
@@ -174,7 +173,7 @@ async def receive(request: Request, task_id = Body()):
 
 	task_id = task_id.get("task_id")
 	log.debug(f"Receiving notification for task_id:  {task_id}")
-	await events.event_handler(task_id)
+	await core.events.event_handler(task_id)
 	return Response(status_code=status.HTTP_200_OK)
 
 
