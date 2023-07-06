@@ -62,17 +62,17 @@ async def execute(autopkg_cmd: models.AutoPkgCMD, item: str | None = None):
 
 		case "run":
 			if item:
-				return await run_recipe(item, autopkg_cmd)
+				return await run_recipe(recipe_id=item, autopkg_cmd=autopkg_cmd)
 			return await run_recipes(autopkg_cmd)
 
 		case "repo-add":
 			return await repo_add(autopkg_cmd)
 
 		case "verify-trust-info":
-			return await verify_recipe(autopkg_cmd)
+			return await verify_recipe(recipe_id=item, autopkg_cmd=autopkg_cmd)
 
 		case "update-trust-info":
-			return await update_trust(autopkg_cmd, recipe_id = item)
+			return await update_trust(recipe_id=item, autopkg_cmd=autopkg_cmd)
 
 		case "version":
 			return await version(autopkg_cmd)
