@@ -16,12 +16,21 @@ router = APIRouter(
 )
 
 
-@router.delete("/delete/{ts}", summary="Delete Slack message by timestamp",
+@router.delete("/delete", summary="Delete Slack message by timestamp",
 	description="Delete a Slack message by its timestamp.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def delete_slack_message(timestamps: str | list, channel: str | None = None):
+async def delete_slack_message(timestamps: str | list, 
+	channel: str | None = None, threaded_msgs: bool = False, files: bool = False):
 
-	return await core.chatbot.delete_messages(timestamps, channel)
+	return await core.chatbot.delete_messages(timestamps, channel, threaded_msgs, files)
+
+
+@router.get("/is_thread", summary="Check if Slack message has a thread",
+	description="Checks if a Slack message has a thread.",
+	dependencies=[Depends(core.user.verify_admin)])
+async def check_slack_thread(timestamp: str, channel: str | None = None):
+
+	return await core.chatbot.check_for_thread(timestamp, channel)
 
 
 @router.post("/receive", summary="Handles incoming messages from Slack",
