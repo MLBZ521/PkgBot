@@ -35,15 +35,26 @@ login_manager.not_authenticated_exception = NotAuthenticatedException
 
 
 async def exc_handler(request, exc):
-	session = { "logged_in": False, "protected_page": True }
-	return templates.TemplateResponse("index.html", { "request": request, "session": session })
+
+	# Set a (more or less) global session variable to trigger a "must login" message
+	session_vars = {"protected_page": request.base_url != request.url}
+
+	try:
+		request.state.pkgbot = session_vars
+		request.state.user = {}
+	except Exception:
+		request.state.pkgbot |= session_vars
+
+	return templates.TemplateResponse("index.html", { "request": request })
 
 
 @login_manager.user_loader()
 async def load_user(username: str):
 
 	# Return the user object otherwise None if a user was not found
-	return await core.user.get({"username": username}) or None
+	user = (await core.user.get({"username": username})).dict(exclude={"pkgbot_token", "jps_token", "last_update"})
+	user["site_access"] = user.get("site_access").split(", ")
+	return user
 
 
 @router.post("/login", summary="Login to web views",
@@ -55,21 +66,19 @@ async def login(
 
 	if not user:
 		log.debug("Invalid credentials or not a Jamf Pro Admin")
-		return templates.TemplateResponse(
-			"index.html",
-			{
-				"request": request,
-				"session": {
-					"access_denied": "You are not authorized to access this page!" ,
-					"logged_in": False,
-					"protected_page": True
-				}
-			}
-		)
+		return templates.TemplateResponse("index.html", { "request": request })
 
 	access_token = login_manager.create_access_token(
 		data = { "sub": form_data.username },
 		expires = timedelta(minutes=config.PkgBot.get("token_valid_for"))
+	)
+
+	# Record the web session token
+	await core.user.create_or_update(
+		schemas.PkgBotAdmin_In(
+			username = user.username,
+			pkgbot_token = access_token
+		)
 	)
 
 	response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
