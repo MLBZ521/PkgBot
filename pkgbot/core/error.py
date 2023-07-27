@@ -14,7 +14,7 @@ async def update(filter: dict, updates: dict):
 	return await models.Errors.filter(**filter).update(**updates)
 
 
-async def construct_error_msg(recipe_id: str, error: str, task_id: str = None):
+async def construct_msg(recipe_id: str, error: str, task_id: str = None):
 	# Construct message content
 
 	try:

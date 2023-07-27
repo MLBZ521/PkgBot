@@ -73,8 +73,8 @@ async def error(recipe_id: str, event: str, error: str, task_id: str = None):
 		"details": error
 	})
 
-	 # Construct error content
-	error_dict = await core.error.construct_error_msg(recipe_id, error, task_id)
+	# Construct error content
+	error_dict = await core.error.construct_msg(recipe_id, error, task_id)
 
 	# Send error message
 	results = await core.chatbot.send.recipe_error_msg(recipe_id, recipe_result.id, error_dict)
