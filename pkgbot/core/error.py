@@ -1,12 +1,17 @@
 from functools import reduce
 
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 
 
-async def create_error(**kwargs: dict):
+async def create(error_object: dict):
 	# Create DB entry in errors table
 
-	return await models.ErrorMessages.create(**kwargs)
+	return await models.Errors.create(**error_object)
+
+
+async def update(filter: dict, updates: dict):
+
+	return await models.Errors.filter(**filter).update(**updates)
 
 
 async def construct_error_msg(recipe_id: str, error: str, task_id: str = None):
@@ -22,8 +27,3 @@ async def construct_error_msg(recipe_id: str, error: str, task_id: str = None):
 	error_dict["Task ID"] = task_id
 
 	return error_dict
-
-
-async def update_error(filter: dict, updates: dict):
-
-	return await models.ErrorMessages.filter(**filter).update(**updates)

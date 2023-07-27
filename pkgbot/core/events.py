@@ -6,7 +6,7 @@ from tempfile import SpooledTemporaryFile
 from fastapi import UploadFile
 
 from pkgbot import config, core
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -168,12 +168,12 @@ async def event_disk_space_warning(task_results):
 		"Warning", stderr, config.PkgBot.get('icon_warning'))
 
 	# Create DB entry
-	await models.ErrorMessages.create(
-		type = event,
-		slack_ts = results.get('ts'),
-		slack_channel = results.get('channel'),
-		status = "Acknowledged"
-	)
+	await core.error.create({
+		"type": event,
+		"slack_ts": results.get("ts"),
+		"slack_channel": results.get("channel"),
+		"status": "Notified"
+	})
 
 
 async def event_failed_pre_checks(task_results):
@@ -201,12 +201,12 @@ async def event_failed_pre_checks(task_results):
 			)
 
 			# Create DB entry
-			await models.ErrorMessages.create(
-				type = event,
-				slack_ts = results.get('ts'),
-				slack_channel = results.get('channel'),
-				status = "Notified"
-			)
+			await core.error.create({
+				"type": event,
+				"slack_ts": results.get("ts"),
+				"slack_channel": results.get("channel"),
+				"status": "Notified"
+			})
 
 		if event == "private_git_pull":
 ##### TODO:
@@ -243,9 +243,13 @@ async def event_recipe_run(task_results):
 		"pkg_name": pkg_name,
 		"recipe_id": recipe_id,
 		"version": pkg_processor.get("Input").get("version"),
-		"notes": pkg_processor.get("Input").get("pkg_notes")
 	}
 
+	pkg_note = {
+		"package_id": pkg_name,
+		"submitted_by": config.PkgBot.get('bot_name'),
+		"note": pkg_processor.get("Input").get("pkg_notes")
+	}
 	if event == "recipe_run_dev":
 
 		try:
@@ -285,8 +289,9 @@ async def event_recipe_run(task_results):
 			else:
 				log.info(f"New package posted to dev:  {pkg_name}")
 
-				pkg_object = models.Package_In(**pkg_data)
-				await core.autopkg.workflow_dev(pkg_object)
+				pkg_object = schemas.Package_In(**pkg_data)
+				pkg_note_object = schemas.Package_In(**pkg_note)
+				await core.autopkg.workflow_dev(pkg_object, pkg_note_object)
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` found a new version `{pkg_data.get('version')}`!"
 
 			if autopkg_cmd.ingress == "Slack":
@@ -319,7 +324,7 @@ async def event_recipe_run(task_results):
 		promoted_date = datetime.strftime(datetime.now(), format_string)
 		pkg_data["promoted_date"] = promoted_date
 
-		await core.autopkg.workflow_prod(event_id, models.Package_In(**pkg_data))
+		await core.autopkg.workflow_prod(event_id, schemas.Package_In(**pkg_data))
 
 
 async def event_autopkg_version(task_results):
@@ -441,7 +446,7 @@ async def handle_autopkg_error(**kwargs):
 			"Error:": redacted_error
 		}
 
-	await core.recipe.error(recipe_id, redacted_error, task_id)
+	await core.recipe.error(recipe_id, event, redacted_error, task_id)
 
 
 async def handle_exception(**kwargs):

@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
 from pkgbot import core
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -15,11 +15,11 @@ async def get(user_filter: dict | None = None):
 	if not user_filter:
 		return await models.PkgBotAdmins.all()
 
-	results = await models.PkgBotAdmin_Out.from_queryset(models.PkgBotAdmins.filter(**user_filter))
+	results = await schemas.PkgBotAdmin_Out.from_queryset(models.PkgBotAdmins.filter(**user_filter))
 	return results[0] if len(results) == 1 else results
 
 
-async def create_or_update(user_object: models.PkgBotAdmin_In):
+async def create_or_update(user_object: schemas.PkgBotAdmin_In):
 
 	result, result_bool = await models.PkgBotAdmins.update_or_create(
 		user_object.dict(exclude_unset=True, exclude_none=True, exclude={"username"}),
@@ -42,7 +42,7 @@ async def get_current(token: str = Depends(oauth2_scheme)):
 
 
 async def verify_admin(response: Response,
-	user_object: models.PkgBotAdmin_In = Depends(get_current)):
+	user_object: schemas.PkgBotAdmin_In = Depends(get_current)):
 
 	if not user_object.full_admin:
 		log.debug("User is NOT an admin")
@@ -63,7 +63,7 @@ async def authenticate(username: str, password: str):
 		user_already_exists = await get({"username": username})
 
 		return await create_or_update(
-			models.PkgBotAdmin_In(
+			schemas.PkgBotAdmin_In(
 				username = username,
 				full_admin = user_already_exists.full_admin if user_already_exists else False,
 				jps_token = api_token,

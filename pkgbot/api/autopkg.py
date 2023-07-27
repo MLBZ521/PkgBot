@@ -3,7 +3,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, 
 from fastapi_utils.tasks import repeat_every
 
 from pkgbot import api, config, core, settings
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -28,11 +28,11 @@ async def results(task_id:  str):
 @router.post("/workflow/dev", summary="Dev Workflow",
 	description="The Dev workflow will create a new package and post to chat.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_dev(pkg_object: models.Package_In = Depends(models.Package_In)):
+async def workflow_dev(pkg_object: schemas.Package_In = Depends(schemas.Package_In)):
 	"""Workflow to create a new package in the database and then post a message to chat.
 
 	Args:
-		pkg_object (models.Package_In): Details about a package object
+		pkg_object (schemas.Package_In): Details about a package object
 
 	Returns:
 		[JSON]: Result of the operation
@@ -45,7 +45,7 @@ async def workflow_dev(pkg_object: models.Package_In = Depends(models.Package_In
 @router.post("/workflow/prod", summary="Production Workflow",
 	description="Workflow to move a package into production and update the Slack message.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_prod(promoted_id: int, pkg_object: models.Package_In = Depends(models.Package_In)):
+async def workflow_prod(promoted_id: int, pkg_object: schemas.Package_In = Depends(schemas.Package_In)):
 
 	return await core.autopkg.workflow_prod(promoted_id, pkg_object)
 
@@ -183,7 +183,7 @@ async def receive(request: Request, task_id = Body()):
 async def autopkg_update_recipe_trust(
 	recipe_id: str | None = None,
 	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo = Depends(models.AutoPkgCMD_UpdateTrustInfo),
-	trust_object: models.TrustUpdate_In | None = Depends(models.TrustUpdate_In)
+	trust_object: schemas.RecipeResult_In | None = Depends(schemas.RecipeResult_In)
 ):
 
 	queued_task = await core.autopkg.update_trust(autopkg_cmd, trust_object, recipe_id)

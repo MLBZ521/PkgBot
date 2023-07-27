@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from pkgbot import core, settings
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 
 
 router = APIRouter(
@@ -15,28 +15,28 @@ router = APIRouter(
 	dependencies=[Depends(core.user.get_current)], response_model=dict)
 async def get_packages():
 
-	packages = await models.Package_Out.from_queryset(core.package.get())
+	packages = await schemas.Package_Out.from_queryset(core.package.get())
 	return { "total": len(packages), "packages": packages }
 
 
 @router.get("/id/{id}", summary="Get package by id", description="Get a package by its id.",
-	dependencies=[Depends(core.user.get_current)], response_model=models.Package_Out)
+	dependencies=[Depends(core.user.get_current)], response_model=schemas.Package_Out)
 async def get_package_by_id(id: int):
 
 	return await core.package.get({"id": id})
 
 
 @router.post("/", summary="Create a package", description="Create a package.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.Package_Out)
-async def create(pkg_object: models.Package_In = Depends(models.Package_In)):
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.Package_Out)
+async def create(pkg_object: schemas.Package_In = Depends(schemas.Package_In)):
 
-	return await models.Package_Out.from_tortoise_orm(
+	return await schemas.Package_Out.from_tortoise_orm(
 		await core.package.create(pkg_object.dict(exclude_unset=True, exclude_none=True)))
 
 
 @router.put("/id/{id}", summary="Update package by id", description="Update a package by id.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.Package_Out)
-async def update(id: int, pkg_object: models.Package_In = Depends(models.Package_In)):
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.Package_Out)
+async def update(id: int, pkg_object: schemas.Package_In = Depends(schemas.Package_In)):
 
 	await core.package.update(
 		{"id": id},

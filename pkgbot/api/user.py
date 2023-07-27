@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
 from pkgbot import core, settings
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -24,9 +24,9 @@ async def get_users():
 
 
 @router.post("/create", summary="Create a user", description="Creates a new PkgBot user.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.PkgBotAdmin_Out,
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.PkgBotAdmin_Out,
 	response_model_exclude={ "slack_id", "jps_token" }, response_model_exclude_unset=True)
-async def create_user(user_object: models.PkgBotAdmin_In = Depends(models.PkgBotAdmin_In)):
+async def create_user(user_object: schemas.PkgBotAdmin_In = Depends(schemas.PkgBotAdmin_In)):
 
 	if await core.user.get(user_object.dict()):
 		raise HTTPException(status_code=status.HTTP_409_CONFLICT,
@@ -36,16 +36,16 @@ async def create_user(user_object: models.PkgBotAdmin_In = Depends(models.PkgBot
 
 
 @router.put("/update", summary="Update a user", description="Updates an existing PkgBot user.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.PkgBotAdmin_Out,
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.PkgBotAdmin_Out,
 	response_model_exclude={ "slack_id", "jps_token" }, response_model_exclude_unset=True)
-async def update_user(user_object: models.PkgBotAdmin_In = Depends(models.PkgBotAdmin_In)):
+async def update_user(user_object: schemas.PkgBotAdmin_In = Depends(schemas.PkgBotAdmin_In)):
 
 	return await core.user.create_or_update(user_object)
 
 
 @router.get("/whoami", summary="Get user's info",
 	description="Get the currently authenticated users information.",
-	response_model=models.PkgBotAdmin_Out)
-async def whoami(user_object: models.PkgBotAdmin_In = Depends(core.user.get_current)):
+	response_model=schemas.PkgBotAdmin_Out)
+async def whoami(user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current)):
 
 	return user_object

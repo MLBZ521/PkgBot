@@ -9,7 +9,7 @@ from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
 from pkgbot import config, core, settings
-from pkgbot.db import models
+from pkgbot.db import schemas
 from pkgbot.utilities import common as utility
 
 
@@ -103,13 +103,13 @@ async def create_token(form_data: OAuth2PasswordRequestForm = Depends(OAuth2Pass
 
 # @router.get("/test", summary="Return user's JWT",
 #     description="Test endpoint to return the current user's token.")
-# async def test(user: models.PkgBotAdmin_In = Depends(user.get_current_user)):
+# async def test(user: schemas.PkgBotAdmin_In = Depends(user.get_current_user)):
 
 #     return { "token": user.jps_token }
 
 
 @router.get("/authorizations", summary="Check user permissions",
 	description="Returns the authenticated user's permissions (e.g. Site access).")
-async def authorizations(user_object: models.PkgBotAdmin_In = Depends(core.user.get_current)):
+async def authorizations(user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current)):
 
 	return { "sites": await core.user.authorizations(user_object.jps_token) }

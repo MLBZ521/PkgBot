@@ -15,7 +15,7 @@ from pkgbot import config
 config = config.load_config(cli_args=tuple(sys.argv[1:]))
 
 from pkgbot.utilities import common as utility
-from pkgbot.db import models
+from pkgbot.db import schemas
 from pkgbot import api, core, create_pkgbot
 
 
@@ -74,7 +74,7 @@ async def startup_event():
 	pkgbot_admins = config.PkgBot.get("Admins")
 
 	for admin in pkgbot_admins:
-		user_object = models.PkgBotAdmin_In(
+		user_object = schemas.PkgBotAdmin_In(
 			username = admin,
 			slack_id = pkgbot_admins.get(admin),
 			full_admin =  True

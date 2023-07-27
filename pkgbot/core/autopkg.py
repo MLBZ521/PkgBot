@@ -5,27 +5,29 @@ from celery import current_app as pkgbot_celery_app
 from fastapi import HTTPException, status
 
 from pkgbot import core
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 log = utility.log
 
 
-async def workflow_dev(pkg_object: models.Package_In):
+async def workflow_dev(pkg_object: schemas.Package_In, pkg_note_object: schemas.PackageNote_In):
 	"""Workflow to create a new package in the database and then post a message to chat.
 
 	Args:
-		pkg_object (models.Package_In): Details about a package object
+		pkg_object (schemas.Package_In): Details about a package object
+		pkg_note_object (schemas.Package_In): Note about a package object
 
 	Returns:
 		[JSON]: Result of the operation
 	"""
 
 	created_pkg = await core.package.create(pkg_object.dict())
+	await core.package.create_note(pkg_note_object.dict())
 
 	results = await core.chatbot.send.new_pkg_msg(
-		await models.Package_Out.from_tortoise_orm(created_pkg))
+		await schemas.Package_Out.from_tortoise_orm(created_pkg))
 
 	await core.package.update(
 		{"id": created_pkg.id},
@@ -38,7 +40,7 @@ async def workflow_dev(pkg_object: models.Package_In):
 	return results
 
 
-async def workflow_prod(promoted_id: int, pkg_object: models.Package_In):
+async def workflow_prod(promoted_id: int, pkg_object: schemas.Package_In):
 
 	if pkg_object.promoted_date is None:
 		date_to_convert = datetime.now()

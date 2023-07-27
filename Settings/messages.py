@@ -1,6 +1,6 @@
 import json
 
-from pkgbot.db import models
+from pkgbot.db import schemas
 from . import blocks as block
 
 
@@ -9,7 +9,7 @@ async def format_json(the_json, indent=4):
 	return json.dumps(the_json, indent=indent)
 
 
-async def new_pkg(pkg_object: models.Package_In):
+async def new_pkg(pkg_object: schemas.Package_In):
 
 	blocks = [
 		await block.brick_header(pkg_object),
@@ -42,7 +42,7 @@ async def trust_diff(id: int, recipe: str, diff_msg: str = None):
 	return await format_json(blocks)
 
 
-async def deny_pkg(pkg_object: models.Package_In ):
+async def deny_pkg(pkg_object: schemas.Package_In ):
 
 	brick_footer = await block.brick_footer_dev(pkg_object)
 	brick_footer.get("elements").append(
@@ -58,7 +58,7 @@ async def deny_pkg(pkg_object: models.Package_In ):
 	return await format_json(blocks)
 
 
-async def deny_trust(trust_object: models.TrustUpdate_In):
+async def deny_trust(trust_object: schemas.RecipeResult_In):
 
 	blocks = [
 		await block.brick_deny_trust(trust_object),
@@ -68,7 +68,7 @@ async def deny_trust(trust_object: models.TrustUpdate_In):
 	return await format_json(blocks)
 
 
-async def promote(pkg_object: models.Package_In):
+async def promote(pkg_object: schemas.Package_In):
 
 	brick_footer = await block.brick_footer_dev(pkg_object)
 	brick_footer.get("elements").append(
@@ -83,7 +83,7 @@ async def promote(pkg_object: models.Package_In):
 	return await format_json(blocks)
 
 
-async def update_trust_success(trust_object: models.TrustUpdate_In):
+async def update_trust_success(trust_object: schemas.RecipeResult_In):
 
 	blocks = [
 		await block.brick_update_trust_success_msg(trust_object),
@@ -93,7 +93,7 @@ async def update_trust_success(trust_object: models.TrustUpdate_In):
 	return await format_json(blocks)
 
 
-async def update_trust_error(msg: str, trust_object: models.TrustUpdate_In):
+async def update_trust_error(msg: str, trust_object: schemas.RecipeResult_In):
 
 	blocks = await block.brick_update_trust_error_msg(trust_object, msg)
 	blocks.append(await block.brick_trust_diff_button(trust_object.dict().get('id')))

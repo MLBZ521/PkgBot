@@ -64,8 +64,8 @@ async def button_click(payload):
 					"channel": channel
 				})
 
-				trust_object = await models.TrustUpdates.filter(id=button_value).first()
-				await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
+				trust_object = await core.recipe.get_result({ "id": button_value })
+				await core.recipe.update_result({ "id": trust_object.id }, updates)
 				await core.autopkg.update_trust(
 					autopkg_cmd = autopkg_cmd, trust_object = trust_object)
 
@@ -92,8 +92,8 @@ async def button_click(payload):
 					"status": "Denied"
 				}
 
-				trust_object = await models.TrustUpdates.filter(id=button_value).first()
-				await models.TrustUpdates.update_or_create(updates, id=trust_object.id)
+				trust_object = await core.recipe.get_result({ "id": button_value })
+				await core.recipe.update_result({ "id": trust_object.id }, updates)
 				await core.recipe.deny_trust(button_value)
 
 		elif button_text == "Acknowledge":
@@ -105,13 +105,17 @@ async def button_click(payload):
 				await core.chatbot.delete_messages(
 					str(message_ts), channel, threaded_msgs=True, files=True)
 
+				filter_obj = { "slack_ts": message_ts }
 				updates = {
 					"response_url": response_url,
 					"status": "Acknowledged",
 					"ack_by": username
 				}
 
-				return await models.ErrorMessages.update_or_create(updates, slack_ts=message_ts)
+				try:
+					return await core.recipe.update_result(filter_obj, updates)
+				except Exception:
+					return await core.error.update(filter_obj, updates)
 
 	else:
 		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")

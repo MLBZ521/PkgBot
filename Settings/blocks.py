@@ -2,7 +2,7 @@ from itertools import groupby
 from operator import itemgetter
 
 from pkgbot import config
-from pkgbot.db import models
+from pkgbot.db import schemas
 
 
 config = config.load_config()
@@ -11,7 +11,7 @@ SECURE = "s" if config.PkgBot.get("enable_ssl") else ""
 PKGBOT_SERVER = f"http{SECURE}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
 
 
-async def brick_header(pkg_object: models.Package_In):
+async def brick_header(pkg_object: schemas.Package_In):
 
 	return {
 		"type": "header",
@@ -22,7 +22,7 @@ async def brick_header(pkg_object: models.Package_In):
 	}
 
 
-async def brick_main(pkg_object: models.Package_In):
+async def brick_main(pkg_object: schemas.Package_In):
 
 	return {
 		"type": "section",
@@ -38,7 +38,7 @@ async def brick_main(pkg_object: models.Package_In):
 	}
 
 
-async def brick_footer_dev(pkg_object: models.Package_In):
+async def brick_footer_dev(pkg_object: schemas.Package_In):
 
 	return {
 			"type": "context",
@@ -51,7 +51,7 @@ async def brick_footer_dev(pkg_object: models.Package_In):
 		}
 
 
-async def brick_footer_promote(pkg_object: models.Package_In):
+async def brick_footer_promote(pkg_object: schemas.Package_In):
 
 	return {
 			"type": "mrkdwn",
@@ -59,7 +59,7 @@ async def brick_footer_promote(pkg_object: models.Package_In):
 		}
 
 
-async def brick_footer_denied(pkg_object: models.Package_In):
+async def brick_footer_denied(pkg_object: schemas.Package_In):
 
 	return {
 			"type": "mrkdwn",
@@ -80,7 +80,7 @@ async def brick_footer_denied_trust(trust_object):
 		}
 
 
-async def brick_button(pkg_object: models.Package_In):
+async def brick_button(pkg_object: schemas.Package_In):
 
 	return	(
 		{
@@ -207,7 +207,7 @@ async def brick_update_trust_error_msg(trust_object, msg):
 		}]
 
 
-async def brick_deny_pkg(pkg_object: models.Package_In):
+async def brick_deny_pkg(pkg_object: schemas.Package_In):
 
 	return {
 		"type": "header",

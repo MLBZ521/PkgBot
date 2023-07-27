@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 
 from pkgbot import core, settings
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -23,7 +23,7 @@ async def get_recipes(recipe_filter: models.Recipe_Filter = Depends(models.Recip
 
 
 @router.get("/id/{id}", summary="Get recipe by id", description="Get a recipe by its id.",
-	dependencies=[Depends(core.user.get_current)], response_model=models.Recipe_Out)
+	dependencies=[Depends(core.user.get_current)], response_model=schemas.Recipe_Out)
 async def get_by_id(id: int):
 
 	return await core.recipe.get({"id": id})
@@ -31,7 +31,7 @@ async def get_by_id(id: int):
 
 @router.get("/recipe_id/{recipe_id}", summary="Get recipe by recipe_id",
 	description="Get a recipe by its recipe_id.",
-	dependencies=[Depends(core.user.get_current)], response_model=models.Recipe_Out)
+	dependencies=[Depends(core.user.get_current)], response_model=schemas.Recipe_Out)
 async def get_by_recipe_id(recipe_id: str):
 
 	if recipe_object := await core.recipe.get({"recipe_id__iexact": recipe_id}):
@@ -42,16 +42,16 @@ async def get_by_recipe_id(recipe_id: str):
 
 
 @router.post("/", summary="Create a recipe", description="Create a recipe.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.Recipe_Out)
-async def create(recipe_object: models.Recipe_In = Body()):
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.Recipe_Out)
+async def create(recipe_object: schemas.Recipe_In = Body()):
 
-	return await models.Recipe_Out.from_tortoise_orm(
+	return await schemas.Recipe_Out.from_tortoise_orm(
 		await core.recipe.create(recipe_object.dict(exclude_unset=True, exclude_none=True)))
 
 
 @router.put("/id/{id}", summary="Update recipe by id", description="Update a recipe by id.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.Recipe_Out)
-async def update_by_id(id: int, updates_object: models.Recipe_In = Depends(models.Recipe_In)):
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.Recipe_Out)
+async def update_by_id(id: int, updates_object: schemas.Recipe_In = Depends(schemas.Recipe_In)):
 
 	await core.recipe.update(
 		{"id": id},
@@ -63,9 +63,9 @@ async def update_by_id(id: int, updates_object: models.Recipe_In = Depends(model
 
 @router.put("/recipe_id/{recipe_id}", summary="Update recipe by recipe_id",
 	description="Update a recipe by recipe_id.",
-	dependencies=[Depends(core.user.verify_admin)], response_model=models.Recipe_Out)
+	dependencies=[Depends(core.user.verify_admin)], response_model=schemas.Recipe_Out)
 async def update_by_recipe_id(recipe_id: str,
-	updates_object: models.Recipe_In = Depends(models.Recipe_In)):
+	updates_object: schemas.Recipe_In = Depends(schemas.Recipe_In)):
 
 	if results := await core.recipe.update(
 		{"recipe_id__iexact": recipe_id},

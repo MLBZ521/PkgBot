@@ -5,7 +5,7 @@ import sys
 from tortoise.expressions import Q
 
 from pkgbot import core
-from pkgbot.db import models
+from pkgbot.db import schemas
 from pkgbot.utilities import common as utility
 
 PKG_ROOT = f"{os.path.dirname(os.path.abspath('PkgBot.py'))}/PkgBot"
@@ -18,7 +18,7 @@ log = utility.log
 MAX_CONTENT_SIZE = 1500
 
 
-async def new_pkg_msg(pkg_object: models.Package_In):
+async def new_pkg_msg(pkg_object: schemas.Package_In):
 
 	return await core.chatbot.SlackBot.post_message(
 		await core.chatbot.build.new_pkg_msg(pkg_object),
@@ -26,7 +26,7 @@ async def new_pkg_msg(pkg_object: models.Package_In):
 	)
 
 
-async def promote_msg(pkg_object: models.Package_In):
+async def promote_msg(pkg_object: schemas.Package_In):
 
 	blocks = await core.chatbot.build.promote_msg(pkg_object)
 	text = f"{pkg_object.pkg_name} was promoted to production"
@@ -80,7 +80,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 	return response
 
 
-async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
+async def trust_diff_msg(diff_msg: str, trust_object: schemas.RecipeResult_In):
 
 	if len(diff_msg) > MAX_CONTENT_SIZE:
 		blocks = await core.chatbot.build.trust_diff_msg(trust_object.id, trust_object.recipe_id)
@@ -112,7 +112,7 @@ async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
 	return response
 
 
-async def update_trust_success_msg(trust_object: models.TrustUpdate_In):
+async def update_trust_success_msg(trust_object: schemas.RecipeResult_In):
 
 	blocks = await core.chatbot.build.update_trust_success_msg(trust_object)
 
@@ -132,7 +132,7 @@ async def update_trust_success_msg(trust_object: models.TrustUpdate_In):
 	return response
 
 
-async def update_trust_error_msg(msg: str, trust_object: models.TrustUpdate_In):
+async def update_trust_error_msg(msg: str, trust_object: schemas.RecipeResult_In):
 
 	blocks = await core.chatbot.build.update_trust_error_msg(msg, trust_object)
 
@@ -143,7 +143,7 @@ async def update_trust_error_msg(msg: str, trust_object: models.TrustUpdate_In):
 	)
 
 
-async def deny_pkg_msg(pkg_object: models.Package_In):
+async def deny_pkg_msg(pkg_object: schemas.Package_In):
 
 	blocks = await core.chatbot.build.deny_pkg_msg(pkg_object)
 
@@ -163,7 +163,7 @@ async def deny_pkg_msg(pkg_object: models.Package_In):
 	return response
 
 
-async def deny_trust_msg(trust_object: models.TrustUpdate_In):
+async def deny_trust_msg(trust_object: schemas.RecipeResult_In):
 
 	blocks = await core.chatbot.build.deny_trust_msg(trust_object)
 
