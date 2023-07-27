@@ -17,7 +17,7 @@ config = config.load_config()
 log = utility.log
 LOGIN_SECRET = os.urandom(1024).hex()
 login_manager = LoginManager(LOGIN_SECRET, token_url="/auth/login", use_cookie=True)
-login_manager.cookie_name = "PkgBot_Cookie"
+login_manager.cookie_name = settings.api.PkgBot_Cookie
 templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
 
 router = APIRouter(
