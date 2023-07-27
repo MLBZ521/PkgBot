@@ -52,7 +52,7 @@ async def promote_msg(pkg_object: schemas.Package_In):
 	)
 
 
-async def recipe_error_msg(recipe_id: str, id: int, error: str):
+async def recipe_error_msg(recipe_id: str, id: int, error: str, thread_ts: str | None = None):
 
 	redacted_error = await utility.replace_sensitive_strings(error)
 
@@ -65,7 +65,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 			recipe_id, id, f"```{formatted_error}```")
 
 	response = await core.chatbot.SlackBot.post_message(
-		blocks, text=f"Encountered error in {recipe_id}")
+		blocks, text=f"Encountered error in {recipe_id}", thread_ts=thread_ts)
 
 	if (
 		response.get("result") != "Failed to post message"

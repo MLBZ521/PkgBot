@@ -31,14 +31,15 @@ class SlackClient(object):
 		self.client = AsyncWebClient(token=self.token, ssl=ssl_context)
 
 
-	async def post_message(self, blocks: str, text: str = "Pkg status incoming..."):
+	async def post_message(self, blocks: str, text: str = "Pkg status incoming...", thread_ts = None):
 
 		try:
 			return await self.client.chat_postMessage(
 				channel = self.channel,
 				text = text,
 				blocks = blocks,
-				username = self.bot_name
+				username = self.bot_name,
+				thread_ts = thread_ts or None ##### Need to test/verify
 			)
 
 		except SlackApiError as error:
