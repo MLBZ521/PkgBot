@@ -281,7 +281,7 @@ async def event_recipe_run(task_results):
 
 			# Instead, check if the package has already been created in the database, this
 			# ensures a message is posted if it failed to post previously.
-			pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
+			pkg_db_object = await core.package.get({ "pkg_name": pkg_name })
 
 			if pkg_db_object:
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` did not find a new version."
@@ -305,7 +305,7 @@ async def event_recipe_run(task_results):
 				)
 
 			# Update attributes for this recipe
-			recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
+			recipe_object = await core.recipe.get({ "recipe_id": recipe_id })
 			recipe_object.last_ran = await utility.utc_to_local(datetime.now())
 			recipe_object.recurring_fail_count = 0
 			await recipe_object.save()
@@ -435,7 +435,7 @@ async def handle_autopkg_error(**kwargs):
 	# Post Ephemeral Message to PkgBot Admin?
 
 		# Get the recipe that failed to be promoted
-		pkg_db_object = await models.Packages.filter(id=event_id).first()
+		pkg_db_object = await core.package.get({ "id": event_id })
 		recipe_id = pkg_db_object.recipe_id
 		software_title = pkg_db_object.name
 		software_version = pkg_db_object.version

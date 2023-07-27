@@ -30,9 +30,20 @@ async def create_or_update(user_object: schemas.PkgBotAdmin_In):
 
 
 async def get_current(token: str = Depends(oauth2_scheme)):
+	"""Get current user from it's jps_token.
+
+	Args:
+		token (str): The users' jps_token. Defaults to Depends(oauth2_scheme).
+
+	Raises:
+		HTTPException: If the user doesn't exist in the database.
+
+	Returns:
+		models.PkgBotAdmins: User object for the the current user.
+	"""
 
 	try:
-		return await models.PkgBotAdmins.get(jps_token = token)
+		return await get({ "jps_token": token })
 
 	except:
 		raise HTTPException(

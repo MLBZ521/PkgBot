@@ -19,7 +19,7 @@ router = APIRouter(
 	dependencies=[Depends(core.user.verify_admin)])
 async def get_users():
 
-	users = await models.PkgBotAdmin_Out.from_queryset(models.PkgBotAdmins.all())
+	users = await core.user.get()
 	return { "total": len(users), "users": users }
 
 
