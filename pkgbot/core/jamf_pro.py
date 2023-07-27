@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import httpx
 
 from xml.etree import ElementTree
@@ -27,8 +29,9 @@ async def get_token(username: str = API_USER, password: str = API_PASSWORD):
 
 async def fixup_token_expiration(token_expires: str):
 
-	return token_expires.rsplit(".", maxsplit=1)[0]
-	# datetime.fromisoformat(token_expires.rsplit(".", maxsplit=1)[0])
+	return datetime.fromisoformat(
+		token_expires.rsplit(".", maxsplit=1)[0]
+	).replace(tzinfo=timezone.utc)
 	# expires = datetime.strptime(token_expires, "%Y-%m-%dT%H:%M:%S")
 
 
