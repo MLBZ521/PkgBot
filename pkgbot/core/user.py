@@ -1,12 +1,13 @@
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
-from pkgbot import core, settings
+from pkgbot import core, config, settings
 from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 log = utility.log
+config = config.load_config()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
@@ -114,21 +115,15 @@ async def authorizations(token: str = Depends(oauth2_scheme)):
 		raise("Failed to get user authorizations!")
 
 	user_details = user_details_response.json()
-	site_ids = []
-	site_names = []
+
+	sites_unauthorized = config.JamfPro_Prod.get("unauthorized_sites")
 
 	try:
-
-		for group in user_details["accountGroups"]:
-			for privilege in group["privileges"]:
-				if privilege == "Enroll Computers and Mobile Devices":
-					site_ids.append(group["siteId"])
-
-		for site in user_details["sites"]:
-			if int(site["id"]) in site_ids:
-				site_names.append(site["name"])
+		return [
+			site["name"]
+			for site in user_details["sites"]
+			if site["name"] not in sites_unauthorized
+		]
 
 	except Exception:
-		pass
-
-	return site_names
+		return
