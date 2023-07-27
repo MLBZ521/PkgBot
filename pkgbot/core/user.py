@@ -97,8 +97,7 @@ async def authenticate(username: str, password: str):
 				username = username,
 				full_admin = user_already_exists.full_admin if user_already_exists else False,
 				jps_token = api_token,
-				jps_token_expires = await utility.string_to_datetime(
-					api_token_expires, "%Y-%m-%dT%H:%M:%S"),
+				jps_token_expires = api_token_expires,
 				site_access = ', '.join(sites)
 			)
 		)
