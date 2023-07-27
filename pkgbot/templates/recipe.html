@@ -1,35 +1,260 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<h1>{% block title %} Edit "{{ recipe['recipe_id'] }}" {% endblock %}</h1>
 
-<form method="post" action="/recipe/{{ recipe['recipe_id'] }}">
+{% if pkgbot.get("action_result") %}
+<div class="alert alert-success alert-dismissible">
+	<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+	<strong>Successly</strong> {{ pkgbot.get("action_result") }}
+</div>
+{% endif %}
 
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" name="enabled">
-        <label class="form-check-label" for="enabled">Enabled</label>
-    </div>
+<h1><code>{% block title %}{{ recipe['recipe_id'] }}{% endblock %}</code></h1>
 
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" name="pkg_only">
-        <label class="form-check-label" for="pkg_only">Upload package only to production?</label>
-    </div>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
 
-    <div class="form-group">
-        <label for="notes">Schedule (days: int)</label>
-        <textarea name="notes" placeholder="schedule"
-                  class="form-control">{{ request.form['schedule'] or recipe['schedule'] }}</textarea>
-    </div>
+<form method="post" action="/recipe/{{ recipe['id'] }}">
 
-    <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea name="notes" placeholder="Notes"
-                  class="form-control">{{ request.form['notes'] or recipe['notes'] }}</textarea>
-    </div>
+	<div class="form-group">
+		<div>
+			<label class="form-label" for="recipe_id">Recipe ID: &nbsp;</label>
+			<input class="w-25" id="recipe_id" name="recipe_id" maxlength="500"
+				value="{{ request.form['recipe_id'] or recipe['recipe_id'] }}" {{ "disabled" if not
+				user.get("site_access") }} />
+		</div>
 
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </div>
+		<div class="custom-switch">
+			<input type="checkbox" class="custom-control-input" id="enabled" name="enabled" {{ "checked" if
+				request.form["enabled"] or recipe["enabled"] }} {{ "disabled" if not user.get("site_access") }} />
+			<label class="custom-control-label" for="enabled">Enabled</label>
+		</div>
+
+		<div class="custom-switch">
+			<input type="checkbox" class="custom-control-input" id="pkg_only" name="pkg_only" {{ "checked" if
+				request.form["pkg_only"] or recipe["pkg_only"] }} {{ "disabled" if not user.get("site_access") }} />
+			<label class="custom-control-label" for="pkg_only">Package Only</label>
+			<span id="help_block" class="form-text text-muted" style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Only .pkg is uploaded to production</span>
+		</div>
+
+		<div class="custom-switch">
+			<input type="checkbox" class="custom-control-input" id="manual_only" name="manual_only" {{ "checked" if
+				request.form["manual_only"] or recipe["manual_only"] }} {{ "disabled" if not user.get("site_access") }} />
+			<label class="custom-control-label" for="manual_only">Manual Only</label>
+			<span id="help_block" class="form-text text-muted" style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Recipe is only available to run manually</span>
+		</div>
+
+
+		<!-- <div class="custom-switch">
+			<input type="checkbox" class="custom-control-input" id="pkg_only" name="pkg_only" {{ "checked" if
+				request.form["pkg_only"] or recipe["pkg_only"] }} {{ "disabled" if not user.get("site_access") }} />
+			<label class="custom-control-label" for="pkg_only">Only upload package (to production)</label>
+		</div>
+
+		<div class="custom-switch">
+			<input type="checkbox" class="custom-control-input" id="manual_only" name="manual_only" {{ "checked" if
+				request.form["manual_only"] or recipe["manual_only"] }} {{ "disabled" if not user.get("site_access") }} />
+			<label class="custom-control-label" for="manual_only">Recipe is only available to run manually</label>
+		</div> -->
+
+		<div>
+			<label class="form-label" for="schedule">Schedule (days: int): &nbsp;</label>
+			<input class="input-sm" id="schedule" name="schedule" placeholder="schedule" type="number" step="1" min="0" max="90"
+				value="{{ request.form['schedule'] or recipe['schedule'] }}" />
+		</div>
+
+
+		<!-- <div>
+			<label class="form-label" for="recipe_status">Status</label>
+			<textarea id="notes" name="recipe_status" maxlength="1000" class="form-control"
+			placeholder="Status details from previous run...">{{ request.form["status"] or recipe["status"] }}</textarea>
+			<span id="counter" class="pull-left form-text text-muted" style="margin-left: 5px; font-size: 12px;"></span>
+		</div> -->
+
+
+
+		<!-- <br /> -->
+
+		<div>
+			<label class="form-label" for="note">Notes</label>
+			<textarea id="note" name="note" maxlength="4000" class="form-control"
+				placeholder="Recipe notes."></textarea>
+			<span id="counter" class="pull-left form-text text-muted" style="margin-left: 5px; font-size: 12px;"></span>
+		</div>
+
+		<br />
+
+		<div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</div>
+	</div>
+
+	<script>
+
+		function count_characters() {
+
+			this.addEventListener("input", count_characters)
+
+			var max_length = $(this).attr("maxlength");
+			var current_length = $(this).val().length;
+			var characters_remaining = max_length - current_length;
+			var counter = $(this).next(".form-text");
+
+			counter.text(current_length + "/" + max_length);
+
+			// Change text color to red when there are 0 characters remaining
+			if (characters_remaining === 0) {
+				counter.removeClass("text-muted");
+				counter.addClass("text-danger");
+			}
+			else {
+				counter.removeClass("text-danger");
+				counter.addClass("text-muted");
+			}
+
+		}
+
+		$(document).ready(function () {
+			$(".form-control").each(count_characters);
+		});
+
+
+		getElements = function (id) {
+			if (typeof id == "object") {
+				return [id];
+			} else {
+				return document.querySelectorAll(id);
+			}
+		};
+
+
+		styleElement = function (element, prop, val) {
+			element.style.setProperty(prop, val);
+		};
+
+		toggleShow = function (sel) {
+			var i, x = getElements(sel), l = x.length;
+			for (i = 0; i < l; i++) {
+				if (x[i].style.display == "none") {
+				styleElement(x[i], "display", "block");
+				} else {
+				styleElement(x[i], "display", "none");
+				}
+			}
+		};
+
+
+
+
+	</script>
+
 </form>
-<hr>
+
+
+
+<div class="accordion" id="accordion_toggle">
+
+	<div class="card">
+		<div class="card-header" id="Results_Card">
+			<h2 class="mb-0">
+			<button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse"
+				data-target="#results_card_one" aria-expanded="true"
+				aria-controls="results_card_one">
+				Result History
+			</button>
+			</h2>
+		</div>
+
+		<div id="results_card_one" class="collapse" aria-labelledby="Results"
+			data-parent="#accordion_toggle">
+			<div class="card-body">
+				<table id="Results" class="Results">
+					<!-- class="table" -->
+					<thead>
+						<tr>
+							{% for header in results_table_headers %}
+							<th>{{ header }}</th>
+							{% endfor %}
+						</tr>
+					</thead>
+					<tbody>
+						{% for result in results %}
+						<tr>
+							<td>{{ result["type"] }}</td>
+							<td>{{ result["status"] }}</td>
+							<td>{{ result["last_update"] | strftime }}</td>
+							<td>{{ result["updated_by"] }}</td>
+							<td>{{ result["task_id"] }}</td>
+							{% if "https://" in result["details"] %}
+							<td><a href="{{ result['details'] }}">Slack Notification</a></td>
+							{% else %}
+							<td>{{ result["details"] }}</td>
+							{% endif %}
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+
+				<script type="text/javascript">
+					$(document).ready(
+						function() {
+						$('#Results').DataTable({
+							"order": [[ 2, "desc" ]]
+						});
+						}
+					);
+				</script>
+			</div>
+		</div>
+	</div>
+
+	<div class="card">
+		<div class="card-header" id="Notes_Card">
+			<h2 class="mb-0">
+			<button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse"
+				data-target="#notes_card_one" aria-expanded="true" aria-controls="notes_card_one">
+				Note History
+			</button>
+			</h2>
+		</div>
+
+		<div id="notes_card_one" class="collapse" aria-labelledby="Notes" data-parent="#accordion_toggle">
+			<div class="card-body">
+				<table id="Notes">
+					<!-- class="table" -->
+					<thead>
+						<tr>
+							{% for header in notes_table_headers %}
+							<th>{{ header }}</th>
+							{% endfor %}
+						</tr>
+					</thead>
+					<tbody>
+						{% for note in notes %}
+						<tr>
+							<td>{{ note["note"] }}</td>
+							<td>{{ note["submitted_by"] }}</td>
+							<td>{{ note["time_stamp"] }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+
+				<script type="text/javascript">
+					$(document).ready(
+						function() {
+							$('#Notes').DataTable(
+								{"order": [[ 2, "desc" ]]}
+							);
+						}
+					);
+				</script>
+			</div>
+		</div>
+	</div>
+
+</div>
+
+<hr />
 {% endblock %}

@@ -4,20 +4,6 @@
 
 {% block content %}
 
-    {% if session["protected_page"] %}
-
-        <div class="alert alert-danger alert-dismissible">
-            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-            <strong>Access Denied:</strong>  
-                {% if session["access_denied"] %}
-                    {{ session["access_denied"] }}
-                {% else %}
-                    You must login before accessing this page!
-                {% endif %}
-        </div>
-
-    {% endif %}
-
 <h2>PkgBot Status: &ThickSpace;[Systems Online]</h3>
 
 <p>PkgBot will record software version history for Jamf Pro.</p>
