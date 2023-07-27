@@ -90,10 +90,10 @@ async def error(recipe_id: str, event: str, error: str, task_id: str = None):
 	)
 
 	# Mark the recipe disabled
-	if recipe:= await get({"recipe_id": recipe_id}):
+	if recipe := await get({ "recipe_id": recipe_id }):
 
 		await update(
-			{"recipe_id": recipe_id},
+			{ "recipe_id": recipe_id },
 			{
 				"enabled": False,
 				"status": "Error after last run.",

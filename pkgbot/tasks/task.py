@@ -406,7 +406,7 @@ def autopkg_run(self, recipes: list, autopkg_cmd: dict, **kwargs):
 				"ignore_parent_trust": True,
 				"prefs": os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs")),
 				"promote_recipe_id": recipe.get("recipe_id"),
-				"verbose": autopkg_cmd.get("verbose", None)
+				"verbose": autopkg_cmd.get("verbose")
 			}
 
 			if recipe.get("pkg_only"):

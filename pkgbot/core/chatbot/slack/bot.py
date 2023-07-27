@@ -132,8 +132,8 @@ class SlackClient(object):
 			messages = response.get("messages")
 
 			if child_messages := [
-				message.get("ts") 
-				for message in messages 
+				message.get("ts")
+				for message in messages
 				if message.get("ts") != ts and message.get("user") == self.slack_id
 			]:
 				ts_is_thread = True
@@ -142,7 +142,7 @@ class SlackClient(object):
 					"parent_message": ts,
 					"child_messages": child_messages,
 					"messages": messages,
-					"files": [ 
+					"files": [
 						file.get("id")
 						for message in messages
 						if message.get("files") and message.get("user") == self.slack_id

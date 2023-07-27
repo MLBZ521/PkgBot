@@ -19,7 +19,7 @@ router = APIRouter(
 @router.delete("/delete", summary="Delete Slack message by timestamp",
 	description="Delete a Slack message by its timestamp.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def delete_slack_message(timestamps: str | list, 
+async def delete_slack_message(timestamps: str | list,
 	channel: str | None = None, threaded_msgs: bool = False, files: bool = False):
 
 	return await core.chatbot.delete_messages(timestamps, channel, threaded_msgs, files)

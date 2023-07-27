@@ -57,12 +57,15 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 	redacted_error = await utility.replace_sensitive_strings(error)
 
 	if len(str(redacted_error)) > MAX_CONTENT_SIZE:
-		blocks = await core.chatbot.build.recipe_error_msg(recipe_id, id, "_See thread for details..._")
+		blocks = await core.chatbot.build.recipe_error_msg(
+			recipe_id, id, "_See thread for details..._")
 	else:
 		formatted_error = await core.chatbot.build.format_json(redacted_error)
-		blocks = await core.chatbot.build.recipe_error_msg(recipe_id, id, f"```{formatted_error}```")
+		blocks = await core.chatbot.build.recipe_error_msg(
+			recipe_id, id, f"```{formatted_error}```")
 
-	response = await core.chatbot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
+	response = await core.chatbot.SlackBot.post_message(
+		blocks, text=f"Encountered error in {recipe_id}")
 
 	if (
 		response.get("result") != "Failed to post message"
@@ -211,7 +214,8 @@ async def basic_msg(text, image: str | None = None,
 async def modal_notification(trigger_id: str, title_txt: str, msg_text: str,
 	button_text: str, image: str | None = None, alt_image_text: str | None = None):
 
-	blocks = await core.chatbot.build.modal_notification(title_txt, msg_text, button_text, image, alt_image_text)
+	blocks = await core.chatbot.build.modal_notification(
+		title_txt, msg_text, button_text, image, alt_image_text)
 	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
 
 
