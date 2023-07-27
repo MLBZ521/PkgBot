@@ -1,7 +1,7 @@
-from fastapi import Depends, HTTPException, Response, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
-from pkgbot import core
+from pkgbot import core, settings
 from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
@@ -50,6 +50,24 @@ async def get_current(token: str = Depends(oauth2_scheme)):
 			status_code = status.HTTP_401_UNAUTHORIZED,
 			detail = "You must authenticate before utilizing this endpoint."
 		)
+
+
+async def get_current_user_from_cookie(request: Request):
+	"""Get the current user from the cookies in the request.
+
+	This function can be used from inside other routes to get the current user. Allowing it to be
+	used for views that should work for both logged in, and not logged in users.
+
+
+	Args:
+		request (Request): Request (from FastAPI/Starlette)
+
+	Returns:
+		models.PkgBotAdmins | None: User object for the the current user, or None.
+	"""
+
+	token = request.cookies.get(settings.api.PkgBot_Cookie)
+	return await get({ "pkgbot_token": token })
 
 
 async def verify_admin(response: Response,
