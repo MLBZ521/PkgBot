@@ -97,8 +97,7 @@ async def trust_diff_msg(diff_msg: str, result_object: schemas.RecipeResult_In):
 		text=f"Trust verification failed for `{trust_object.recipe_id}`"
 	)
 
-	trust_object.slack_ts = response.get('ts')
-	await trust_object.save()
+	await core.recipe.update_result({ "id": result_object.id }, { "slack_ts": response.get('ts') })
 
 	if (
 		response.get("result") != "Failed to post message"
