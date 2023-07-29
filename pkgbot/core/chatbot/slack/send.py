@@ -34,7 +34,7 @@ async def promote_msg(pkg_object: schemas.Package_In):
 	result = await core.chatbot.SlackBot.update_message_with_response_url(
 		pkg_object.response_url,
 		blocks,
-		text=text
+		text = text
 	)
 
 	# If the first method fails, try the alternate
@@ -42,7 +42,7 @@ async def promote_msg(pkg_object: schemas.Package_In):
 		await core.chatbot.SlackBot.update_message(
 			blocks,
 			pkg_object.slack_ts,
-			text=text
+			text = text
 		)
 
 	return await core.chatbot.SlackBot.reaction(
@@ -94,7 +94,7 @@ async def trust_diff_msg(diff_msg: str, result_object: schemas.RecipeResult_In):
 
 	response = await core.chatbot.SlackBot.post_message(
 		blocks,
-		text=f"Trust verification failed for `{trust_object.recipe_id}`"
+		text = f"Trust verification failed for `{result_object.recipe.recipe_id}`"
 	)
 
 	await core.recipe.update_result({ "id": result_object.id }, { "slack_ts": response.get('ts') })
@@ -153,7 +153,7 @@ async def deny_pkg_msg(pkg_object: schemas.Package_In):
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
 		pkg_object.dict().get("response_url"),
 		blocks,
-		text=f"{pkg_object.pkg_name} was not approved for production"
+		text = f"{pkg_object.pkg_name} was not approved for production"
 	)
 
 	if response.status_code == 200:
@@ -208,8 +208,8 @@ async def direct_msg(user, text, channel: str | None = None, image: str | None =
 
 	return await core.chatbot.SlackBot.post_ephemeral_message(
 		user, blocks,
-		channel=channel,
-		text=alt_text
+		channel = channel,
+		text = alt_text
 	)
 
 
