@@ -44,13 +44,14 @@ async def get_current(token: str = Depends(oauth2_scheme)):
 	"""
 
 	try:
-		return await get({ "jps_token": token })
+		if user := await get({ "jps_token": token }):
+			return user
 
-	except:
-		raise HTTPException(
-			status_code = status.HTTP_401_UNAUTHORIZED,
-			detail = "You must authenticate before utilizing this endpoint."
-		)
+		raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED,
+			detail = "You must authenticate before utilizing this endpoint.")
+
+	except HTTPException as error:
+		raise error
 
 
 async def get_current_user_from_cookie(request: Request):
@@ -71,10 +72,9 @@ async def get_current_user_from_cookie(request: Request):
 	return await get({ "pkgbot_token": token })
 
 
-async def verify_admin(response: Response,
-	user_object: schemas.PkgBotAdmin_In = Depends(get_current)):
+async def verify_admin(request: Request):
 
-	if not user_object.full_admin:
+	if not request.state.user.get("full_admin"):
 		log.debug("User is NOT an admin")
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
 			detail="You are not authorized to utilize this endpoint.")
