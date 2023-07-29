@@ -96,53 +96,52 @@ async def error(recipe_id: str, event: str, error: str, task_id: str = None):
 			{ "recipe_id": recipe_id },
 			{
 				"enabled": False,
-				"status": "Error after last run.",
 				"recurring_fail_count": recipe.recurring_fail_count + 1
 			}
 		)
 
 
-async def verify_trust_failed(recipe_id: str, diff_msg: str):
+async def verify_trust_failed(recipe_id: str, diff_msg: str, task_id: str):
 	""" When `autopkg verify-trust-info <recipe_id>` fails """
 
-	# Create DB entry in TrustUpdates table
-	result_object = await core.recipe.create_result({ "recipe_id": recipe_id })
+	# Create DB entry in RecipeResults table
+	result_object = await core.recipe.create_result({
+		"type": "trust",
+		"recipe_id": recipe_id,
+		"task_id": task_id,
+		"details": diff_msg,
+		"status": "Failed parent recipe trust verification."
+	})
 
 	# Post Slack Message
 	await core.chatbot.send.trust_diff_msg(diff_msg, result_object)
 
 	# Mark the recipe disabled
-	await update(
-		{"recipe_id": result_object.recipe_id},
-		{
-			"enabled": False,
-			"status": "Failed parent recipe trust verification."
-		}
-	)
-
+	await update({ "recipe_id": result_object.id }, { "enabled": False })
 	return { "result": "Success" }
 
 
-async def deny_trust(result_object_id: int):
+async def deny_trust(filter_object: dict):
 
-	result_object = await get({ "id": result_object_id })
+	result_object = await get_result(filter_object)
 	await core.chatbot.send.deny_trust_msg(result_object)
 
 
-async def update_trust_result(success: bool, result_id: int, error_msg: str):
+async def update_trust_result(
+	success: bool, result_filter: dict, error_msg: str, updated_by: str = None):
 
 	# Get DB entry
-	if result_object := get({ "id": result_id }):
+	if result_object := await get_result(result_filter):
 
 		if success:
 			# Enable the recipe
-			await update({"recipe_id": result_object.recipe_id}, {"enabled": True, "status": ""})
+			await update({ "recipe_id": result_object.recipe.recipe_id }, { "enabled": True })
+			await update_result(result_filter, { "status": "", "updated_by": updated_by })
 			return await core.chatbot.send.update_trust_success_msg(result_object)
 
 		# Ensure the recipe is marked disabled
-		await update(
-			{"recipe_id": result_object.recipe_id},
-			{"enabled": False, "status": "Failed to update trust info"}
-		)
+		await update({ "recipe_id": result_object.recipe.recipe_id }, { "enabled": False })
 
+		await update_result(
+			result_filter, { "status": "Failed to update trust info", "updated_by": updated_by })
 		return await core.chatbot.send.update_trust_error_msg(error_msg, result_object)

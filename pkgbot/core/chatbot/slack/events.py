@@ -43,8 +43,10 @@ async def button_click(payload):
 			if button_value_type == "Package":
 				log.info(f"PkgBotAdmin `{username}` is promoting package id: {button_value}")
 
-				await core.package.update({"id": button_value},
-					{ "response_url": response_url, "updated_by": username })
+				await core.package.update(
+					{ "id": button_value },
+					{ "response_url": response_url, "updated_by": username, "slack_ts": message_ts }
+				)
 				await core.package.promote(button_value)
 
 			elif button_value_type == "Trust":
@@ -63,9 +65,7 @@ async def button_click(payload):
 					"egress": username,
 					"channel": channel
 				})
-
-				trust_object = await core.recipe.get_result({ "id": button_value })
-				await core.recipe.update_result({ "id": trust_object.id }, updates)
+				result_object = await core.recipe.update_result({ "slack_ts": message_ts }, updates)
 				await core.autopkg.update_trust(
 					autopkg_cmd = autopkg_cmd, trust_object = trust_object)
 
@@ -74,12 +74,17 @@ async def button_click(payload):
 			if button_value_type == "Package":
 				log.info(f"PkgBotAdmin `{username}` has denied package id: {button_value}")
 
-				await core.package.update({"id": button_value},
+				pkg_object = await core.package.update({"id": button_value},
 					{ "response_url": response_url,
 						"updated_by": username,
-						"status": "Denied",
-						"notes":  "This package was not approved for use in production." }
+						"status": "Denied"
+					}
 				)
+				await core.package.create_note({
+					"notes":  "This package was not approved for use in production.",
+					"package_id": pkg_object.dict().get("pkg_name"),
+					"submitted_by": username
+				})
 				await core.package.deny(button_value)
 
 			if button_value_type == "Trust":
@@ -92,13 +97,12 @@ async def button_click(payload):
 					"status": "Denied"
 				}
 
-				trust_object = await core.recipe.get_result({ "id": button_value })
-				await core.recipe.update_result({ "id": trust_object.id }, updates)
-				await core.recipe.deny_trust(button_value)
+				await core.recipe.update_result({ "slack_ts": message_ts }, updates)
+				await core.recipe.deny_trust({ "slack_ts": message_ts })
 
 		elif button_text == "Acknowledge":
 
-			if button_value_type == "Error":
+			if button_value_type in ("Error", "Recipe_Error"):
 
 				log.info(
 					f"PkgBotAdmin `{username}` has acknowledged error message: {message_ts}")
@@ -109,13 +113,20 @@ async def button_click(payload):
 				updates = {
 					"response_url": response_url,
 					"status": "Acknowledged",
-					"ack_by": username
+					"updated_by": username
 				}
 
-				try:
+				if button_value_type == "Recipe_Error":
 					return await core.recipe.update_result(filter_obj, updates)
-				except Exception:
-					return await core.error.update(filter_obj, updates)
+
+				else:
+					# For legacy errors...  Future cleanup/removal
+					try:
+						log.debug("Old recipe error")
+						return await core.recipe.update_result(filter_obj, updates)
+					except Exception:
+						log.debug("Generic error")
+						return await core.error.update(filter_obj, updates)
 
 	else:
 		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")

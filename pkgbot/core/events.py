@@ -81,7 +81,7 @@ async def event_details(task_results):
 	return (
 		task_results.get("event"),
 		task_results.get("event_id", ""),
-		models.AutoPkgCMD(**task_results.get("autopkg_cmd")),
+		models.AutoPkgCMD(**task_results.get("autopkg_cmd")) if task_results.get("autopkg_cmd") else {},
 		task_results.get("recipe_id") if "recipe_id" in task_results.keys() else task_results.get("repo"),
 		task_results.get("success"),
 		task_results.get("stdout"),
@@ -128,7 +128,7 @@ async def event_verify_trust_info(task_results):
 	else:
 		# Send message that recipe_id failed verify-trust-info
 		redacted_error = await utility.replace_sensitive_strings(stderr)
-		await core.recipe.verify_trust_failed(recipe_id, redacted_error)
+		await core.recipe.verify_trust_failed(recipe_id, redacted_error, task_results.get("task_id"))
 
 
 async def event_update_trust_info(task_results):
@@ -137,7 +137,7 @@ async def event_update_trust_info(task_results):
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	if event_id:
-		await core.recipe.update_trust_result(success, event_id, str(stderr))
+		await core.recipe.update_trust_result(success, { "id": event_id }, str(stderr), autopkg_cmd.egress)
 
 	elif autopkg_cmd.ingress == "Slack":
 		# Post ephemeral msg to Slack user
@@ -172,7 +172,9 @@ async def event_disk_space_warning(task_results):
 		"type": event,
 		"slack_ts": results.get("ts"),
 		"slack_channel": results.get("channel"),
-		"status": "Notified"
+		"status": "Notified",
+		"task_id": task_results.get("task_id"),
+		"details": stderr
 	})
 
 
@@ -183,12 +185,12 @@ async def event_failed_pre_checks(task_results):
 
 	for task_id in task_results.get("task_id"):
 
-		task_results = await utility.get_task_results(task_id)
-		event = task_results.get("task_results").get("event")
+		child_task_results = await utility.get_task_results(task_id)
+		event = child_task_results.get("task_results").get("event")
 
 		if event == "autopkg_repo_update":
 ##### TODO:
-	# Sent message to ChatBot
+	# Send message to ChatBot
 			log.warning("Failure during event:  autopkg_repo_update")
 
 		if event == "disk_space_critical":
@@ -196,7 +198,7 @@ async def event_failed_pre_checks(task_results):
 
 			results = await core.chatbot.send.disk_space_msg(
 				"Critical",
-				task_results.get("stderr"),
+				child_task_results.get("stderr"),
 				config.PkgBot.get('icon_error')
 			)
 
@@ -205,12 +207,14 @@ async def event_failed_pre_checks(task_results):
 				"type": event,
 				"slack_ts": results.get("ts"),
 				"slack_channel": results.get("channel"),
-				"status": "Notified"
+				"status": "Notified",
+				"task_id": child_task_results.get("task_id"),
+				"details": child_task_results.get("stderr")
 			})
 
 		if event == "private_git_pull":
 ##### TODO:
-	# Sent message to ChatBot
+	# Send message to ChatBot
 			log.warning("Failure during event:  private_git_pull")
 
 
@@ -247,9 +251,10 @@ async def event_recipe_run(task_results):
 
 	pkg_note = {
 		"package_id": pkg_name,
-		"submitted_by": config.PkgBot.get('bot_name'),
+		"submitted_by": config.Slack.get('bot_name'),
 		"note": pkg_processor.get("Input").get("pkg_notes")
 	}
+
 	if event == "recipe_run_dev":
 
 		try:
@@ -290,7 +295,7 @@ async def event_recipe_run(task_results):
 				log.info(f"New package posted to dev:  {pkg_name}")
 
 				pkg_object = schemas.Package_In(**pkg_data)
-				pkg_note_object = schemas.Package_In(**pkg_note)
+				pkg_note_object = schemas.PackageNote_In(**pkg_note)
 				await core.autopkg.workflow_dev(pkg_object, pkg_note_object)
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` found a new version `{pkg_data.get('version')}`!"
 
@@ -305,10 +310,10 @@ async def event_recipe_run(task_results):
 				)
 
 			# Update attributes for this recipe
-			recipe_object = await core.recipe.get({ "recipe_id": recipe_id })
-			recipe_object.last_ran = await utility.utc_to_local(datetime.now())
-			recipe_object.recurring_fail_count = 0
-			await recipe_object.save()
+			await core.recipe.update({ "recipe_id": recipe_id }, {
+				"last_ran": await utility.utc_to_local(datetime.now()),
+				"recurring_fail_count": 0
+			})
 
 		except Exception as exception:
 
