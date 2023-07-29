@@ -53,9 +53,11 @@ async def update(filter: dict, updates: dict):
 	return await models.Recipes.filter(**filter).update(**updates)
 
 
-async def update_result(filter: dict, updates: dict):
+async def update_result(result_filter: dict, updates: dict):
 
-	return await models.Recipes.filter(**filter).update(**updates)
+	result = await models.RecipeResults.filter(**result_filter).first()
+	await (result.update_from_dict(updates)).save()
+	return await schemas.RecipeResult_Out.from_tortoise_orm(result)
 
 
 async def delete(filter: dict):

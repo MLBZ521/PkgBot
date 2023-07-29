@@ -49,10 +49,11 @@ async def create_hold(pkg_hold_object: dict):
 	return await models.PackageHold.create(**pkg_hold_object)
 
 
-async def update(filter: dict, updates: dict):
+async def update(package_filter: dict, updates: dict):
 
-	await models.Packages.filter(**filter).update(**updates)
-	return await get(filter)
+	result = await models.Packages.filter(**package_filter).first()
+	await (result.update_from_dict(updates)).save()
+	return await schemas.Package_Out.from_tortoise_orm(result)
 
 
 async def delete(filter: dict):

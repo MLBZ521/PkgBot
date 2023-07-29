@@ -9,9 +9,11 @@ async def create(error_object: dict):
 	return await models.Errors.create(**error_object)
 
 
-async def update(filter: dict, updates: dict):
+async def update(error_filter: dict, updates: dict):
 
-	return await models.Errors.filter(**filter).update(**updates)
+	result = await models.Errors.filter(**error_filter).first()
+	await (result.update_from_dict(updates)).save()
+	return await schemas.Error_Out.from_tortoise_orm(result)
 
 
 async def construct_msg(recipe_id: str, error: str, task_id: str = None):
