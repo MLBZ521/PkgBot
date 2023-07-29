@@ -27,17 +27,14 @@ class PkgBotAdmins(Model):
 
 class Recipes(Model):
 	id = fields.IntField(pk=True)
-	# recipe_id: fields.ReverseRelation['Packages'] = fields.CharField(max_length=512, unique=True)
 	recipe_id = fields.CharField(max_length=512, unique=True)
-	# package = fields.ForeignKeyField("pkgbot.Packages", related_name="recipes", on_delete="CASCADE", to_field="pkg_name")
-	packages: fields.ReverseRelation['Packages']
+	packages: fields.ReverseRelation["Packages"]
 	enabled = fields.BooleanField(default=True)
 	manual_only = fields.BooleanField(default=False)
 	pkg_only = fields.BooleanField(default=False)
 	last_ran = fields.DatetimeField(null=True, default=None)
 	recurring_fail_count = fields.IntField(null=True, default=0)
 	schedule = fields.IntField(default=0)
-	# packages: fields.ReverseRelation['Packages']
 
 	class Meta:
 		table = "recipes"
@@ -54,7 +51,7 @@ class Recipe_Filter(BaseModel):
 class RecipeNotes(Model):
 	id = fields.IntField(pk=True)
 	note = fields.CharField(max_length=4096, default="", null=True)
-	recipe = fields.ForeignKeyField("pkgbot.Recipes", on_delete="CASCADE", to_field="recipe_id") # related_name="recipe", 
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="notes", on_delete="CASCADE", to_field="recipe_id")
 	submitted_by = fields.CharField(max_length=64)
 	time_stamp = fields.DatetimeField(auto_now=True)
 
@@ -68,15 +65,14 @@ class RecipeResults(Model):
 	slack_ts = fields.CharField(max_length=32, null=True)
 	slack_channel = fields.CharField(max_length=32, null=True)
 	response_url = fields.CharField(max_length=1024, null=True)
-	recipe = fields.ForeignKeyField("pkgbot.Recipes", on_delete="CASCADE", to_field="recipe_id") # related_name="recipe", 
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="results", on_delete="CASCADE", to_field="recipe_id") 
 	task_id = fields.CharField(max_length=36, null=True)
 	details = fields.CharField(max_length=4096)
 
 
 class Packages(Model):
 	id = fields.IntField(pk=True)
-	recipe: fields.ForeignKeyRelation[Recipes] = fields.ForeignKeyField("pkgbot.Recipes", related_name="packages", null=True, on_delete="RESTRICT", to_field="recipe_id") # SET_NULL
-	# recipe_id: fields.ReverseRelation['Recipes']# = fields.CharField(max_length=512)
+	recipe: fields.ForeignKeyRelation[Recipes] = fields.ForeignKeyField("pkgbot.Recipes", related_name="recipe", null=True, on_delete="RESTRICT", to_field="recipe_id") # SET_NULL
 	name = fields.CharField(max_length=64)
 	version = fields.CharField(max_length=64)
 	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
@@ -97,7 +93,7 @@ class Packages(Model):
 class PackageNotes(Model):
 	id = fields.IntField(pk=True)
 	note = fields.CharField(max_length=4096, default="", null=True)
-	package = fields.ForeignKeyField("pkgbot.Packages", related_name="package", on_delete="CASCADE", to_field="pkg_name")
+	package = fields.ForeignKeyField("pkgbot.Packages", related_name="notes", on_delete="CASCADE", to_field="pkg_name")
 	submitted_by = fields.CharField(max_length=64)
 	time_stamp = fields.DatetimeField(auto_now=True)
 
@@ -105,7 +101,7 @@ class PackageNotes(Model):
 class PackageHold(Model):
 	id = fields.IntField(pk=True)
 	enabled = fields.BooleanField()
-	package = fields.ForeignKeyField("pkgbot.Packages", on_delete="CASCADE", to_field="pkg_name") # related_name="package", 
+	package = fields.ForeignKeyField("pkgbot.Packages", related_name="holds", on_delete="CASCADE", to_field="pkg_name")
 	site = fields.CharField(max_length=128)
 	submitted_by = fields.CharField(max_length=64)
 	time_stamp = fields.DatetimeField(auto_now=True)

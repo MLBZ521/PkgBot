@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 
-from tortoise import Tortoise
 from tortoise.contrib.fastapi import register_tortoise
 
 from pkgbot import settings
@@ -17,8 +16,6 @@ def create_pkgbot() -> FastAPI:
 		openapi_tags=settings.api.tags_metadata,
 		docs_url="/api"
 	)
-
-	Tortoise.init_models(['pkgbot.db.models'], 'pkgbot')
 
 	# Initialize Tortoise ORM (aka, the database)
 	register_tortoise(
