@@ -152,7 +152,7 @@ async def brick_error(recipe_id, error):
 						"text": "Acknowledge"
 					},
 					"style": "danger",
-					"value": "Error:ack"
+					"value": "Recipe_Error:ack"
 				}
 			]
 		}]
