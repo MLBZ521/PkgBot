@@ -21,7 +21,7 @@
 		<div>
 			<label class="form-label" for="recipe_id">Recipe ID: &nbsp;</label>
 			<input class="w-25" id="recipe_id" name="recipe_id" maxlength="500"
-				value="{{ request.form['recipe_id'] or recipe['recipe_id'] }}" {{ "disabled" if not
+				value="{{ request.form['recipe_id'] or recipe['recipe_id'] }}" required {{ "disabled" if not
 				user.get("site_access") }} />
 		</div>
 
@@ -45,36 +45,11 @@
 			<span id="help_block" class="form-text text-muted" style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Recipe is only available to run manually</span>
 		</div>
 
-
-		<!-- <div class="custom-switch">
-			<input type="checkbox" class="custom-control-input" id="pkg_only" name="pkg_only" {{ "checked" if
-				request.form["pkg_only"] or recipe["pkg_only"] }} {{ "disabled" if not user.get("site_access") }} />
-			<label class="custom-control-label" for="pkg_only">Only upload package (to production)</label>
-		</div>
-
-		<div class="custom-switch">
-			<input type="checkbox" class="custom-control-input" id="manual_only" name="manual_only" {{ "checked" if
-				request.form["manual_only"] or recipe["manual_only"] }} {{ "disabled" if not user.get("site_access") }} />
-			<label class="custom-control-label" for="manual_only">Recipe is only available to run manually</label>
-		</div> -->
-
 		<div>
 			<label class="form-label" for="schedule">Schedule (days: int): &nbsp;</label>
 			<input class="input-sm" id="schedule" name="schedule" placeholder="schedule" type="number" step="1" min="0" max="90"
 				value="{{ request.form['schedule'] or recipe['schedule'] }}" />
 		</div>
-
-
-		<!-- <div>
-			<label class="form-label" for="recipe_status">Status</label>
-			<textarea id="notes" name="recipe_status" maxlength="1000" class="form-control"
-			placeholder="Status details from previous run...">{{ request.form["status"] or recipe["status"] }}</textarea>
-			<span id="counter" class="pull-left form-text text-muted" style="margin-left: 5px; font-size: 12px;"></span>
-		</div> -->
-
-
-
-		<!-- <br /> -->
 
 		<div>
 			<label class="form-label" for="note">Notes</label>

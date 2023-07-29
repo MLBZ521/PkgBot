@@ -58,15 +58,14 @@
 			<tbody>
 				{% for recipe in recipes %}
 				<tr>
-					<td><a href="{{ url_for(name='get_recipe', id=recipe.id) }}"><span class="badge badge-warning">{{ recipe.id }}</span></a></td>
+					<td><a href="{{ url_for(name='recipe', id=recipe.id) }}"><span class="badge badge-warning">{{ recipe.id }}</span></a></td>
 					<td>{{ recipe.recipe_id }}</td>
 					<td>{{ recipe.enabled }}</td>
 					<td>{{ recipe.manual_only }}</td>
 					<td>{{ recipe.pkg_only }}</td>
 					<td>{{ recipe.last_ran | strftime }}</td>
 					<td>{{ recipe.schedule }}</td>
-					<td>{{ recipe.status }}</td>
-					<td>{{ recipe.notes }}</td>
+					<td>{{ recipe.notes[0].note if recipe.notes[0] }}</td>
 				</tr>
 				{% endfor %}
 			</tbody>
@@ -76,7 +75,7 @@
 			$(document).ready(
 				function() {
 					$('#recipes').DataTable(
-						{"order": [[ 0, "desc" ]]}
+						{"order": [[ 0, "asc" ]]}
 					);
 				}
 			);

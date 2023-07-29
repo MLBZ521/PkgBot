@@ -59,22 +59,21 @@
 				</tr>
 			</thead>
 			<tbody>
-			{% for app in packages %}
+			{% for pkg in packages %}
 				<tr>
-				{% if app["icon"] %}
-					<td><img src="{{ url_for('static', path='/icons/%s' % app.icon) }}" width="30" height="30"/></td>
+				{% if pkg["icon"] %}
+					<td><img src="{{ url_for('static', path='/icons/%s' % pkg.icon) }}" width="30" height="30"/></td>
 				{% else %}
 					<td><img src="{{ url_for('static', path='/icons/%s.png' % ['package', 'metapackage']|random) }}" width="30" height="30"/></td>
 				{% endif %}
-					<td><a href="{{ url_for(name='get_package', id=app.id) }}"><span class="badge badge-warning">{{ app.id }}</span></a></td>
-					<td>{{ app.name }}</td>
-					<td>{{ app.version }}</td>
-					<td>{{ app.status }}</td>
-					<td>{{ app.updated_by }}</td>
-					<td>{{ app.packaged_date | strftime }}</td>
-					<td>{{ app.promoted_date | strftime }}</td>
-					<td>{{ app.special_flags }}</td>
-					<td>{{ app.notes }}</td>
+					<td><a href="{{ url_for(name='package', id=pkg.id) }}"><span class="badge badge-warning">{{ pkg.id }}</span></a></td>
+					<td>{{ pkg.name }}</td>
+					<td>{{ pkg.version }}</td>
+					<td>{{ pkg.status }}</td>
+					<td>{{ pkg.updated_by }}</td>
+					<td>{{ pkg.packaged_date | strftime }}</td>
+					<td>{{ pkg.promoted_date | strftime if pkg.promoted_date else "" }}</td>
+					<td>{{ pkg.notes[0].note if pkg.notes[0] }}</td>
 				</tr>
 			{% endfor %}
 			</tbody>

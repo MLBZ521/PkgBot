@@ -24,14 +24,14 @@
 				<label class="form-label" for="pkg_name">Pkg Name: &nbsp;</label>
 				<input class="w-25" id="pkg_name" name="pkg_name" maxlength="500"
 					value="{{ request.form['pkg_name'] or package['pkg_name'] }}" {{ "disabled" if not
-					user.get("full_admin") }} />
+					user.get("full_admin") }} required />
 			</div>
 
 			<div>
 				<label class="form-label" for="packaged_date">Packaged Date: &nbsp;</label>
 				<input class="w-25" id="packaged_date" name="packaged_date" maxlength="500"
 					value="{{ request.form['packaged_date'] or package['packaged_date'] }}" {{ "disabled" if not
-					user.get("full_admin") }} />
+					user.get("full_admin") }} required />
 			</div>
 
 			<div>
@@ -45,7 +45,7 @@
 				<label class="form-label" for="last_update">Last Updated: &nbsp;</label>
 				<input class="w-25" id="last_update" name="last_update" maxlength="500"
 					value="{{ request.form['last_update'] or package['last_update'] }}" {{ "disabled" if not
-					user.get("full_admin") }} />
+					user.get("full_admin") }} required />
 			</div>
 
 			<div>
