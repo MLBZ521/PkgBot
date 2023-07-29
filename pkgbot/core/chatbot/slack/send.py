@@ -169,12 +169,21 @@ async def deny_pkg_msg(pkg_object: schemas.Package_In):
 async def deny_trust_msg(trust_object: schemas.RecipeResult_In):
 
 	blocks = await core.chatbot.build.deny_trust_msg(trust_object)
+	text = f"Trust info for {result_object.recipe.recipe_id} was not approved"
 
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
 		trust_object.dict().get("response_url"),
 		blocks,
-		text=f"Trust info for {trust_object.recipe_id} was not approved"
+		text = text
 	)
+
+	# If the first method fails, try the alternate
+	if json.loads(response.body).get("error") in ("used_url", "expired_url"):
+		response = await core.chatbot.SlackBot.update_message(
+			blocks,
+			result_object.slack_ts,
+			text = text
+		)
 
 	if response.status_code == 200:
 		await core.chatbot.SlackBot.reaction(
