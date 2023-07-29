@@ -1,15 +1,16 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Form, Request, UploadFile, status
+from fastapi import APIRouter, Depends, Request, UploadFile, status
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from pkgbot import api, config, core
-# from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
+log = utility.log
 
 router = APIRouter(
 	tags = ["view"],
@@ -43,25 +44,22 @@ async def index(request: Request):
 
 
 @router.get("/packages", response_class=HTMLResponse)
-async def package_history(request: Request):
+async def packages(request: Request):
 
-	packages = await core.package.get()
+	pkgs = await schemas.Package_Out.from_queryset(models.Packages.all())
 
 	table_headers = [
-		"", "", "Name", "Version", "Status", "Updated By",
-		"Packaged", "Promoted", "Flags", "Notes"
+		"", "", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
 	]
 
 	return templates.TemplateResponse("packages.html",
-		{ "request": request, "table_headers": table_headers, "packages": packages })
+		{ "request": request, "table_headers": table_headers, "packages": pkgs })
 
 
 @router.get("/package/{id}", response_class=HTMLResponse)
-async def get_package(request: Request):
+async def package(request: Request):
 
 	pkg = await core.package.get({"id": request.path_params['id']})
-	notes = await core.package.get_note({ "package_id": pkg.pkg_name })
-	pkg_holds = await core.package.get_hold({ "package_id": pkg.pkg_name })
 
 	notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
 	pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
@@ -70,9 +68,9 @@ async def get_package(request: Request):
 		{
 			"request": request,
 			"package": pkg,
-			"notes": notes,
+			"notes": pkg.notes,
 			"notes_table_headers": notes_table_headers,
-			"pkg_holds": pkg_holds,
+			"pkg_holds": pkg.holds,
 			"pkg_holds_table_headers": pkg_holds_table_headers
 	})
 
@@ -94,13 +92,13 @@ async def update_package(request: Request):
 ##### Need to setup
 	remove_site_tags = [ site for site in (request.state.user.site_access).split(", ") if site not in site_tags ]
 
-	for site in site_tags:
-		await core.package.create_hold({
-			"enabled": True,
-			"package_id": updates.get("pkg_name"),
-			"site": site,
-			"submitted_by": request.state.user.username
-		})
+	# for site in site_tags:
+		# await core.package.create_hold({
+		# 	"enabled": True,
+		# 	"package_id": updates.get("pkg_name"),
+		# 	"site": site,
+		# 	"submitted_by": request.state.user.get("username")
+		# })
 ##### Determine which version to use...
 		# Maintains a single record for package/site combination...
 		# result, result_bool = await models.PackageHold.update_or_create(
@@ -108,7 +106,7 @@ async def update_package(request: Request):
 		# 			"enabled": True,
 		# 			"package_id": updates.get("pkg_name"),
 		# 			"site": site,
-		# 			"submitted_by": request.state.user.username
+		# 			"submitted_by": request.state.user.get("username")
 		# 	},
 		# 	site=site
 		# )
@@ -117,31 +115,29 @@ async def update_package(request: Request):
 
 	try:
 		request.state.pkgbot = session_vars
-	except:
+	except Exception:
 		request.state.pkgbot |= session_vars
 
-	redirect_url = request.url_for(name="get_package", **{"id": db_id})
+	redirect_url = request.url_for(name="package", **{"id": db_id})
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/recipes", response_class=HTMLResponse)
-async def recipe_list(request: Request):
+async def recipes(request: Request):
 
-	recipes = await core.recipe.get()
+	all_recipes = await schemas.Recipe_Out.from_queryset(models.Recipes.all())
 
 	table_headers = [ "ID", "Recipe ID", "Enable", "Manual Only",
-		"Pkg Only", "Last Ran", "Schedule", "Status", "Notes" ]
+		"Pkg Only", "Last Ran", "Schedule", "Notes" ]
 
 	return templates.TemplateResponse("recipes.html",
-		{ "request": request, "table_headers": table_headers, "recipes": recipes })
+		{ "request": request, "table_headers": table_headers, "recipes": all_recipes })
 
 
 @router.get("/recipe/{id}", response_class=HTMLResponse)
-async def get_recipe(request: Request):
+async def recipe(request: Request):
 
-	recipe = await core.recipe.get({"id": request.path_params['id']})
-	results = await core.recipe.get_result({"recipe_id": recipe.recipe_id})
-	notes = await core.recipe.get_note({"recipe_id": recipe.recipe_id})
+	recipe_object = await core.recipe.get({"id": request.path_params['id']})
 
 	notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
 	results_table_headers = [ "Event", "Status", "Last Update", "Updated By", "Task ID", "Details" ]
@@ -149,13 +145,12 @@ async def get_recipe(request: Request):
 	return templates.TemplateResponse("recipe.html",
 		{
 			"request": request,
-			"recipe": recipe,
-			"notes": notes,
+			"recipe": recipe_object,
+			"notes": recipe_object.notes,
 			"notes_table_headers": notes_table_headers,
-			"results": results,
+			"results": recipe_object.results,
 			"results_table_headers": results_table_headers
-		}
-	)
+	})
 
 
 @router.post("/recipe/{id}", response_class=HTMLResponse)
@@ -170,7 +165,7 @@ async def update_recipe(request: Request):
 		recipe_note["recipe_id"] = recipe.get("recipe_id")
 		await core.recipe.create_note(recipe_note)
 
-	redirect_url = request.url_for(name="get_recipe", **{"id": db_id})
+	redirect_url = request.url_for(name="recipe", **{"id": db_id})
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -183,17 +178,28 @@ async def new_recipe(request: Request):
 
 @router.post("/create/recipe", response_class=HTMLResponse,
 	dependencies=[Depends(core.user.verify_admin)])
-async def create_recipe(
-	request: Request):
+async def create_recipe(request: Request):
 
 	recipe, recipe_note, _ = await parse_form(request)
-	results = await core.recipe.create(recipe)
 
-	if recipe_note:
-		recipe_note["recipe_id"] = recipe.get("recipe_id")
-		await core.recipe.create_note(recipe_note)
+	if not recipe.get("recipe_id"):
+		log.debug("Recipe ID was not provided")
+		redirect_url = request.url_for(name="create_recipe")
 
-	redirect_url = request.url_for(name="get_recipe", **{"id": results.id})
+	elif test := await core.recipe.get({ "recipe_id": recipe.get("recipe_id") }):
+		log.debug("Recipe ID already exists!")
+		redirect_url = request.url_for(name="recipes")
+
+	else:
+		# log.debug("Recipe ID provided")
+		results = await core.recipe.create(recipe)
+		
+		if recipe_note:
+			recipe_note["recipe_id"] = recipe.get("recipe_id")
+			await core.recipe.create_note(recipe_note)
+
+		redirect_url = request.url_for(name="recipe", **{"id": results.id})
+	
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -227,10 +233,11 @@ async def parse_form(request):
 			site_tags.append(value)
 
 		elif key == "note":
-			note = {
-				"note": value,
-				"submitted_by": request.state.user.username
-			}
+			if value:
+				note = {
+					"note": value,
+					"submitted_by": request.state.user.get("username")
+				}
 
 		else:
 			updates[key] = value
