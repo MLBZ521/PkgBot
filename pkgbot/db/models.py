@@ -53,7 +53,7 @@ class RecipeNotes(Model):
 	note = fields.CharField(max_length=4096, default="", null=True)
 	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="notes", on_delete="CASCADE", to_field="recipe_id")
 	submitted_by = fields.CharField(max_length=64)
-	time_stamp = fields.DatetimeField(auto_now=True)
+	time_stamp = fields.DatetimeField(auto_now_add=True)
 
 
 class RecipeResults(Model):
@@ -61,7 +61,7 @@ class RecipeResults(Model):
 	type = fields.CharField(max_length=64)
 	status = fields.CharField(max_length=64, null=True)
 	last_update = fields.DatetimeField(auto_now=True)
-	updated_by = fields.CharField(max_length=64, null=True, default=config.PkgBot.get('bot_name'))
+	updated_by = fields.CharField(max_length=64, default=config.Slack.get('bot_name'))
 	slack_ts = fields.CharField(max_length=32, null=True)
 	slack_channel = fields.CharField(max_length=32, null=True)
 	response_url = fields.CharField(max_length=1024, null=True)
@@ -81,7 +81,7 @@ class Packages(Model):
 	promoted_date = fields.DatetimeField(null=True, default=None)
 	last_update = fields.DatetimeField(auto_now=True)
 	status = fields.CharField(max_length=64, default="dev")
-	updated_by = fields.CharField(max_length=64, default=config.PkgBot.get('bot_name'))
+	updated_by = fields.CharField(max_length=64, default=config.Slack.get('bot_name'))
 	slack_channel = fields.CharField(max_length=32, null=True)
 	slack_ts = fields.CharField(max_length=32, null=True)
 	response_url = fields.CharField(max_length=1024, null=True)
@@ -95,7 +95,7 @@ class PackageNotes(Model):
 	note = fields.CharField(max_length=4096, default="", null=True)
 	package = fields.ForeignKeyField("pkgbot.Packages", related_name="notes", on_delete="CASCADE", to_field="pkg_name")
 	submitted_by = fields.CharField(max_length=64)
-	time_stamp = fields.DatetimeField(auto_now=True)
+	time_stamp = fields.DatetimeField(auto_now_add=True)
 
 
 class PackageHold(Model):
