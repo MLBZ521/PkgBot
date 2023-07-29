@@ -53,9 +53,9 @@ async def deny_pkg_msg(pkg_object: schemas.Package_In = Depends(schemas.Package_
 @router.get("/deny-trust-msg", summary="Build deny trust message",
 	description="Builds a message stating a recipe's parent trust info changes were denied.")
 async def deny_trust_msg(
-	trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.build.deny_trust_msg(trust_object)
+	return await core.chatbot.build.deny_trust_msg(result_object)
 
 
 @router.get("/promote-msg", summary="Build promoted package message",
@@ -68,17 +68,17 @@ async def promote_msg(pkg_object: schemas.Package_In = Depends(schemas.Package_I
 @router.get("/update-trust-success-msg", summary="Build trust update success message",
 	description="Builds a message when a recipe's trust info is updated successfully.")
 async def update_trust_success_msg(
-	trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.build.update_trust_success_msg(trust_object)
+	return await core.chatbot.build.update_trust_success_msg(result_object)
 
 
 @router.get("/update-trust-error-msg", summary="Build trust update error message",
 	description="Builds a message when a recipe's trust info failed to update.")
 async def update_trust_error_msg(msg: str,
-	trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.build.update_trust_error_msg(trust_object)
+	return await core.chatbot.build.update_trust_error_msg(result_object)
 
 
 @router.get("/unauthorized-msg", summary="Build unauthorized message",

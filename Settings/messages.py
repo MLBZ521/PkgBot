@@ -58,11 +58,11 @@ async def deny_pkg(pkg_object: schemas.Package_In ):
 	return await format_json(blocks)
 
 
-async def deny_trust(trust_object: schemas.RecipeResult_In):
+async def deny_trust(result_object: schemas.RecipeResult_In):
 
 	blocks = [
-		await block.brick_deny_trust(trust_object),
-		await block.brick_footer_denied_trust(trust_object)
+		await block.brick_deny_trust(result_object),
+		await block.brick_footer_denied_trust(result_object)
 	]
 
 	return await format_json(blocks)
@@ -83,20 +83,20 @@ async def promote(pkg_object: schemas.Package_In):
 	return await format_json(blocks)
 
 
-async def update_trust_success(trust_object: schemas.RecipeResult_In):
+async def update_trust_success(result_object: schemas.RecipeResult_In):
 
 	blocks = [
-		await block.brick_update_trust_success_msg(trust_object),
-		await block.brick_footer_update_trust_success_msg(trust_object)
+		await block.brick_update_trust_success_msg(result_object),
+		await block.brick_footer_update_trust_success_msg(result_object)
 	]
 
 	return await format_json(blocks)
 
 
-async def update_trust_error(msg: str, trust_object: schemas.RecipeResult_In):
+async def update_trust_error(msg: str, result_object: schemas.RecipeResult_In):
 
-	blocks = await block.brick_update_trust_error_msg(trust_object, msg)
-	blocks.append(await block.brick_trust_diff_button(trust_object.dict().get('id')))
+	blocks = await block.brick_update_trust_error_msg(result_object, msg)
+	blocks.append(await block.brick_trust_diff_button(result_object.dict().get('id')))
 	return await format_json(blocks)
 
 

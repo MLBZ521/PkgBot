@@ -64,7 +64,7 @@ async def delete(filter: dict):
 async def promote(id: int, autopkg_cmd: models.AutoPkgCMD | None = None):
 
 	pkg_object = await get({"id": id})
-	recipe = await core.recipe.get({"recipe_id": pkg_object.recipe_id})
+	recipe = await core.recipe.get({"recipe_id": pkg_object.recipe.recipe_id})
 
 	if autopkg_cmd is None:
 		autopkg_cmd = models.AutoPkgCMD(

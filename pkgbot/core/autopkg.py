@@ -179,17 +179,16 @@ async def run_recipes(autopkg_cmd: models.AutoPkgCMD_Run):
 
 async def update_trust(
 	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo,
-	trust_object: dict | None, recipe_id: str | None = None):
+	result_object: dict | None, recipe_id: str | None = None):
 
 	# Get recipe object
 	if recipe_object := await core.recipe.get({"recipe_id__iexact": recipe_id}):
 		event_id = None
 		recipe_id = recipe_object.recipe_id
 
-	elif trust_object:
-
-		event_id = trust_object.id
-		recipe_id = trust_object.recipe_id
+	elif result_object:
+		event_id = result_object.id
+		recipe_id = result_object.recipe.recipe_id
 
 	else:
 

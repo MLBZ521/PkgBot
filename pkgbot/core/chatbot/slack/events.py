@@ -67,7 +67,7 @@ async def button_click(payload):
 				})
 				result_object = await core.recipe.update_result({ "slack_ts": message_ts }, updates)
 				await core.autopkg.update_trust(
-					autopkg_cmd = autopkg_cmd, trust_object = trust_object)
+					autopkg_cmd = autopkg_cmd, result_object = result_object)
 
 		elif button_text == "Deny":
 

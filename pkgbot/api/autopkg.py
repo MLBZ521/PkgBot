@@ -183,8 +183,8 @@ async def receive(request: Request, task_id = Body()):
 async def autopkg_update_recipe_trust(
 	recipe_id: str | None = None,
 	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo = Depends(models.AutoPkgCMD_UpdateTrustInfo),
-	trust_object: schemas.RecipeResult_In | None = Depends(schemas.RecipeResult_In)
+	result_object: schemas.RecipeResult_In | None = Depends(schemas.RecipeResult_In)
 ):
 
-	queued_task = await core.autopkg.update_trust(autopkg_cmd, trust_object, recipe_id)
+	queued_task = await core.autopkg.update_trust(autopkg_cmd, result_object, recipe_id)
 	return { "result": "Queued background task" , "task_id": queued_task.id }

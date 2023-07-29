@@ -47,25 +47,25 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 @router.post("/trust-diff-msg", summary="Send trust diff message",
 	description="Sends a message with diff contents after a recipe fails verify-trust-info.")
 async def trust_diff_msg(
-	diff_msg: str, trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	diff_msg: str, result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.send.trust_diff_msg(diff_msg, trust_object)
+	return await core.chatbot.send.trust_diff_msg(diff_msg, result_object)
 
 
 @router.put("/update-trust-success-msg", summary="Send trust update success message",
 	description="Sends a message when a recipe's trust info is updated successfully.")
 async def update_trust_success_msg(
-	trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.send.update_trust_success_msg(trust_object)
+	return await core.chatbot.send.update_trust_success_msg(result_object)
 
 
 @router.put("/update-trust-error-msg", summary="Send trust update error message",
 	description="Sends a message when a recipe's trust info fails to update.")
 async def update_trust_error_msg(msg: str,
-	trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.send.update_trust_error_msg(msg, trust_object)
+	return await core.chatbot.send.update_trust_error_msg(msg, result_object)
 
 
 @router.put("/deny-pkg-msg", summary="Send deny package message",
@@ -78,9 +78,9 @@ async def deny_pkg_msg(pkg_object: schemas.Package_In = Depends(schemas.Package_
 @router.put("/deny-trust-msg", summary="Send deny trust message",
 	description="Send a message stating a recipe's parent trust info changes were denied.")
 async def deny_trust_msg(
-	trust_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
+	result_object: schemas.RecipeResult_In = Depends(schemas.RecipeResult_In)):
 
-	return await core.chatbot.send.deny_trust_msg(trust_object)
+	return await core.chatbot.send.deny_trust_msg(result_object)
 
 
 @router.post("/disk-space-msg", summary="Send message regarding disk usage",

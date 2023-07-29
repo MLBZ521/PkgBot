@@ -67,14 +67,14 @@ async def brick_footer_denied(pkg_object: schemas.Package_In):
 		}
 
 
-async def brick_footer_denied_trust(trust_object):
+async def brick_footer_denied_trust(result_object):
 
 	return {
 			"type": "context",
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Denied by*:  @{trust_object.dict().get('updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
+					"text": f"*Denied by*:  @{result_object.dict().get('updated_by')}\t*On*:  {result_object.dict().get('last_update')}"
 				}
 			]
 		}
@@ -158,38 +158,38 @@ async def brick_error(recipe_id, error):
 		}]
 
 
-async def brick_update_trust_success_msg(trust_object):
+async def brick_update_trust_success_msg(result_object):
 
 	return {
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"Trust info was updated for:  `{trust_object.dict().get('recipe_id')}`",
+			"text": f"Trust info was updated for:  `{result_object.recipe.recipe_id}`",
 			"verbatim": True
 		}
 	}
 
 
-async def brick_footer_update_trust_success_msg(trust_object):
+async def brick_footer_update_trust_success_msg(result_object):
 
 	return {
 			"type": "context",
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"*Updated by*:  @{trust_object.dict().get('updated_by')}\t*On*:  {trust_object.dict().get('last_update')}"
+					"text": f"*Updated by*:  @{result_object.dict().get('updated_by')}\t*On*:  {result_object.dict().get('last_update')}"
 				}
 			]
 		}
 
 
-async def brick_update_trust_error_msg(trust_object, msg):
+async def brick_update_trust_error_msg(result_object, msg):
 
 	return [{
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": f"Failed to update trust info for `{trust_object.dict().get('recipe_id')}`",
+				"text": f"Failed to update trust info for `{result_object.recipe.recipe_id}`",
 				"emoji": True
 			}
 		},
@@ -218,13 +218,13 @@ async def brick_deny_pkg(pkg_object: schemas.Package_In):
 	}
 
 
-async def brick_deny_trust(trust_object):
+async def brick_deny_trust(result_object):
 
 	return {
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": f"Denied update to trust info for `{trust_object.dict().get('recipe_id')}`",
+			"text": f"Denied update to trust info for `{result_object.recipe.recipe_id}`",
 			"verbatim": True
 		},
 		"accessory": {

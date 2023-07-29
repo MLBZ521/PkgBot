@@ -83,13 +83,14 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str, thread_ts: str |
 	return response
 
 
-async def trust_diff_msg(diff_msg: str, trust_object: schemas.RecipeResult_In):
+async def trust_diff_msg(diff_msg: str, result_object: schemas.RecipeResult_In):
 
 	if len(diff_msg) > MAX_CONTENT_SIZE:
-		blocks = await core.chatbot.build.trust_diff_msg(trust_object.id, trust_object.recipe_id)
+		blocks = await core.chatbot.build.trust_diff_msg(
+			result_object.id, result_object.recipe.recipe_id)
 	else:
 		blocks = await core.chatbot.build.trust_diff_msg(
-			trust_object.id, trust_object.recipe_id, diff_msg)
+			result_object.id, result_object.recipe.recipe_id, diff_msg)
 
 	response = await core.chatbot.SlackBot.post_message(
 		blocks,
@@ -105,44 +106,44 @@ async def trust_diff_msg(diff_msg: str, trust_object: schemas.RecipeResult_In):
 	):
 		response = await core.chatbot.SlackBot.file_upload(
 			content = diff_msg,
-			filename = f"{trust_object.recipe_id}.diff",
+			filename = f"{result_object.recipe.recipe_id}.diff",
 			filetype = "diff",
-			title = trust_object.recipe_id,
-			text = f"Diff Output for {trust_object.recipe_id}",
-			thread_ts = trust_object.slack_ts
+			title = result_object.recipe.recipe_id,
+			text = f"Diff Output for {result_object.recipe.recipe_id}",
+			thread_ts = result_object.slack_ts
 		)
 
 	return response
 
 
-async def update_trust_success_msg(trust_object: schemas.RecipeResult_In):
+async def update_trust_success_msg(result_object: schemas.RecipeResult_In):
 
-	blocks = await core.chatbot.build.update_trust_success_msg(trust_object)
+	blocks = await core.chatbot.build.update_trust_success_msg(result_object)
 
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"),
+		result_object.dict().get("response_url"),
 		blocks,
-		text=f"Successfully updated trust info for {trust_object.recipe_id}"
+		text = f"Successfully updated trust info for {result_object.recipe.recipe_id}"
 	)
 
 	if response.status_code == 200:
 		await core.chatbot.SlackBot.reaction(
 			action = "remove",
 			emoji = "gear",
-			ts = trust_object.slack_ts
+			ts = result_object.slack_ts
 		)
 
 	return response
 
 
-async def update_trust_error_msg(msg: str, trust_object: schemas.RecipeResult_In):
+async def update_trust_error_msg(msg: str, result_object: schemas.RecipeResult_In):
 
-	blocks = await core.chatbot.build.update_trust_error_msg(msg, trust_object)
+	blocks = await core.chatbot.build.update_trust_error_msg(msg, result_object)
 
 	return await core.chatbot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"),
+		result_object.dict().get("response_url"),
 		blocks,
-		text=f"Failed to update trust info for {trust_object.recipe_id}"
+		text = f"Failed to update trust info for {result_object.recipe.recipe_id}"
 	)
 
 
@@ -166,13 +167,13 @@ async def deny_pkg_msg(pkg_object: schemas.Package_In):
 	return response
 
 
-async def deny_trust_msg(trust_object: schemas.RecipeResult_In):
+async def deny_trust_msg(result_object: schemas.RecipeResult_In):
 
-	blocks = await core.chatbot.build.deny_trust_msg(trust_object)
+	blocks = await core.chatbot.build.deny_trust_msg(result_object)
 	text = f"Trust info for {result_object.recipe.recipe_id} was not approved"
 
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"),
+		result_object.dict().get("response_url"),
 		blocks,
 		text = text
 	)
@@ -189,7 +190,7 @@ async def deny_trust_msg(trust_object: schemas.RecipeResult_In):
 		await core.chatbot.SlackBot.reaction(
 			action = "remove",
 			emoji = "gear",
-			ts = trust_object.slack_ts
+			ts = result_object.slack_ts
 		)
 
 	return response

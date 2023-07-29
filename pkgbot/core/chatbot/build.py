@@ -36,9 +36,9 @@ async def deny_pkg_msg(pkg_object: schemas.Package_In ):
 	return await messages.deny_pkg(pkg_object)
 
 
-async def deny_trust_msg(trust_object: schemas.RecipeResult_In):
+async def deny_trust_msg(result_object: schemas.RecipeResult_In):
 
-	return await messages.deny_trust(trust_object)
+	return await messages.deny_trust(result_object)
 
 
 async def promote_msg(pkg_object: schemas.Package_In):
@@ -46,14 +46,14 @@ async def promote_msg(pkg_object: schemas.Package_In):
 	return await messages.promote(pkg_object)
 
 
-async def update_trust_success_msg(trust_object: schemas.RecipeResult_In):
+async def update_trust_success_msg(result_object: schemas.RecipeResult_In):
 
-	return await messages.update_trust_success(trust_object)
+	return await messages.update_trust_success(result_object)
 
 
-async def update_trust_error_msg(msg: str, trust_object: schemas.RecipeResult_In):
+async def update_trust_error_msg(msg: str, result_object: schemas.RecipeResult_In):
 
-	return await messages.update_trust_error(msg, trust_object)
+	return await messages.update_trust_error(msg, result_object)
 
 
 async def unauthorized_msg(user: str):
