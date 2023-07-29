@@ -48,9 +48,9 @@ async def create_note(note_object: dict):
 	return await models.RecipeNotes.create(**note_object)
 
 
-async def update(filter: dict, updates: dict):
+async def update(recipe_filter: dict, updates: dict):
 
-	return await models.Recipes.filter(**filter).update(**updates)
+	return await models.Recipes.filter(**recipe_filter).update(**updates)
 
 
 async def update_result(result_filter: dict, updates: dict):
@@ -60,9 +60,9 @@ async def update_result(result_filter: dict, updates: dict):
 	return await schemas.RecipeResult_Out.from_tortoise_orm(result)
 
 
-async def delete(filter: dict):
+async def delete(recipe_filter: dict):
 
-	return await models.Recipes.filter(**filter).delete()
+	return await models.Recipes.filter(**recipe_filter).delete()
 
 
 async def error(recipe_id: str, event: str, error: str, task_id: str = None):

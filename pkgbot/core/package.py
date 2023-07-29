@@ -25,12 +25,12 @@ async def get_note(note_filter: dict | None = None):
 	return results[0] if len(results) == 1 else results
 
 
-async def get_hold(result_filter: dict | None = None):
+async def get_hold(hold_filter: dict | None = None):
 
-	if not result_filter:
+	if not hold_filter:
 		return await models.PackageHold.all()
 
-	results = await schemas.PackageHold_Out.from_queryset(models.PackageHold.filter(**result_filter))
+	results = await schemas.PackageHold_Out.from_queryset(models.PackageHold.filter(**hold_filter))
 	return results[0] if len(results) == 1 else results
 
 
@@ -56,9 +56,9 @@ async def update(package_filter: dict, updates: dict):
 	return await schemas.Package_Out.from_tortoise_orm(result)
 
 
-async def delete(filter: dict):
+async def delete(package_filter: dict):
 
-	return await models.Packages.filter(**filter).delete()
+	return await models.Packages.filter(**package_filter).delete()
 
 
 async def promote(id: int, autopkg_cmd: models.AutoPkgCMD | None = None):
