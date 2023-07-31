@@ -40,6 +40,10 @@ async def create(recipe_object: dict):
 
 async def create_result(recipe_result: dict):
 
+	if recipe_result.get("details") and len(recipe_result.get("details")) > 3950:
+		recipe_result["details"] = recipe_result.get("details")[:3950] + \
+			"\n[[ ***Content Truncated*** ]]"
+
 	return await models.RecipeResults.create(**recipe_result)
 
 
