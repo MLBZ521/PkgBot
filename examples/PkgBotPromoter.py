@@ -200,13 +200,15 @@ class PkgBotPromoter(Processor):
 								self.env[key] = value
 								self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
-						jamfpackageuploader_data = processor_output.get(
-							"jamfpackageuploader_summary_result").get("data")
+						if jamfpackageuploader_summary := processor_output.get(
+							"jamfpackageuploader_summary_result"):
+						
+							if jamfpackageuploader_data := jamfpackageuploader_summary.get("data"):
 
-						for key, value in jamfpackageuploader_data.items():
-							if key not in ignore_keys:
-								self.env[key] = value
-								self.output(f"{key}:  {self.env[key]}", verbose_level=3)
+								for key, value in jamfpackageuploader_data.items():
+									if key not in ignore_keys:
+										self.env[key] = value
+										self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
 						if self.env["version"] and basename(self.env["pkg_path"]) == match_pkg:
 							version_found = True
