@@ -255,11 +255,7 @@ I support a variety of commands to help run AutoPkg on your behalf.  Please see 
 
 			else:
 				recipe_id = options
-				status = ""
 				debug_status = ""
-
-			if status:
-				updates |= {"status": status}
 
 			log.debug(f"[ verb:  {verb} ] | [ recipe_id:  {recipe_id} ]{debug_status}")
 
