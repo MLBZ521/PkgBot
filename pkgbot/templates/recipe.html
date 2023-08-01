@@ -5,7 +5,7 @@
 {% if pkgbot.get("action_result") %}
 <div class="alert alert-success alert-dismissible">
 	<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-	<strong>Successly</strong> {{ pkgbot.get("action_result") }}
+	<strong>Successfully</strong> {{ pkgbot.get("action_result") }}
 </div>
 {% endif %}
 
@@ -22,32 +22,34 @@
 			<label class="form-label" for="recipe_id">Recipe ID: &nbsp;</label>
 			<input class="w-25" id="recipe_id" name="recipe_id" maxlength="500"
 				value="{{ request.form['recipe_id'] or recipe['recipe_id'] }}" required {{ "disabled" if not
-				user.get("site_access") }} />
+				user.get("full_admin") }} />
 		</div>
 
 		<div class="custom-switch">
 			<input type="checkbox" class="custom-control-input" id="enabled" name="enabled" {{ "checked" if
-				request.form["enabled"] or recipe["enabled"] }} {{ "disabled" if not user.get("site_access") }} />
+				request.form["enabled"] or recipe["enabled"] }} {{ "disabled" if not user.get("full_admin") }} />
 			<label class="custom-control-label" for="enabled">Enabled</label>
 		</div>
 
 		<div class="custom-switch">
 			<input type="checkbox" class="custom-control-input" id="pkg_only" name="pkg_only" {{ "checked" if
-				request.form["pkg_only"] or recipe["pkg_only"] }} {{ "disabled" if not user.get("site_access") }} />
+				request.form["pkg_only"] or recipe["pkg_only"] }} {{ "disabled" if not user.get("full_admin") }} />
 			<label class="custom-control-label" for="pkg_only">Package Only</label>
 			<span id="help_block" class="form-text text-muted" style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Only .pkg is uploaded to production</span>
 		</div>
 
 		<div class="custom-switch">
 			<input type="checkbox" class="custom-control-input" id="manual_only" name="manual_only" {{ "checked" if
-				request.form["manual_only"] or recipe["manual_only"] }} {{ "disabled" if not user.get("site_access") }} />
+				request.form["manual_only"] or recipe["manual_only"] }} {{ "disabled" if not user.get("full_admin") }} />
 			<label class="custom-control-label" for="manual_only">Manual Only</label>
 			<span id="help_block" class="form-text text-muted" style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Recipe is only available to run manually</span>
 		</div>
 
 		<div>
 			<label class="form-label" for="schedule">Schedule (days: int): &nbsp;</label>
-			<input class="input-sm" id="schedule" name="schedule" placeholder="schedule" type="number" step="1" min="0" max="90"
+			<input class="input-sm" id="schedule" name="schedule" placeholder="schedule"
+				type="number" step="1" min="0" max="90"
+				{{ "disabled" if not user.get("full_admin") }}
 				value="{{ request.form['schedule'] or recipe['schedule'] }}" />
 		</div>
 
