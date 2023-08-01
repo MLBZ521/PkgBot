@@ -44,7 +44,8 @@ async def create_result(recipe_result: dict):
 		recipe_result["details"] = recipe_result.get("details")[:3950] + \
 			"\n[[ ***Content Truncated*** ]]"
 
-	return await models.RecipeResults.create(**recipe_result)
+	return await schemas.RecipeResult_Out.from_tortoise_orm(
+		await models.RecipeResults.create(**recipe_result))
 
 
 async def create_note(note_object: dict):
@@ -111,7 +112,7 @@ async def verify_trust_failed(recipe_id: str, diff_msg: str, task_id: str):
 	""" When `autopkg verify-trust-info <recipe_id>` fails """
 
 	# Create DB entry in RecipeResults table
-	result_object = await core.recipe.create_result({
+	result_object = await create_result({
 		"type": "trust",
 		"recipe_id": recipe_id,
 		"task_id": task_id,
