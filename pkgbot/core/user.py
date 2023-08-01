@@ -72,14 +72,17 @@ async def get_current_user_from_cookie(request: Request):
 	return await get({ "pkgbot_token": token })
 
 
-async def verify_admin(request: Request):
+async def verify_admin(request: Request,
+	user_object: schemas.PkgBotAdmin_In = Depends(get_current)):
 
-	if not request.state.user.get("full_admin"):
-		log.debug("User is NOT an admin")
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-			detail="You are not authorized to utilize this endpoint.")
-
-	# log.debug("User is an admin")
+	if ( request.state.user and request.state.user.get("full_admin") ) \
+		or ( user_object and user_object.dict().get("full_admin") ):
+		log.debug("User is an admin")
+		return
+	
+	log.debug("User is NOT an admin")
+	raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+		detail="You are not authorized to utilize this endpoint.")
 
 
 async def authenticate(username: str, password: str):
