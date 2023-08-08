@@ -124,7 +124,7 @@ async def verify_trust_failed(recipe_id: str, diff_msg: str, task_id: str):
 	await core.chatbot.send.trust_diff_msg(diff_msg, result_object)
 
 	# Mark the recipe disabled
-	await update({ "recipe_id": result_object.id }, { "enabled": False })
+	await update({ "recipe_id": recipe_id }, { "enabled": False })
 	return { "result": "Success" }
 
 
