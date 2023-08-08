@@ -66,6 +66,17 @@ async def login(
 	user = await core.user.authenticate(form_data.username, form_data.password)
 
 	if not user:
+
+		session_vars = {
+			"access_denied": "Invalid credentials or not a Jamf Pro Admin.",
+			"protected_page": True
+		}
+
+		try:
+			request.state.pkgbot = session_vars
+		except Exception:
+			request.state.pkgbot |= session_vars
+
 		log.debug("Invalid credentials or not a Jamf Pro Admin")
 		return templates.TemplateResponse("index.html", { "request": request })
 

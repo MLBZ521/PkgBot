@@ -93,7 +93,7 @@
 	<title>PkgBot: {% block title %} {% endblock %}</title>
 </head>
 
-{% set user = request.state.user %}
+{% set user = request.state.user or {} %}
 {% set pkgbot = request.state.pkgbot or {} %}
 
 <body>

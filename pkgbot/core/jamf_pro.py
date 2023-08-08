@@ -24,7 +24,7 @@ async def get_token(username: str = API_USER, password: str = API_PASSWORD):
 		response_json = response_get_token.json()
 		return response_json["token"], await fixup_token_expiration(response_json["expires"])
 
-	return False
+	return False, False
 
 
 async def fixup_token_expiration(token_expires: str):

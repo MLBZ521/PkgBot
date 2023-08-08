@@ -44,11 +44,13 @@ async def get_current(token: str = Depends(oauth2_scheme)):
 	"""
 
 	try:
-		if user := await get({ "jps_token": token }):
-			return user
 
-		raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED,
-			detail = "You must authenticate before utilizing this endpoint.")
+		if token:
+			if user := await get({ "jps_token": token }):
+				return user
+
+			raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED,
+				detail = "You must authenticate before utilizing this endpoint.")
 
 	except HTTPException as error:
 		raise error
