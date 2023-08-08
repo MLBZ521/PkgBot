@@ -171,8 +171,8 @@ class SlackClient(object):
 			return { "result": "Failed to post message", "error": error }
 
 
-	async def post_ephemeral_message(
-		self, user_id: str, blocks: str, channel: str = None, text: str = "Private Note"):
+	async def post_ephemeral_message(self, user_id: str, blocks: str, channel: str = None,
+		text: str = "Private Note", thread_ts=None):
 
 		# `user` must match regex pattern:  ^[UW][A-Z0-9]{2,}$
 		if not re.match(r"^[UW][A-Z0-9]{2,}$", user_id):
@@ -185,7 +185,8 @@ class SlackClient(object):
 				user = user_id,
 				text = text,
 				blocks = blocks,
-				username = self.bot_name
+				username = self.bot_name,
+				thread_ts=thread_ts
 			)
 
 		except SlackApiError as error:
