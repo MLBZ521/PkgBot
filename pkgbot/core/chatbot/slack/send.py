@@ -140,10 +140,29 @@ async def update_trust_error_msg(msg: str, result_object: schemas.RecipeResult_I
 
 	blocks = await core.chatbot.build.update_trust_error_msg(msg, result_object)
 
-	return await core.chatbot.SlackBot.update_message_with_response_url(
-		result_object.dict().get("response_url"),
+	response = await core.chatbot.SlackBot.post_message(
 		blocks,
-		text = f"Failed to update trust info for {result_object.recipe.recipe_id}"
+		text = f"Failed to update trust info for {result_object.recipe.recipe_id}",
+		thread_ts = result_object.dict().get("slack_ts")
+	)
+
+	if response.status_code == 200:
+		await core.chatbot.SlackBot.reaction(
+			action = "remove",
+			emoji = "gear",
+			ts = result_object.dict().get("slack_ts")
+		)
+
+	user_object = await core.user.get({"username": result_object.dict().get('updated_by')})
+
+	mention_blocks = await core.chatbot.build.basic_msg(
+		f"<@{user_object.dict().get('slack_id')}> Your request to update "
+		f"trust info for `{result_object.recipe.recipe_id}` failed!")
+
+	return await core.chatbot.SlackBot.post_message(
+		mention_blocks,
+		text = f"Failed to update trust info for {result_object.recipe.recipe_id}",
+		thread_ts = result_object.dict().get("slack_ts")
 	)
 
 
@@ -208,7 +227,8 @@ async def direct_msg(user, text, channel: str | None = None, image: str | None =
 	blocks = await core.chatbot.build.basic_msg(text, image, alt_image_text)
 
 	return await core.chatbot.SlackBot.post_ephemeral_message(
-		user, blocks,
+		user,
+		blocks,
 		channel = channel,
 		text = alt_text
 	)
