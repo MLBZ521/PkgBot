@@ -235,10 +235,11 @@ async def upload_icon(icon: UploadFile):
 async def parse_form(request):
 
 	form_submission = await request.form()
-	restricted_form_items = {
-		"recipe_id", "enabled", "pkg_only", "manual_only", "schedule", "pkg_name",
+	check_box_attributes = { "enabled", "pkg_only", "manual_only" }
+	restricted_form_items = check_box_attributes.union({
+		"recipe_id", "schedule", "pkg_name",
 		"packaged_date", "promoted_date", "last_update", "pkg_status"
-	}
+	})
 	form_items = restricted_form_items.union({ "note", "site_tag" })
 	note = {}
 	site_tags = []
@@ -263,5 +264,9 @@ async def parse_form(request):
 
 		else:
 			updates[key] = value
+
+	if "recipe_id" in form_submission.keys():
+		for check_box in check_box_attributes:
+			updates[check_box] = form_submission.get(check_box, False)
 
 	return updates, note, site_tags
