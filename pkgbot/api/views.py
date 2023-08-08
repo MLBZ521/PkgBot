@@ -186,15 +186,21 @@ async def update_recipe(request: Request):
 
 
 @router.get("/create/recipe", response_class=HTMLResponse)
-async def new_recipe(request: Request):
+async def new_recipe(request: Request,
+	user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current_user_from_cookie)):
 
-	if request.state.user.get("full_admin"):
-		return templates.TemplateResponse("recipe_create.html", { "request": request })
+	if not user_object or not user_object.dict().get("full_admin"):
+		return await error(request)
+		
+	return templates.TemplateResponse("recipe_create.html", { "request": request })
 
 
-@router.post("/create/recipe", response_class=HTMLResponse,
-	dependencies=[Depends(core.user.verify_admin)])
-async def create_recipe(request: Request):
+@router.post("/create/recipe", response_class=HTMLResponse)
+async def create_recipe(request: Request,
+	user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current_user_from_cookie)):
+
+	if not user_object or not user_object.dict().get("full_admin"):
+		return await error(request)
 
 	recipe, recipe_note, _ = await parse_form(request)
 
