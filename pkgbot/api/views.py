@@ -43,6 +43,22 @@ async def index(request: Request):
 #	return templates.TemplateResponse("login.html", { "request": request })
 
 
+@router.get("/error", response_class=HTMLResponse)
+async def error(request: Request, error: str | None = None):
+
+	session_vars = {
+		"access_denied": error or "You are not authorized to utilize this endpoint.",
+		"protected_page": True
+	}
+
+	try:
+		request.state.pkgbot = session_vars
+	except Exception:
+		request.state.pkgbot |= session_vars
+
+	return templates.TemplateResponse("error.html", { "request": request })
+
+
 @router.get("/packages", response_class=HTMLResponse)
 async def packages(request: Request):
 
