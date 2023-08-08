@@ -96,7 +96,6 @@ async def update_trust_success(result_object: schemas.RecipeResult_In):
 async def update_trust_error(msg: str, result_object: schemas.RecipeResult_In):
 
 	blocks = await block.brick_update_trust_error_msg(result_object, msg)
-	blocks.append(await block.brick_trust_diff_button(result_object.dict().get('id')))
 	return await format_json(blocks)
 
 
