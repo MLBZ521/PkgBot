@@ -262,8 +262,8 @@ async def parse_form(request):
 					"submitted_by": request.state.user.get("username")
 				}
 
-		else:
-			updates[key] = value
+		elif value:
+				updates[key] = value
 
 	if "recipe_id" in form_submission.keys():
 		for check_box in check_box_attributes:
