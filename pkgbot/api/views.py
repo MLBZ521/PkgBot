@@ -106,7 +106,7 @@ async def update_package(request: Request):
 		await core.package.create_note(pkg_note)
 
 ##### Need to setup
-	remove_site_tags = [ site for site in (request.state.user.site_access).split(", ") if site not in site_tags ]
+	# remove_site_tags = [ site for site in (request.state.user.site_access).split(", ") if site not in site_tags ]
 
 	# for site in site_tags:
 		# await core.package.create_hold({
