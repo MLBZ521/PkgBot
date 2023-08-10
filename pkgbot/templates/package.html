@@ -37,7 +37,7 @@
 			<div>
 				<label class="form-label" for="promoted_date">Promoted Date: &nbsp;</label>
 				<input class="w-25" id="promoted_date" name="promoted_date" maxlength="500"
-					value="{{ request.form['promoted_date'] or package['promoted_date'] }}" {{ "disabled" if not
+					value="{{ request.form['promoted_date'] if request.form['promoted_date'] or package['promoted_date'] if package['promoted_date'] }}" {{ "disabled" if not
 					user.get("full_admin") }} />
 			</div>
 
