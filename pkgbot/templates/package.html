@@ -63,9 +63,10 @@
 			</select>
 
 			<div class="form-group">
-				<label for="note">Package Notes</label>
-				<textarea id="note" name="note" maxlength="4000" placeholder="Notes"
-					class="form-control"></textarea>
+				<label class="form-label" for="note">Package Notes</label>
+				<textarea id="note" name="note" maxlength="4000" class="form-control"
+					placeholder="Package notes."></textarea>
+				<span id="counter" class="pull-left form-text text-muted" style="margin-left: 5px; font-size: 12px;"></span>
 			</div>
 
 			Package is used in:
@@ -86,6 +87,38 @@
 			</p>
 
 		</div>
+
+		<script>
+
+			function count_characters() {
+	
+				this.addEventListener("input", count_characters)
+	
+				var max_length = $(this).attr("maxlength");
+				var current_length = $(this).val().length;
+				var characters_remaining = max_length - current_length;
+				var counter = $(this).next(".form-text");
+	
+				counter.text(current_length + "/" + max_length);
+	
+				// Change text color to red when there are 0 characters remaining
+				if (characters_remaining === 0) {
+					counter.removeClass("text-muted");
+					counter.addClass("text-danger");
+				}
+				else {
+					counter.removeClass("text-danger");
+					counter.addClass("text-muted");
+				}
+	
+			}
+	
+			$(document).ready(function () {
+				$(".form-control").each(count_characters);
+			});
+	
+		</script>
+
 	</form>
 </p>
 
