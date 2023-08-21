@@ -524,12 +524,16 @@ async def build_xml(root, parent, child, values, sub_element = None):
 	return root_element
 
 
-async def save_icon(icon: UploadFile):
-
-	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
+async def save_file(file: UploadFile, save_dir):
 
 	try:
-		with open(f"{pkg_dir}/static/icons/{icon.filename}", "wb") as icon_obj:
-			shutil.copyfileobj(icon.file, icon_obj)
+		with open(f"{save_dir}/{file.filename}", "wb") as file_obj:
+			shutil.copyfileobj(file.file, file_obj)
 	finally:
-		await icon.close()
+		await file.close()
+
+
+async def save_icon(icon: UploadFile):
+
+	static_dir = config.PkgBot.get("jinja_static")
+	await save_file(icon, f"{static_dir}/icons")
