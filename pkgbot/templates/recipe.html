@@ -2,13 +2,6 @@
 
 {% block content %}
 
-{% if pkgbot.get("action_result") %}
-<div class="alert alert-success alert-dismissible">
-	<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-	<strong>Successfully</strong> {{ pkgbot.get("action_result") }}
-</div>
-{% endif %}
-
 <h1><code>{% block title %}{{ recipe['recipe_id'] }}{% endblock %}</code></h1>
 
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">

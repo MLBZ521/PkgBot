@@ -2,13 +2,6 @@
 
 {% block content %}
 
-{% if pkgbot.get("action_result") %}
-<div class="alert alert-success alert-dismissible">
-	<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-	<strong>Successfully</strong> {{ pkgbot.get("action_result") }}
-</div>
-{% endif %}
-
 <h1><img src="{{ url_for('static', path='/icons/%s' % package['icon']) }}" width="100" height="100" />
 	<code>{% block title %}{{ package['name'] }} v{{ package['version'] }}{% endblock %}</code></h1>
 

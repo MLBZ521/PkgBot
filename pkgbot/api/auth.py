@@ -5,7 +5,6 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
@@ -19,7 +18,6 @@ log = utility.log
 LOGIN_SECRET = os.urandom(1024).hex()
 login_manager = LoginManager(LOGIN_SECRET, token_url="/auth/login", use_cookie=True)
 login_manager.cookie_name = settings.api.PkgBot_Cookie
-templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
 
 router = APIRouter(
 	prefix = "/auth",
@@ -37,23 +35,26 @@ login_manager.not_authenticated_exception = NotAuthenticatedException
 
 async def exc_handler(request, exc):
 
-	# Set a (more or less) global session variable to trigger a "must login" message
-	session_vars = {"protected_page": request.base_url != request.url}
+	# Display a "must login" message
+	if request.base_url != request.url:
+		await core.views.notify(
+			request,
+			category = "danger",
+			emphasize = "Access Denied:  ",
+			emphasize_type = "strong",
+			message = "You must login before accessing this page!"
+		)
 
-	try:
-		request.state.pkgbot = session_vars
-		request.state.user = {}
-	except Exception:
-		request.state.pkgbot |= session_vars
-
-	return templates.TemplateResponse("index.html", { "request": request })
+	return core.views.jinja_templates.TemplateResponse("index.html", { "request": request })
 
 
 @login_manager.user_loader()
 async def load_user(username: str):
 
 	# Return the user object otherwise None if a user was not found
-	user = (await core.user.get({"username": username})).dict(exclude={"pkgbot_token", "jps_token", "last_update"})
+	user = (
+			await core.user.get({"username": username})
+		).dict(exclude={"pkgbot_token", "jps_token", "last_update"})
 	user["site_access"] = user.get("site_access").split(", ")
 	return user
 
@@ -67,18 +68,16 @@ async def login(
 
 	if not user:
 
-		session_vars = {
-			"access_denied": "Invalid credentials or not a Jamf Pro Admin.",
-			"protected_page": True
-		}
-
-		try:
-			request.state.pkgbot = session_vars
-		except Exception:
-			request.state.pkgbot |= session_vars
+		await core.views.notify(
+			request,
+			category = "danger",
+			emphasize = "Access Denied:  ",
+			emphasize_type = "strong",
+			message = "Invalid credentials or not a Jamf Pro Admin."
+		)
 
 		log.debug("Invalid credentials or not a Jamf Pro Admin")
-		return templates.TemplateResponse("index.html", { "request": request })
+		return core.views.jinja_templates.TemplateResponse("index.html", { "request": request })
 
 	access_token = login_manager.create_access_token(
 		data = { "sub": form_data.username },
@@ -93,6 +92,7 @@ async def login(
 		)
 	)
 
+	await core.views.notify(request, "Login Successful", category = "success")
 	response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 	login_manager.set_cookie(response, access_token)
 	return response

@@ -1,8 +1,5 @@
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 
 from pkgbot import api, config, core
 from pkgbot.db import models, schemas
@@ -11,6 +8,7 @@ from pkgbot.utilities import common as utility
 
 config = config.load_config()
 log = utility.log
+templates = core.views.jinja_templates
 
 router = APIRouter(
 	tags = ["view"],
@@ -18,17 +16,6 @@ router = APIRouter(
 	dependencies = [Depends(api.auth.login_manager)
 	]
 )
-
-
-def template_filter_datetime(date, date_format="%Y-%m-%d %I:%M:%S"):
-
-	if date:
-		converted = datetime.fromisoformat(str(date))
-		return converted.strftime(date_format)
-
-
-templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
-templates.env.filters["strftime"] = template_filter_datetime
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -46,17 +33,17 @@ async def index(request: Request):
 @router.get("/error", response_class=HTMLResponse)
 async def error(request: Request, error: str | None = None):
 
-	session_vars = {
-		"access_denied": error or "You are not authorized to utilize this endpoint.",
-		"protected_page": True
-	}
+	log.error(f"[ERROR] {error}")
 
-	try:
-		request.state.pkgbot = session_vars
-	except Exception:
-		request.state.pkgbot |= session_vars
+	await core.views.notify(
+		request,
+		category = "danger",
+		emphasize = "ERROR:  ",
+		emphasize_type = "strong",
+		message = error or "Something went wrong!"
+	)
 
-	return templates.TemplateResponse("error.html", { "request": request })
+	return templates.TemplateResponse("error.html", { "request": request, "error": error })
 
 
 @router.get("/packages", response_class=HTMLResponse)
@@ -97,7 +84,7 @@ async def update_package(request: Request):
 	db_id = request.path_params.get("id")
 	await core.package.get({"id": db_id})
 
-	updates, pkg_note, site_tags = await parse_form(request)
+	updates, pkg_note, site_tags = await core.views.parse_form(request)
 
 	await core.package.update({"id": db_id}, updates)
 
@@ -127,12 +114,13 @@ async def update_package(request: Request):
 		# 	site=site
 		# )
 
-	session_vars = { "action_result": "updated the recipe!" }
-
-	try:
-		request.state.pkgbot = session_vars
-	except Exception:
-		request.state.pkgbot |= session_vars
+	await core.views.notify(
+		request,
+		category = "success",
+		emphasize = "Successfully",
+		emphasize_type = "strong",
+		message = "updated the package!"
+	)
 
 	redirect_url = request.url_for(name="package", **{"id": db_id})
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
@@ -173,7 +161,7 @@ async def recipe(request: Request):
 async def update_recipe(request: Request):
 
 	db_id = request.path_params.get("id")
-	recipe, recipe_note, _ = await parse_form(request)
+	recipe, recipe_note, _ = await core.views.parse_form(request)
 
 	await core.recipe.update({"id": db_id}, recipe)
 
@@ -181,17 +169,25 @@ async def update_recipe(request: Request):
 		recipe_note["recipe_id"] = recipe.get("recipe_id")
 		await core.recipe.create_note(recipe_note)
 
+	await core.views.notify(
+		request,
+		category = "success",
+		emphasize = "Successfully",
+		emphasize_type = "strong",
+		message = "updated the recipe!"
+	)
+
 	redirect_url = request.url_for(name="recipe", **{"id": db_id})
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/create/recipe", response_class=HTMLResponse)
-async def new_recipe(request: Request,
+async def create_recipe_form(request: Request,
 	user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current_user_from_cookie)):
 
 	if not user_object or not user_object.dict().get("full_admin"):
-		return await error(request)
-		
+		return await core.views.notify_not_authorized(request, "recipes")
+
 	return templates.TemplateResponse("recipe_create.html", { "request": request })
 
 
@@ -200,28 +196,14 @@ async def create_recipe(request: Request,
 	user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current_user_from_cookie)):
 
 	if not user_object or not user_object.dict().get("full_admin"):
-		return await error(request)
+		return await core.views.notify_not_authorized(request, "recipes")
 
-	recipe, recipe_note, _ = await parse_form(request)
+	recipe, recipe_note, _ = await core.views.parse_form(request)
 
-	if not recipe.get("recipe_id"):
-		log.debug("Recipe ID was not provided")
-		redirect_url = request.url_for(name="create_recipe")
+	referral, path_params, result = await core.views.from_web_create_recipe(recipe, recipe_note)
+	redirect_url = request.url_for(name=referral, **path_params)
 
-	elif test := await core.recipe.get({ "recipe_id": recipe.get("recipe_id") }):
-		log.debug("Recipe ID already exists!")
-		redirect_url = request.url_for(name="recipes")
-
-	else:
-		# log.debug("Recipe ID provided")
-		results = await core.recipe.create(recipe)
-		
-		if recipe_note:
-			recipe_note["recipe_id"] = recipe.get("recipe_id")
-			await core.recipe.create_note(recipe_note)
-
-		redirect_url = request.url_for(name="recipe", **{"id": results.id})
-	
+	core.views.notify_create_recipe_result(request, **{ result: 1 })
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -230,43 +212,3 @@ async def upload_icon(icon: UploadFile):
 
 	await utility.save_icon(icon)
 	return { "result": "Successfully uploaded icon", "filename": icon.filename }
-
-
-async def parse_form(request):
-
-	form_submission = await request.form()
-	check_box_attributes = { "enabled", "pkg_only", "manual_only" }
-	restricted_form_items = check_box_attributes.union({
-		"recipe_id", "schedule", "pkg_name",
-		"packaged_date", "promoted_date", "last_update", "pkg_status"
-	})
-	form_items = restricted_form_items.union({ "note", "site_tag" })
-	note = {}
-	site_tags = []
-	updates = {}
-
-	for key, value in form_submission.multi_items():
-
-		if key not in form_items or (
-			key in restricted_form_items and not request.state.user.get("full_admin")
-		):
-			continue
-
-		elif key == "site_tag":
-			site_tags.append(value)
-
-		elif key == "note":
-			if value:
-				note = {
-					"note": value,
-					"submitted_by": request.state.user.get("username")
-				}
-
-		elif value:
-				updates[key] = value
-
-	if "recipe_id" in form_submission.keys():
-		for check_box in check_box_attributes:
-			updates[check_box] = form_submission.get(check_box, False)
-
-	return updates, note, site_tags

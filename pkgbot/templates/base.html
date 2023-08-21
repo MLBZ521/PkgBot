@@ -94,7 +94,6 @@
 </head>
 
 {% set user = request.state.user or {} %}
-{% set pkgbot = request.state.pkgbot or {} %}
 
 <body>
 	<nav class="navbar navbar-expand-md navbar-light bg-light">
@@ -117,8 +116,9 @@
 
 				<div class="dropdown-menu">
 					<a class="dropdown-item disabled"
-						href="{{ url_for(name='new_recipe') }}">Create Package</a>
-					<!-- <div class="dropdown-divider"></div> -->
+						href="{{ url_for(name='create_recipe_form') }}">Create Package</a>
+						<!-- url_for's name parameter should be changed to "new_package" once supported -->
+						<!-- <div class="dropdown-divider"></div> -->
 				</div>
 			</div>
 
@@ -133,7 +133,7 @@
 
 				<div class="dropdown-menu">
 					<a class="dropdown-item"
-						href="{{ url_for(name='new_recipe') }}">Create Recipe</a>
+							href="{{ url_for(name='create_recipe_form') }}">Create Recipe</a>
 					<!-- <div class="dropdown-divider"></div> -->
 				</div>
 			</div>
@@ -194,14 +194,15 @@
 	</nav>
 
 	<div class="main-container">
-
-		{% if pkgbot.get("protected_page") %}
-		<div class="alert alert-danger alert-dismissible">
+		{% for message in parse_messages(request) %}
+		<div class="alert alert-{{ message.category }} alert-dismissible">
 			<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-			<strong>Access Denied:</strong>
-			{{ pkgbot.get("access_denied") or "You must login before accessing this page!" }}
+			{% if message.get("emphasize") %}
+			<{{message.emphasize_type}}>{{message.emphasize}}</{{message.emphasize_type}}>
+			{% endif %}
+			{{ message.message }}
 		</div>
-		{% endif %}
+		{% endfor %}
 
 		{% block content %} {% endblock %}
 	</div>

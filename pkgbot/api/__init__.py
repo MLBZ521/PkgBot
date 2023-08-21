@@ -4,14 +4,16 @@ import json
 
 from fastapi import Request
 
-from . import auth
-from . import package
-from . import recipe
-from . import user
-from . import views
-from . import autopkg
-from . import build_msg
-from . import send_msg
+from . import (
+	auth,
+	autopkg,
+	build_msg,
+	package,
+	send_msg,
+	recipe,
+	user,
+	views
+)
 
 from pkgbot import config
 from pkgbot.utilities import common as utility

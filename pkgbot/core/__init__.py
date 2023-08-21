@@ -1,11 +1,14 @@
-from . import autopkg
-from . import error
-from . import events
-from . import jamf_pro
-from . import package
-from . import policy
-from . import recipe
-from . import user
+from . import (
+	autopkg,
+	error,
+	events,
+	jamf_pro,
+	package,
+	policy,
+	recipe,
+	user,
+	views
+)
 
 from pkgbot import config
 
