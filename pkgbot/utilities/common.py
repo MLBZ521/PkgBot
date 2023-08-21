@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import hashlib
 import hmac
 import logging.config
@@ -12,6 +13,7 @@ import yaml
 
 from datetime import datetime, timezone
 from distutils.util import strtobool
+from io import StringIO
 from typing import List, Union
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
@@ -537,3 +539,17 @@ async def save_icon(icon: UploadFile):
 
 	static_dir = config.PkgBot.get("jinja_static")
 	await save_file(icon, f"{static_dir}/icons")
+
+
+async def receive_file_upload(file: UploadFile):
+
+	# Read in the file contents
+	file_contents = await file.read()
+	file.file.close()
+	return file_contents
+
+
+async def parse_csv_contents(csv_file: bytes):
+
+	# Convert the file contents to a file-like object that csv.DictReader can parse
+	return csv.DictReader(StringIO(csv_file.decode()))

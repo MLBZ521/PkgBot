@@ -207,6 +207,17 @@ async def create_recipe(request: Request,
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
+@router.post("/create/recipes", response_class=HTMLResponse)
+async def create_recipes(request: Request, file: UploadFile = File(),
+	user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current_user_from_cookie)):
+
+	if not user_object or not user_object.dict().get("full_admin"):
+		return await core.views.notify_not_authorized(request, "recipes")
+
+	redirect_url = await core.views.from_web_create_recipes(request, file)
+	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.post("/icons")
 async def upload_icon(icon: UploadFile):
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import Request, status
+from fastapi import Request, UploadFile, status
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 
@@ -172,3 +172,50 @@ async def from_web_create_recipe(recipe: dict, recipe_note: dict):
 		result = "success"
 
 	return redirect_url, path_params, result
+
+
+async def from_web_create_recipes(request: Request, file: UploadFile):
+
+	file_contents = await utility.receive_file_upload(file)
+	csv_contents = await utility.parse_csv_contents(file_contents)
+
+	# Dynamically generate the columns that should be expected in the csv
+	data_fields = models.Recipes.describe().get("data_fields")
+	expected_columns = [ 
+		field.get("name") for field in data_fields if not field.get("nullable") ] + [ "notes" ]
+
+	if {field.lower() for field in csv_contents.fieldnames}.difference(set(expected_columns)):
+		log.debug("[Error] Invalid csv format!")
+
+		await core.views.notify(
+			request,
+			category = "danger",
+			emphasize = "Error:  ",
+			emphasize_type = "strong",
+			message = "Invalid csv format!"
+		)
+
+	else:
+
+		# Track the result for each recipe so the user can be notified
+		notify_results = { "success": 0, "failure": 0, "exists": 0 }
+
+		# Create recipes
+		for recipe_row in csv_contents:
+
+			if note := recipe_row.pop("notes"):
+				recipe_note = {
+					"note": note,
+					"submitted_by": request.state.user.get("username")
+				}
+			else:
+				recipe_note = {}
+
+			_, _, result = await core.views.from_web_create_recipe(recipe_row, recipe_note)
+
+			# # Update the result tracking
+			notify_results[result] += 1
+
+		await core.views.notify_create_recipe_result(request, **notify_results)
+
+	return request.url_for(name="recipes")

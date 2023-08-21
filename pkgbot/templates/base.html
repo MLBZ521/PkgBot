@@ -11,6 +11,10 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
 		integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
 
+	<!-- Add Font Awesome's icon library -->
+	<link rel="stylesheet" 
+		href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
 	<!-- Import JavaScript Plugins -->
 	<!-- jQuery first, then Popper.js, then Bootstrap JS -->
 	<!-- Used to display theme and control tables within the website -->
@@ -37,10 +41,11 @@
 		.btn-main:focus,
 		.btn-main:not(:disabled):not(.disabled):focus {
 			/* .button:active:after { */
-			opacity: 1;
-			transition: 0s;
+			color: white;
 			background: #BB2657;
 			box-shadow: 0 0 10px #BB2657;
+			opacity: 1;
+			transition: 0s;
 		}
 
 		/* .btn,
@@ -131,11 +136,47 @@
 					<span class="sr-only">Toggle Dropdown</span>
 				</button>
 
-				<div class="dropdown-menu">
-					<a class="dropdown-item"
+				<div class="dropdown">
+					<div class="dropdown-menu">
+						<a class="dropdown-item"
 							href="{{ url_for(name='create_recipe_form') }}">Create Recipe</a>
-					<!-- <div class="dropdown-divider"></div> -->
+
+						<form method="post" action="/create/recipes" enctype="multipart/form-data" class="validatedForm">
+							<label class="dropdown-item">Upload Recipes&ThickSpace;
+								<input type="file" id="recipes_file" name="file" style="display: none;">
+								<button id="upload_recipes" type="submit"
+									class="fa-solid fa-upload btn-main"
+									style="background-color: #8C1D40; border: none; border-radius: 0.3rem; color: white; padding: 4px 8px;">
+								</button>
+							</label>
+						</form>
+
+					</div>
 				</div>
+
+				<script>
+					document.getElementById('upload_recipes').addEventListener('click', (e) => {
+						var file_input = document.querySelector('input[id="recipes_file"]')
+						verify_file(e, file_input);
+					});
+
+					function verify_file(event, file) {
+						event.preventDefault();
+
+						if (file.value){
+							// A file was selected
+							console.log("Uploading file...");
+							event.target.click();
+						}
+						else {
+							// A file was not selected
+							console.warn("[WARNING] A file was not selected");
+							event.target.setCustomValidity("Please select a file to upload!");
+							event.target.reportValidity();
+						}
+					}
+				</script>
+
 			</div>
 
 			<div class="nav-item nav-text">
