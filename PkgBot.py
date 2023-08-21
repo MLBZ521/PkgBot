@@ -23,7 +23,7 @@ log = utility.log
 app = create_pkgbot()
 celery = app.celery_app
 
-app.mount("/static", StaticFiles(directory="/Library/AutoPkg/PkgBot/pkgbot/static"), name="static")
+app.mount("/static", StaticFiles(directory=config.PkgBot.get("jinja_static")), name="static")
 app.include_router(api.views.router)
 app.include_router(api.auth.router)
 app.include_router(api.autopkg.router)
