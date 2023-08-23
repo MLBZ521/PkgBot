@@ -153,11 +153,17 @@ async def compute_hex_digest(key: bytes,
 	return hmac.new(key, message, hash).hexdigest()
 
 
+async def load_yaml_file(config_file):
+
+	# Open a yaml file
+	with open(config_file, 'rb') as config_file_path:
+		return load_yaml(config_file_path)
+
+
 async def load_yaml(config_file):
 
-	# Load the recipe config
-	with open(config_file, 'rb') as config_file_path:
-		return yaml.safe_load(config_file_path)
+	# Load yaml file
+	return yaml.safe_load(config_file)
 
 
 async def save_yaml(contents, config_file):
