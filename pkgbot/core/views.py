@@ -220,7 +220,7 @@ async def from_web_create_recipes(request: Request, file: UploadFile):
 		notify_results = { "success": 0, "failure": 0, "exists": 0 }
 
 		# Create recipes
-		for recipe_row in csv_contents:
+		for recipe_row in contents:
 
 			if note := recipe_row.pop("notes"):
 				recipe_note = {
