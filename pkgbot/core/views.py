@@ -177,22 +177,41 @@ async def from_web_create_recipe(recipe: dict, recipe_note: dict):
 async def from_web_create_recipes(request: Request, file: UploadFile):
 
 	file_contents = await utility.receive_file_upload(file)
-	csv_contents = await utility.parse_csv_contents(file_contents)
+
+	if file.content_type == "text/csv":
+		contents = await utility.parse_csv_contents(file_contents)
+		fieldnames = contents.fieldnames
+
+	elif file.content_type == "application/x-yaml":
+
+		contents = (await utility.load_yaml(file_contents)).get("recipes")
+		fieldnames = contents[0].keys()
+
+	else:
+		await core.views.notify(
+			request,
+			category = "danger",
+			emphasize = "Error:  ",
+			emphasize_type = "strong",
+			message = "Unknown format!"
+		)
+
+		return request.url_for("recipes")
 
 	# Dynamically generate the columns that should be expected in the csv
 	data_fields = models.Recipes.describe().get("data_fields")
 	expected_columns = [ 
 		field.get("name") for field in data_fields if not field.get("nullable") ] + [ "notes" ]
 
-	if {field.lower() for field in csv_contents.fieldnames}.difference(set(expected_columns)):
-		log.debug("[Error] Invalid csv format!")
+	if {field.lower() for field in fieldnames}.difference(set(expected_columns)):
+		log.debug("[Error] Invalid format!")
 
 		await core.views.notify(
 			request,
 			category = "danger",
 			emphasize = "Error:  ",
 			emphasize_type = "strong",
-			message = "Invalid csv format!"
+			message = "Invalid format!"
 		)
 
 	else:

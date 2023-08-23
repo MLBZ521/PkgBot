@@ -141,9 +141,9 @@
 						<a class="dropdown-item"
 							href="{{ url_for(name='create_recipe_form') }}">Create Recipe</a>
 
-						<form method="post" action="/create/recipes" enctype="multipart/form-data" class="validatedForm">
+						<form method="post" action="/create/recipes" enctype="multipart/form-data">
 							<label class="dropdown-item">Upload Recipes&ThickSpace;
-								<input type="file" id="recipes_file" name="file" style="display: none;">
+								<input type="file" id="recipes_file" name="file" accept=".csv,.yaml,yml" style="display: none;">
 								<button id="upload_recipes" type="submit"
 									class="fa-solid fa-upload btn-main"
 									style="background-color: #8C1D40; border: none; border-radius: 0.3rem; color: white; padding: 4px 8px;">
