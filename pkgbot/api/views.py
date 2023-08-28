@@ -52,7 +52,7 @@ async def packages(request: Request):
 	pkgs = await schemas.Package_Out.from_queryset(models.Packages.all())
 
 	table_headers = [
-		"", "", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
+		"", "ID", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
 	]
 
 	return templates.TemplateResponse("packages.html",
