@@ -1,257 +1,217 @@
 <!doctype html>
 <html lang="en">
 
-<head>
-	<!-- Required meta tags -->
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<head>
+		<!-- Required meta tags -->
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-	<!-- Import CSS Style Sheets -->
-	<!-- Bootstrap CSS - Used to display the website "theme" -->
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
-		integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+		<!-- Import CSS Style Sheets -->
+		<!-- Bootstrap CSS - Used to display the website "theme" -->
+		<link rel="stylesheet" type="text/css"
+			href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+			integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N"
+			crossorigin="anonymous" />
 
-	<!-- Add Font Awesome's icon library -->
-	<link rel="stylesheet" 
-		href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+		<!-- Add Font Awesome's icon library -->
+		<link rel="stylesheet" type="text/css"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
-	<!-- Import JavaScript Plugins -->
-	<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-	<!-- Used to display theme and control tables within the website -->
-	<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"
-		integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
-		crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
-		integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
-		crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"
-		integrity="sha384-+sLIOodYLS7CIrQpBjl+C7nPvqq+FbNUBDunl/OZv93DB7Ln/533i8e/mZXLi/P+"
-		crossorigin="anonymous"></script>
+		<!-- Internal PkgBot Styling -->
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', path='/styles.css')}}" />
 
-	<style>
-		.btn-main,
-		.btn-main:active,
-		.btn-main:not(:disabled):not(.disabled):active {
-			background-color: #8C1D40;
-			border-color: #8C1D40;
-			color: white;
-		}
+		<!-- Import JavaScript Plugins -->
+		<!-- jQuery first, then Bootstrap JS with Popper.js bundle -->
+		<!-- Used to display theme and control tables within the website -->
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.7.0.slim.js" async>
+		</script>
+		<script type="text/javascript"
+			src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
+			integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
+			crossorigin="anonymous" async>
+		</script>
 
-		.btn-main:hover,
-		.btn-main:focus,
-		.btn-main:not(:disabled):not(.disabled):focus {
-			/* .button:active:after { */
-			color: white;
-			background: #BB2657;
-			box-shadow: 0 0 10px #BB2657;
-			opacity: 1;
-			transition: 0s;
-		}
+		<title>PkgBot: {% block title %} {% endblock %}</title>
+	</head>
 
-		/* .btn,
-		.btn-group,
-		.btn-primary,
-		.btn-secondary,
-		.btn-outline-primary,
-		.dropdown,
-		.dropdown-toggle,
-		.dropdown-toggle-split,
-		.navbar,
-		.button,
-		.dropdown-menu,
-		.navbar-toggler { */
-			/* background-color: transparent; */
-			/* color: black; */
-			/* color: transparent; */
-			/* background-repeat: no-repeat; */
-			/* border: none; */
-			/* cursor: pointer; */
-			/* overflow: hidden; */
-			/* outline: none; */
-		/* } */
+	{% set user = request.state.user or {} %}
 
-		.nav-btn-group {
-			padding: 0;
-			padding-left: 5px;
-			/* font-size: medium; */
+	<body>
+		<nav class="navbar navbar-expand-md navbar-light bg-light">
 
-		}
+			<a class="navbar-brand" href="{{ url_for('index')}}">PkgBot</a>
 
-		.nav-item,
-		.nav-link,
-		.nav-link:hover,
-		.nav-text {
-			color: black;
-			/* font-size: medium; */
+			<!-- Navigation menu for small/mobile UIs -->
+			<button type="button" class="navbar-toggler" aria-controls="navbarNav"
+				aria-expanded="false" aria-label="Toggle navigation" data-toggle="collapse"
+				data-target="#navbarNav">
+				<span class="navbar-toggler-icon"></span>
+			</button>
 
-		}
-
-		.main-container {
-			/* display: flex; */
-			justify-content: center;
-			padding-top: 25px;
-			padding-left: 50px;
-			padding-right: 50px;
-		}
-	</style>
-
-	<title>PkgBot: {% block title %} {% endblock %}</title>
-</head>
-
-{% set user = request.state.user or {} %}
-
-<body>
-	<nav class="navbar navbar-expand-md navbar-light bg-light">
-		<a class="navbar-brand" href="{{ url_for('index')}}">PkgBot</a>
-		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-			aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-			<span class="navbar-toggler-icon"></span>
-		</button>
-		<div class="collapse navbar-collapse" id="navbarNav">
-
-			{% if user.get("full_admin") %}
-			<div class="btn-group px-1">
-				<a class="btn active dropdown nav-btn-group"
-					href="{{ url_for(name='packages') }}">Packages</a>
-
-				<button type="button" class="btn dropdown-toggle dropdown-toggle-split nav-btn-group"
-					data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-					<span class="sr-only">Toggle Dropdown</span>
-				</button>
-
-				<div class="dropdown-menu">
-					<a class="dropdown-item disabled"
-						href="{{ url_for(name='create_recipe_form') }}">Create Package</a>
-						<!-- url_for's name parameter should be changed to "new_package" once supported -->
-						<!-- <div class="dropdown-divider"></div> -->
-				</div>
-			</div>
-
-			<div class="btn-group px-1">
-				<a class="btn active dropdown nav-btn-group"
-					href="{{ url_for(name='recipes') }}">Recipes</a>
-
-				<button type="button" class="btn dropdown-toggle dropdown-toggle-split nav-btn-group"
-					data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-					<span class="sr-only">Toggle Dropdown</span>
-				</button>
-
-				<div class="dropdown">
-					<div class="dropdown-menu">
-						<a class="dropdown-item"
-							href="{{ url_for(name='create_recipe_form') }}">Create Recipe</a>
-
-						<form method="post" action="/create/recipes" enctype="multipart/form-data">
-							<label class="dropdown-item">Upload Recipes&ThickSpace;
-								<input type="file" id="recipes_file" name="file" accept=".csv,.yaml,yml" style="display: none;">
-								<button id="upload_recipes" type="submit"
-									class="fa-solid fa-upload btn-main"
-									style="background-color: #8C1D40; border: none; border-radius: 0.3rem; color: white; padding: 4px 8px;">
-								</button>
-							</label>
-						</form>
-
-					</div>
-				</div>
-
-				<script>
-					document.getElementById('upload_recipes').addEventListener('click', (e) => {
-						var file_input = document.querySelector('input[id="recipes_file"]')
-						verify_file(e, file_input);
-					});
-
-					function verify_file(event, file) {
-						event.preventDefault();
-
-						if (file.value){
-							// A file was selected
-							console.log("Uploading file...");
-							event.target.click();
-						}
-						else {
-							// A file was not selected
-							console.warn("[WARNING] A file was not selected");
-							event.target.setCustomValidity("Please select a file to upload!");
-							event.target.reportValidity();
-						}
-					}
-				</script>
-
-			</div>
-
-			<div class="nav-item nav-text">
-				<a class="nav-link" href="#">About</a>
-			</div>
-			{% else %}
 			<div class="collapse navbar-collapse" id="navbarNav">
-				<ul class="navbar-nav">
-					<!-- <li class="nav-item active">
-						<a class="nav-link" href=" url_for(name='userlogin') }}">Login</a>
-					</li> -->
-					<li class="nav-item active">
-						<a class="nav-link" href="{{ url_for(name='packages') }}">Packages</a>
-					</li>
-					<li class="nav-item active">
-						<a class="nav-link" href="{{ url_for(name='recipes') }}">Recipes</a>
-					</li>
-					<!-- <li class="nav-item active">
-						<a class="nav-link" href="#">KB Articles</a>
-					</li> -->
-					<li class="nav-item">
-						<a class="nav-link" href="#">About</a>
-					</li>
-				</ul>
+
+				{% if user.get("full_admin") %}
+				<div class="btn-group px-1">
+					<a class="btn active dropdown nav-btn-group"
+						href="{{ url_for(name='packages') }}">Packages</a>
+
+					<button type="button"
+						class="btn dropdown-toggle dropdown-toggle-split nav-btn-group"
+						aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+						<span class="sr-only">Toggle Dropdown</span>
+					</button>
+
+					<div class="dropdown-menu">
+						<a class="dropdown-item disabled"
+							href="{{ url_for(name='create_recipe_form') }}">Create Package</a>
+							<!-- url_for's name parameter should be changed
+								to "new_package" once supported -->
+							<!-- <div class="dropdown-divider"></div> -->
+					</div>
+				</div>
+
+				<div class="btn-group px-1">
+
+					<a class="btn active dropdown nav-btn-group"
+						href="{{ url_for(name='recipes') }}">Recipes</a>
+
+					<button type="button"
+						class="btn dropdown-toggle dropdown-toggle-split nav-btn-group"
+						aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+						<span class="sr-only">Toggle Dropdown</span>
+					</button>
+
+					<div class="dropdown">
+						<div class="dropdown-menu">
+
+							<a class="dropdown-item"
+								href="{{ url_for(name='create_recipe_form') }}">Create Recipe</a>
+
+							<form action="/create/recipes" method="post"
+								enctype="multipart/form-data">
+								<label class="dropdown-item">Upload Recipes&ThickSpace;
+									<input type="file" class="display-none" id="recipes_file"
+										name="file" accept=".csv,.yaml,yml">
+									<button type="submit" id="upload_recipes"
+										class="fa-solid fa-upload btn-main btn-recipe-upload">
+									</button>
+								</label>
+							</form>
+
+						</div>
+					</div>
+
+					<script>
+						document.getElementById('upload_recipes').addEventListener('click', (e) => {
+							var file_input = document.querySelector('input[id="recipes_file"]')
+							verify_file(e, file_input);
+						});
+
+						function verify_file(event, file) {
+							// event.preventDefault();
+
+							if (file.value){
+								// A file was selected
+								console.log("Uploading file...");
+								event.target.click();
+							}
+							else {
+								// A file was not selected
+								console.warn("[WARNING] A file was not selected");
+								event.target.setCustomValidity("Please select a file to upload!");
+								event.target.reportValidity();
+							}
+						}
+					</script>
+
+				</div>
+
+				<div class="nav-item nav-text">
+					<a class="nav-link" href="#">About</a>
+				</div>
+				{% else %}
+				<div class="collapse navbar-collapse" id="navbarNav">
+
+					<ul class="navbar-nav">
+						<!-- <li class="nav-item active">
+							<a class="nav-link" href=" url_for(name='userlogin') }}">Login</a>
+						</li> -->
+						<li class="nav-item active">
+							<a class="nav-link" href="{{ url_for(name='packages') }}">Packages</a>
+						</li>
+						<li class="nav-item active">
+							<a class="nav-link" href="{{ url_for(name='recipes') }}">Recipes</a>
+						</li>
+						<!-- <li class="nav-item active">
+							<a class="nav-link" href="#">KB Articles</a>
+						</li> -->
+						<li class="nav-item">
+							<a class="nav-link" href="#">About</a>
+						</li>
+					</ul>
+
+				</div>
+				{% endif %}
 			</div>
+
+			{% if user %}
+				<form action="/auth/logout" method="POST">
+					<div class="form-row align-items-center">
+						<div class="col-auto">
+							<button type="submit" class="btn btn-sm btn-main" color="8C1D40">
+								Logout
+							</button>
+						</div>
+					</div>
+				</form>
+			{% else %}
+				<form action="/auth/login" method="POST">
+					<div class="form-row align-items-center">
+						<div class="form-floating col-auto">
+							<input type="text" class="form-control" name="username" id="username"
+								placeholder="username"required>
+							<label class="col-form-label col-form-label-sm" for="username">
+								Username
+							</label>
+						</div>
+						<div class="form-floating col-auto">
+							<input type="password" class="form-control" name="password"
+								id="password" placeholder="password"required>
+							<label class="col-form-label col-form-label-sm" for="password">
+								Password
+							</label>
+						</div>
+						<div class="col-auto">
+							<button type="submit" class="btn btn-sm btn-main" color="8C1D40">
+								Login
+							</button>
+						</div>
+					</div>
+				</form>
 			{% endif %}
+		</nav>
+
+		<div class="main-container">
+			{% for message in parse_messages(request) %}
+			<div class="alert alert-{{ message.category }} alert-dismissible">
+				<a class="close" href="#" aria-label="close" data-dismiss="alert">&times;</a>
+				{% if message.get("emphasize") %}
+				<{{message.emphasize_type}}>{{message.emphasize}}</{{message.emphasize_type}}>
+				{% endif %}
+				{{ message.message }}
+			</div>
+			{% endfor %}
+
+			{% block content %} {% endblock content %}
+
+			<hr />
+
 		</div>
 
-		{% if user %}
-			<form method="POST" action="/auth/logout">
-				<div class="form-row align-items-center">
-					<div class="col-auto">
-						<button type="submit" class="btn btn-sm btn-main" color="8C1D40">Logout</button>
-					</div>
-				</div>
-			</form>
-		{% else %}
-			<form method="POST" action="/auth/login">
-				<div class="form-row align-items-center">
-					<div class="form-floating col-auto">
-						<input type="text" name="username" class="form-control" id="username" placeholder="username"
-							required>
-						<label class="col-form-label col-form-label-sm" for="username">Username</label>
-					</div>
-					<div class="form-floating col-auto">
-						<input type="password" name="password" class="form-control" id="password" placeholder="password"
-							required>
-						<label class="col-form-label col-form-label-sm" for="password">Password</label>
-					</div>
-					<div class="col-auto">
-						<button type="submit" class="btn btn-sm btn-main" color="8C1D40">Login</button>
-					</div>
-				</div>
-			</form>
-		{% endif %}
-	</nav>
-
-	<div class="main-container">
-		{% for message in parse_messages(request) %}
-		<div class="alert alert-{{ message.category }} alert-dismissible">
-			<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-			{% if message.get("emphasize") %}
-			<{{message.emphasize_type}}>{{message.emphasize}}</{{message.emphasize_type}}>
-			{% endif %}
-			{{ message.message }}
-		</div>
-		{% endfor %}
-
-		{% block content %} {% endblock %}
-	</div>
+	</body>
 
 	<footer>
 		<center>This service is managed by the Endpoint Management team.</center>
 	</footer>
-
-</body>
 
 </html>

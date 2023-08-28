@@ -1,99 +1,93 @@
 {% extends "base.html" %}
-
 {% block content %}
-<h1><code>{% block title %}Create new Recipe{% endblock %}</code></h1>
 
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
-<script type="text/javascript" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
+		<h1><code>{% block title %}Create new Recipe{% endblock %}</code></h1>
 
-<form method="post" action="/create/recipe">
+		<form method="post" action="/create/recipe">
 
-	<div class="form-group">
+			<div class="form-group">
 
-		<div>
-			<label class="form-label" for="recipe_id">Recipe ID: &nbsp;</label>
-			<input class="w-25" id="recipe_id" name="recipe_id" maxlength="500"
-				placeholder="Recipe ID" required {{ "disabled" if not
-				user.get("site_access") }} />
-		</div>
+				<div>
+					<label class="form-label" for="recipe_id">Recipe ID: &nbsp;</label>
+					<input class="w-25" id="recipe_id" name="recipe_id" maxlength="500"
+						placeholder="Recipe ID" required {{ "disabled" if not
+						user.get("site_access") }} />
+				</div>
 
-		<div class="custom-switch">
-			<input type="checkbox" class="custom-control-input" id="enabled" name="enabled"
-				{{ "disabled" if not user.get("site_access") }} />
-			<label class="custom-control-label" for="enabled">Enabled</label>
-		</div>
+				<div class="custom-switch">
+					<input type="checkbox" class="custom-control-input" id="enabled" name="enabled"
+						{{ "disabled" if not user.get("site_access") }} />
+					<label class="custom-control-label" for="enabled">Enabled</label>
+				</div>
 
-		<div class="custom-switch">
-			<input type="checkbox" class="custom-control-input" id="pkg_only" name="pkg_only"
-				{{ "disabled" if not user.get("site_access") }} />
-			<label class="custom-control-label" for="pkg_only">Package Only</label>
-			<span id="help_block" class="form-text text-muted"
-				style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Only .pkg is uploaded to production</span>
-		</div>
+				<div class="custom-switch">
+					<input type="checkbox" class="custom-control-input" id="pkg_only"
+						name="pkg_only" {{ "disabled" if not user.get("site_access") }} />
+					<label class="custom-control-label" for="pkg_only">Package Only</label>
+					<span id="help_block" class="form-text text-muted sub-help-text">
+						Only .pkg is uploaded to production</span>
+				</div>
 
-		<div class="custom-switch">
-			<input type="checkbox" class="custom-control-input" id="manual_only" name="manual_only"
-				{{ "disabled" if not user.get("site_access") }} />
-			<label class="custom-control-label" for="manual_only">Manual Only</label>
-			<span id="help_block" class="form-text text-muted"
-				style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">Recipe is only available to run manually</span>
-		</div>
+				<div class="custom-switch">
+					<input type="checkbox" class="custom-control-input" id="manual_only"
+						name="manual_only" {{ "disabled" if not user.get("site_access") }} />
+					<label class="custom-control-label" for="manual_only">Manual Only</label>
+					<span id="help_block" class="form-text text-muted sub-help-text">
+						Recipe is only available to run manually</span>
+				</div>
 
-		<div>
-			<label class="form-label" for="schedule">Schedule (days: int): &nbsp;</label>
-			<input class="input-sm" id="schedule" name="schedule" placeholder="schedule" 
-				type="number" step="1" min="0" max="90" value="0" />
-		</div>
+				<div>
+					<label class="form-label" for="schedule">Schedule (days: int): &nbsp;</label>
+					<input class="input-sm" id="schedule" name="schedule" placeholder="schedule"
+						type="number" step="1" min="0" max="90" value="0" />
+				</div>
 
-		<div>
-			<label class="form-label" for="note">Notes</label>
-			<textarea id="note" name="note" maxlength="4000" class="form-control" 
-				placeholder="Recipe notes."></textarea>
-			<span id="counter" class="pull-left form-text text-muted"
-			style="margin-left: 5px; font-size: 12px;"></span>
-		</div>
+				<div>
+					<label class="form-label" for="note">Notes</label>
+					<textarea id="note" name="note" maxlength="4000" class="form-control"
+						placeholder="Recipe notes."></textarea>
+					<span id="counter" class="pull-left form-text text-muted counter"></span>
+				</div>
 
-		<br />
+				<br />
 
-		<div>
-			<button type="submit" class="btn btn-primary">Save</button>
-		</div>
+				<div>
+					<button type="submit" class="btn btn-main">Save</button>
+				</div>
 
-	</div>
+			</div>
 
-	<script>
+			<script>
 
-		function count_characters() {
+				function count_characters() {
 
-			this.addEventListener("input", count_characters)
+					this.addEventListener("input", count_characters)
 
-			var max_length = $(this).attr("maxlength");
-			var current_length = $(this).val().length;
-			var characters_remaining = max_length - current_length;
-			var counter = $(this).next(".form-text");
+					var max_length = $(this).attr("maxlength");
+					var current_length = $(this).val().length;
+					var characters_remaining = max_length - current_length;
+					var counter = $(this).next(".form-text");
 
-			counter.text(current_length + "/" + max_length);
+					counter.text(current_length + "/" + max_length);
 
-			// Change text color to red when there are 0 characters remaining
-			if (characters_remaining === 0) {
-				counter.removeClass("text-muted");
-				counter.addClass("text-danger");
-			} 
-			else {
-				counter.removeClass("text-danger");
-				counter.addClass("text-muted");
-			}
+					// Change text color to red when there are 0 characters remaining
+					if (characters_remaining === 0) {
+						counter.removeClass("text-muted");
+						counter.addClass("text-danger");
+					}
+					else {
+						counter.removeClass("text-danger");
+						counter.addClass("text-muted");
+					}
 
-		}
+				}
 
-		$(document).ready(function () {
-			$(".form-control").each(count_characters);
-		});
+				$(document).ready(function () {
+					$(".form-control").each(count_characters);
+				});
 
-	</script>
+			</script>
 
-</form>
+		</form>
 
-<hr />
-{% endblock %}
+{% endblock content %}

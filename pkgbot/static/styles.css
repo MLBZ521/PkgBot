@@ -1,0 +1,180 @@
+a {
+    color: #00A3E0
+}
+
+.dropdown-item:active,
+.dropdown-item.active.selected:active,
+.dropdown-item.active.selected:focus,
+.dropdown-item.active.selected:hover,
+.dropdown-item.active.selected
+{
+    background-color: #FFC627 !important;
+    color: #000000 !important;
+}
+
+/* .btn,
+.btn-group,
+.btn-primary,
+.btn-secondary,
+.btn-outline-primary,
+.dropdown,
+.dropdown-toggle,
+.dropdown-toggle-split,
+.navbar,
+.button,
+.dropdown-menu,
+.navbar-toggler { */
+    /* background-color: transparent; */
+    /* color: black; */
+    /* color: transparent; */
+    /* background-repeat: no-repeat; */
+    /* border: none; */
+    /* cursor: pointer; */
+    /* overflow: hidden; */
+    /* outline: none; */
+/* } */
+
+.btn-link {
+    /* background: #BB2657; */
+    color: #8C1D40;
+}
+
+.btn-link:focus {
+    box-shadow: 0 0 0px;
+    color: #BB2657;
+}
+
+.btn-link:hover {
+    /* background: #BB2657; */
+    color: #BB2657;
+}
+
+.btn-main,
+.btn-main:active,
+.btn-main:not(:disabled):not(.disabled):active {
+    background-color: #8C1D40;
+    border-color: #8C1D40;
+    color: #F2F2F2;
+}
+
+.btn-main:hover,
+.btn-main:focus,
+.btn-main:not(:disabled):not(.disabled):focus {
+    /* .button:active:after { */
+    background: #BB2657;
+    box-shadow: 0 0 10px #BB2657;
+    color: #F2F2F2;
+    opacity: 1;
+    transition: 0s;
+}
+
+.btn-recipe-upload {
+    background-color: #8C1D40;
+    border: none;
+    border-radius: 0.3rem;
+    color: #F2F2F2;
+    padding: 4px 8px;
+}
+
+.black-text {
+    color: #000000
+}
+
+.counter {
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+/* Switch (just for inheritance) */
+.custom-control-input~.custom-control-label::before {
+    opacity: 1;
+    transition: 0s;
+}
+
+/* Switch is disabled */
+/* .custom-control-input:not(:checked)~.custom-control-label::before {
+    background-color: #8C1D40 !important;
+    border-color: #8C1D40 !important;
+} */
+
+/* Switch is disabled and in focus */
+.custom-control-input:focus:not(:checked) ~ .custom-control-label::before {
+    border-color: #BB2657 !important;
+    box-shadow: 0 0 10px #BB2657 !important;
+}
+
+/* Switch is disabled and active */
+.custom-control-input:active:not(:checked) ~ .custom-control-label::before {
+    background-color: #FFC627 !important;
+    border-color: #FFC627 !important;
+    box-shadow: 0 0 10px #FFC627 !important;
+}
+
+/* Switch is enabled */
+.custom-control-input:checked ~ .custom-control-label::before {
+    border-color: #FFC627 !important;
+    background-color: #FFC627 !important;
+}
+
+/* Switch is enabled and in focus */
+.custom-control-input:checked:focus ~ .custom-control-label::before {
+    box-shadow: 0 0 10px #FFC627 !important;
+}
+
+/* Switch is enabled and active */
+.custom-control-input:checked:active ~ .custom-control-label::before {
+    background-color: #BB2657 !important;
+    border-color: #BB2657 !important;
+    box-shadow: 0 0 10px #BB2657 !important;
+}
+
+.display-none {
+    display: none;
+}
+
+select:focus,
+select:active,
+textarea:focus,
+textarea:active,
+input:focus:not(.custom-control-input),
+input:active:not(.custom-control-input) {
+    border-color: #FFC627 !important;
+    box-shadow: 0 0 10px #FFC627 !important;
+    opacity: 1;
+    outline: 0 none;
+    transition: 0s;
+}
+
+.main-container {
+    /* display: flex; */
+    justify-content: center;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 25px;
+}
+
+.nav-btn-group {
+    padding: 0;
+    padding-left: 5px;
+    /* font-size: medium; */
+}
+
+.nav-btn-group:focus,
+/* .nav-btn-group:hover, */
+.nav-btn-group:active {
+    box-shadow: 0 0 0px;
+}
+
+.nav-item,
+.nav-link,
+.nav-link:hover,
+.nav-text {
+    color: black;
+    /* font-size: medium; */
+}
+
+.sub-help-text{
+    font-size: 12px;
+    margin-bottom: 5px;
+    margin-left: 15px;
+}
