@@ -2,6 +2,7 @@
 {% block title %}List of Recipes{% endblock %}
 {% block content %}
 {% include "table_css.html" %}
+{% include "table_js.html" %}
 
 		<table class="dataTable pkgbot-table" id="recipes">
 
@@ -36,15 +37,4 @@
 
 		</table>
 
-		<script type="text/javascript">
-			$(document).ready(
-				function() {
-					$('#recipes').DataTable(
-						{"order": [[ $('.primary-column').index(), "desc" ]]}
-					);
-				}
-			);
-		</script>
-
-{% include "table_js.html" %}
 {% endblock content %}

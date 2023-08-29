@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 {% include "table_css.html" %}
+{% include "table_js.html" %}
 
 		<h1><code class="black-text">{% block title %}{{ recipe['recipe_id'] }}{% endblock %}</code></h1>
 
 		<form action="/recipe/{{ recipe['id'] }}" method="post">
-
 			<div class="form-group">
 
 				<div>
@@ -51,8 +51,8 @@
 
 				<div>
 					<label class="form-label" for="note">Notes</label>
-					<textarea class="form-control" id="note" name="note" maxlength="4000"
-						placeholder="Recipe notes."></textarea>
+					<textarea class="form-control count-text" id="note" name="note"
+						maxlength="4000" placeholder="Recipe notes."></textarea>
 					<span class="pull-left form-text text-muted counter" id="counter"></span>
 				</div>
 
@@ -63,61 +63,6 @@
 				</div>
 
 			</div>
-
-			<script>
-				function count_characters() {
-
-					this.addEventListener("input", count_characters)
-
-					var max_length = $(this).attr("maxlength");
-					var current_length = $(this).val().length;
-					var characters_remaining = max_length - current_length;
-					var counter = $(this).next(".form-text");
-
-					counter.text(current_length + "/" + max_length);
-
-					// Change text color to red when there are 0 characters remaining
-					if (characters_remaining === 0) {
-						counter.removeClass("text-muted");
-						counter.addClass("text-danger");
-					}
-					else {
-						counter.removeClass("text-danger");
-						counter.addClass("text-muted");
-					}
-
-				}
-
-				$(document).ready(function () {
-					$(".form-control").each(count_characters);
-				});
-
-
-				getElements = function (id) {
-					if (typeof id == "object") {
-						return [id];
-					} else {
-						return document.querySelectorAll(id);
-					}
-				};
-
-
-				styleElement = function (element, prop, val) {
-					element.style.setProperty(prop, val);
-				};
-
-				toggleShow = function (sel) {
-					var i, x = getElements(sel), l = x.length;
-					for (i = 0; i < l; i++) {
-						if (x[i].style.display == "none") {
-						styleElement(x[i], "display", "block");
-						} else {
-						styleElement(x[i], "display", "none");
-						}
-					}
-				};
-			</script>
-
 		</form>
 
 		<div class="accordion" id="accordion_toggle">
@@ -170,16 +115,6 @@
 
 						</table>
 
-						<script type="text/javascript">
-							$(document).ready(
-								function() {
-									$('#Results').DataTable(
-										{"order": [[ $('.primary-column').index(), "desc" ]]}
-									);
-								}
-							);
-						</script>
-
 					</div>
 				</div>
 
@@ -223,16 +158,6 @@
 							</tbody>
 						</table>
 
-						<script type="text/javascript">
-							$(document).ready(
-								function() {
-									$('#Notes').DataTable(
-										{"order": [[ $('.primary-column').index(), "desc" ]]}
-									);
-								}
-							);
-						</script>
-
 					</div>
 				</div>
 
@@ -240,5 +165,4 @@
 
 		</div>
 
-{% include "table_js.html" %}
 {% endblock content %}

@@ -2,6 +2,7 @@
 {% block title %}Package History{% endblock %}
 {% block content %}
 {% include "table_css.html" %}
+{% include "table_js.html" %}
 
 		<table class="dataTable pkgbot-table" id="packages">
 
@@ -45,25 +46,4 @@
 
 		</table>
 
-		<script type="text/javascript">
-			$(document).ready(
-				function() {
-					$('#packages').DataTable(
-						{"order": [[ $('.primary-column').index(), "desc" ]],
-						"search": {
-							"regex": true
-						},
-						"columnDefs": [
-							{
-								"targets": $('.sorting-disabled').index(),
-								"orderable": false
-							} 
-						]
-					}
-					);
-				}
-			);
-		</script>
-
-{% include "table_js.html" %}
 {% endblock content %}
