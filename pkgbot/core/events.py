@@ -36,7 +36,7 @@ async def event_handler(task_id, loop_count=0):
 
 		log.error(f"FAILED GETTING TASK RESULTS for {task_id} -- WHY?!?")
 		log.debug(f"task_results:  {task_results}")
-		# log.debug(f"task_results.result:  {task_results.result}")
+		# log.debug(f"task_results:  {task_results}")
 		log.debug("Sleeping for one second...")
 		time.sleep(1)
 		return await event_handler(task_id, loop_count + 1)
@@ -63,7 +63,7 @@ async def event_handler(task_id, loop_count=0):
 		case "disk_space_warning":
 			await event_disk_space_warning(task_results)
 
-		case "error" | "error" if not task_results.result.get("success"):
+		case "error" | "error" if not task_results.get("success"):
 			await event_error(task_results)
 
 		case event if event in ("recipe_run_dev", "recipe_run_prod"):
@@ -88,13 +88,13 @@ async def event_details(task_results):
 		task_results.get("stderr")
 	)
 	# or: {
-		# "event": task_results.result.get("event"),
-		# "event_id": task_results.result.get("event_id", ""),
-		# "autopkg_cmd": task_results.result.get("autopkg_cmd"),
-		# "recipe_id": task_results.result.get("recipe_id"),
-		# "success": task_results.result.get("success"),
-		# "stdout": task_results.result.get("stdout"),
-		# "stderr": task_results.result.get("stderr")
+		# "event": task_results.get("event"),
+		# "event_id": task_results.get("event_id", ""),
+		# "autopkg_cmd": task_results.get("autopkg_cmd"),
+		# "recipe_id": task_results.get("recipe_id"),
+		# "success": task_results.get("success"),
+		# "stdout": task_results.get("stdout"),
+		# "stderr": task_results.get("stderr")
 	# }
 
 
