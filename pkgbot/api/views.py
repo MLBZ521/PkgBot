@@ -203,7 +203,7 @@ async def create_recipe(request: Request,
 	referral, path_params, result = await core.views.from_web_create_recipe(recipe, recipe_note)
 	redirect_url = request.url_for(name=referral, **path_params)
 
-	core.views.notify_create_recipe_result(request, **{ result: 1 })
+	await core.views.notify_create_recipe_result(request, **{ result: 1 })
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
