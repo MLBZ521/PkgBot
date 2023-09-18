@@ -330,9 +330,6 @@ async def split_string(string: str, split_on: str = " ", split_index: int = 1):
 
 async def parse_slash_cmd_options(cmd_text: str, verb: str):
 
-	if " " not in cmd_text:
-		return cmd_text
-
 	final_options = {}
 
 	if verb in { "run", "verify-trust-info" }:
@@ -341,7 +338,7 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 			v_count = re.subn("v", '', v_count[0])[1]
 			final_options["verbose"] = f"{'v' * v_count}"
 
-		elif v_count := re.subn(r"--verbose|-v", '', cmd_text)[1]:
+		elif v_count := re.subn(r"\s--verbose|\s-v", '', cmd_text)[1]:
 			final_options["verbose"] = f"{'v' * v_count}"
 
 	options_to_parse = await split_string(cmd_text, split_index = -1)
@@ -367,7 +364,9 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 		if option == "--ignore-parent-trust-verification-errors":
 			final_options["ignore_parent_trust"] = True
 
-	final_options["overrides"] = overrides.lstrip()
+	if overrides:
+		final_options["overrides"] = overrides.lstrip()
+
 	return final_options
 
 
