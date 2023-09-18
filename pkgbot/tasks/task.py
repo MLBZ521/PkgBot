@@ -473,7 +473,8 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 			"recipe_id": recipe_id,
 			"success": parent_task_results["success"],
 			"stdout": parent_task_results["stdout"],
-			"stderr": parent_task_results["stderr"]
+			"stderr": parent_task_results["stderr"],
+			"task_id": self.request.id
 		}
 
 	else:
@@ -500,7 +501,8 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 			"recipe_id": recipe_id,
 			"success": results["success"],
 			"stdout": results["stdout"],
-			"stderr": results["stderr"]
+			"stderr": results["stderr"],
+			"task_id": self.request.id
 		}
 
 
@@ -540,7 +542,7 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	results = asyncio.run(utility.execute_process(cmd))
 
 	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
-		send_webhook.apply_async((task_id,), queue="autopkg", priority=9)
+		send_webhook.apply_async((task_id or self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "verify_trust_info",
@@ -549,6 +551,7 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 			"success": results["success"],
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
+			"task_id": task_id or self.request.id
 		}
 
 	return results
@@ -632,7 +635,7 @@ def autopkg_update_trust(
 	if stashed:
 		private_repo.git.stash("pop")
 
-	send_webhook.apply_async((self.request.id or task_id,), queue="autopkg", priority=9)
+	send_webhook.apply_async((task_id or self.request.id,), queue="autopkg", priority=9)
 
 	return {
 		"event": "update_trust_info",
@@ -642,6 +645,7 @@ def autopkg_update_trust(
 		"success": results["success"],
 		"stdout": results["stdout"],
 		"stderr": results["stderr"],
+		"task_id": task_id or self.request.id
 	}
 
 
@@ -666,7 +670,7 @@ def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
 	results = asyncio.run(utility.execute_process(cmd))
 
 	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
-		send_webhook.apply_async((task_id,), queue="autopkg", priority=9)
+		send_webhook.apply_async((task_id or self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "autopkg_version",
@@ -674,6 +678,7 @@ def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
 			"success": results["success"],
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
+			"task_id": task_id or self.request.id
 		}
 
 	return results
@@ -709,7 +714,7 @@ def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = N
 	results = asyncio.run(utility.execute_process(cmd))
 
 	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
-		send_webhook.apply_async((task_id,), queue="autopkg", priority=9)
+		send_webhook.apply_async((task_id or self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "repo-add",
@@ -718,6 +723,7 @@ def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = N
 			"success": results["success"],
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
+			"task_id": task_id or self.request.id
 		}
 
 	return results
