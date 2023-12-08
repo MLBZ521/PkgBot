@@ -92,13 +92,14 @@ async def autopkg_run_recipe(recipe_id: str = Depends(core.recipe.get),
 		dict:  Dict describing the results of the ran process
 	"""
 
-	return await core.autopkg.execute(autopkg_cmd, recipe_id)
+	queued_task = await core.autopkg.execute(autopkg_cmd, recipe_id.recipe_id)
+	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
 @router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
 	description="Validates a recipes trust info in a background task.",
 	dependencies=[Depends(core.user.get_current)])
-async def autopkg_verify_recipe(recipe_id: str,
+async def autopkg_verify_recipe(recipe_id: str = Depends(core.recipe.get),
 	autopkg_cmd: models.AutoPkgCMD_VerifyTrustInfo = Depends(models.AutoPkgCMD_VerifyTrustInfo)):
 	"""Runs the passed recipe id.
 
@@ -111,7 +112,7 @@ async def autopkg_verify_recipe(recipe_id: str,
 		dict:  Dict describing the results of the ran process
 	"""
 
-	queued_task = await core.autopkg.execute(autopkg_cmd, recipe_id)
+	queued_task = await core.autopkg.execute(autopkg_cmd, recipe_id.recipe_id)
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
@@ -180,11 +181,10 @@ async def receive(request: Request, task_id = Body()):
 @router.post("/trust/update", summary="Update recipe trust info",
 	description="Update a recipe's trust information.  Runs `autopkg update-trust-info`.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def autopkg_update_recipe_trust(
-	recipe_id: str | None = None,
-	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo = Depends(models.AutoPkgCMD_UpdateTrustInfo),
-	result_object: schemas.RecipeResult_In | None = Depends(schemas.RecipeResult_In)
-):
+async def autopkg_update_recipe_trust(recipe_id: str = Depends(core.recipe.get),
+	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo = Depends(models.AutoPkgCMD_UpdateTrustInfo)):
+	# result_object: schemas.RecipeResult_In | None = Depends(schemas.RecipeResult_In)
+	# Removed -- not sure this will be used via the API...
 
-	queued_task = await core.autopkg.update_trust(autopkg_cmd, result_object, recipe_id)
+	queued_task = await core.autopkg.update_trust(autopkg_cmd, recipe_id)
 	return { "result": "Queued background task" , "task_id": queued_task.id }
