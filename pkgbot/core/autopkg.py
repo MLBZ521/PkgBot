@@ -179,7 +179,7 @@ async def run_recipes(autopkg_cmd: models.AutoPkgCMD_Run):
 
 async def update_trust(
 	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo,
-	result_object: dict | None, recipe_id: str | None = None):
+	result_object: dict | None = None, recipe_id: str | None = None):
 
 	# Get recipe object
 	if recipe_object := await core.recipe.get({"recipe_id__iexact": recipe_id}):
