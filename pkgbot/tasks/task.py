@@ -278,10 +278,40 @@ def autopkg_verb_parser(self, **kwargs):
 	match verb:
 
 		case "verify-trust-info":
-			return autopkg_verify_trust(recipes, autopkg_cmd, task_id=self.request.id)
+
+			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
+
+			if isinstance(results_pre_check, dict):
+				# An error occurred in a pre-check
+				return results_pre_check
+
+			queued_tasks.extend(results_pre_check)
+
+			queued_task = autopkg_verify_trust.apply_async(
+				(recipes, autopkg_cmd, self.request.id),
+				queue="autopkg", priority=4
+			)
+
+			queued_tasks.append(queued_task.id)
+			return { "Queued background tasks": queued_tasks }
 
 		case "update-trust-info":
-			return autopkg_update_trust(recipes, autopkg_cmd, event_id, self.request.id)
+
+			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
+
+			if isinstance(results_pre_check, dict):
+				# An error occurred in a pre-check
+				return results_pre_check
+
+			queued_tasks.extend(results_pre_check)
+
+			queued_task = autopkg_update_trust.apply_async(
+				(recipes, autopkg_cmd, event_id, self.request.id),
+				queue="autopkg", priority=4
+			)
+
+			queued_tasks.append(queued_task.id)
+			return { "Queued background tasks": queued_tasks }
 
 		case "repo-add":
 			return autopkg_repo_add(repos, autopkg_cmd, task_id=self.request.id)
@@ -541,8 +571,8 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	# log.debug(f"Command to execute:  {cmd}")
 	results = asyncio.run(utility.execute_process(cmd))
 
-	if autopkg_cmd.get("ingress") in {"api", "Slack"} and not self.request.parent_id:
-		send_webhook.apply_async((task_id or self.request.id,), queue="autopkg", priority=9)
+	if autopkg_cmd.get("ingress") in {"api", "Slack"} and autopkg_cmd.get("verb") == "verify-trust-info":
+		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
 			"event": "verify_trust_info",
@@ -551,7 +581,7 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 			"success": results["success"],
 			"stdout": results["stdout"],
 			"stderr": results["stderr"],
-			"task_id": task_id or self.request.id
+			"task_id": self.request.id
 		}
 
 	return results
@@ -635,7 +665,7 @@ def autopkg_update_trust(
 	if stashed:
 		private_repo.git.stash("pop")
 
-	send_webhook.apply_async((task_id or self.request.id,), queue="autopkg", priority=9)
+	send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 	return {
 		"event": "update_trust_info",
@@ -645,7 +675,7 @@ def autopkg_update_trust(
 		"success": results["success"],
 		"stdout": results["stdout"],
 		"stderr": results["stderr"],
-		"task_id": task_id or self.request.id
+		"task_id": self.request.id
 	}
 
 
