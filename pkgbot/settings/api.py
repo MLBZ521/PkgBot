@@ -40,3 +40,5 @@ custom_responses = {
 	status.HTTP_404_NOT_FOUND: { "model": HTTPNotFoundError },
 	status.HTTP_409_CONFLICT: { "description": "The object already exists." }
 }
+
+PkgBot_Cookie = "PkgBot_Cookie"

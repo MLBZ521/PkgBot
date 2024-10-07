@@ -1,30 +1,184 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<h1>{% block title %} Edit "{{ package['name'] }} - {{ package['version'] }}" {% endblock %}</h1>
+{% include "table_css.html" %}
+{% include "table_js.html" %}
 
-<form method="post" action="/package/{{ package['id'] }}">
+		<h1>
+			<img src="{{ url_for('static', path='/icons/%s' % package['icon']) }}"
+				width="100" height="100" />
+			<code class="black-text">{% block title %}{{ package['name'] }} v{{ package['version'] }}{% endblock %}</code>
+		</h1>
 
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" name="do_not_delete">
-        <label class="form-check-label" for="do_not_delete">Prevent Deletion</label>
-    </div>
+		<p>
+			<form action="/package/{{ package['id'] }}" method="post">
+				<div class="form-group">
 
-    <div class="form-group">
-        <label for="special_flags">Special Flags</label>
-        <textarea name="special_flags" placeholder="Special Flags??"
-                  class="form-control">{{ request.form['special_flags'] or package['special_flags'] }}</textarea>
-    </div>
+					<div>
+						<label class="form-label" for="pkg_name">Pkg Name: &nbsp;</label>
+						<input class="w-25" id="pkg_name" name="pkg_name" maxlength="500"
+							value="{{ package['pkg_name'] }}"
+							{{ "disabled" if not user.get("full_admin") }} required />
+					</div>
 
-    <div class="form-group">
-        <label for="notes">Special Remarks</label>
-        <textarea name="notes" placeholder="Notes"
-                  class="form-control">{{ request.form['notes'] or package['notes'] }}</textarea>
-    </div>
+					<div>
+						<label class="form-label" for="packaged_date">Packaged Date: &nbsp;</label>
+						<input class="w-25" id="packaged_date" name="packaged_date" maxlength="500"
+							value="{{ package['packaged_date'] }}"
+							{{ "disabled" if not user.get("full_admin") }} required />
+					</div>
 
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </div>
-</form>
-<hr>
-{% endblock %}
+					<div>
+						<label class="form-label" for="promoted_date">Promoted Date: &nbsp;</label>
+						<input class="w-25" id="promoted_date" name="promoted_date" maxlength="500"
+							value="{{ package['promoted_date'] if package['promoted_date'] }}"
+							{{ "disabled" if not user.get("full_admin") }} />
+					</div>
+
+					<div>
+						<label class="form-label" for="last_update">Last Updated: &nbsp;</label>
+						<input class="w-25" id="last_update" name="last_update" maxlength="500"
+							value="{{ package['last_update'] }}"
+							{{ "disabled" if not user.get("full_admin") }} required />
+					</div>
+
+					<div>
+						<label class="form-label" for="updated_by">Last Updated By: &nbsp;</label>
+						<input class="w-25" id="updated_by" name="updated_by" maxlength="500"
+							value="{{ package['updated_by'] }}" disabled />
+					</div>
+
+					<label class="d-inline-block" for="pkg_status">Status:</label>
+					<select class="form-control form-control-sm w-25 d-inline-block selectpicker"
+						name="pkg_status" id="pkg_status"
+						{{ "disabled" if not user.get("full_admin") }} >
+						<option {{ "selected" if package["status"] == "dev" }}>dev</option>
+						<option {{ "selected" if package["status"] == "prod" }}>prod</option>
+						<option {{ "selected" if package["status"] == "retired" }}>retired</option>
+					</select>
+
+					<div class="form-group">
+						<label class="form-label" for="note">Package Notes</label>
+						<textarea class="form-control count-text" id="note" name="note"
+							maxlength="4000" placeholder="Package notes."></textarea>
+						<span class="pull-left form-text text-muted counter" id="counter"></span>
+					</div>
+
+					Package is used in:
+					<span class="form-text text-muted sub-help-text" id="help_block">
+						Enabling for a Site allows you to prevent automatic deletion of the .pkg
+					</span>
+					{% for site in user.get("site_access") | sort(attribute = sort_on, reverse = True) %}
+						<div class="custom-switch form-check-inline">
+							<input type="checkbox" class="custom-control-input"
+								id="site_tag__{{ site }}" name="site_tag" value="{{ site }}"
+								{{ "checked" if site in pkg_holds["pkg_holds"] }} />
+							<label class="custom-control-label" for="site_tag__{{ site }}">
+								{{ site }}
+							</label>
+						</div>
+					{% endfor %}
+
+					<p>
+						<div class="form-group">
+							<button type="submit" class="btn btn-main">Save</button>
+						</div>
+					</p>
+
+				</div>
+			</form>
+		</p>
+
+		<div class="accordion" id="accordion_toggle">
+
+			<div class="card">
+				<div class="card-header" id="Results_Card">
+					<h2 class="mb-0">
+					<button type="button" class="btn btn-link btn-block text-left"
+						aria-controls="results_card_one" aria-expanded="true"
+						data-target="#results_card_one" data-toggle="collapse">
+						Sites that have flagged pkg
+					</button>
+					</h2>
+				</div>
+
+				<div class="collapse" id="results_card_one" aria-labelledby="Results"
+					data-parent="#accordion_toggle">
+					<div class="card-body">
+
+						<table class="dataTable pkgbot-table" id="SiteFlags">
+
+							<thead>
+								<tr>
+									{% for header in pkg_holds_table_headers %}
+									<th {{ "class=primary-column" if header == "Time Stamp" }}>
+										{{ header }}
+									</th>
+									{% endfor %}
+								</tr>
+							</thead>
+
+							<tbody>
+								{% for pkg_hold in pkg_holds %}
+								<tr>
+									<td>{{ pkg_hold["site"] }}</td>
+									<td>{{ pkg_hold["enabled"] }}</td>
+									<td>{{ pkg_hold["time_stamp"] }}</td>
+									<td>{{ pkg_hold["submitted_by"] }}</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+
+						</table>
+
+					</div>
+				</div>
+			</div>
+
+			<div class="card">
+
+				<div class="card-header" id="Notes_Card">
+					<h2 class="mb-0">
+						<button type="button" class="btn btn-link btn-block text-left"
+							aria-controls="notes_card_one" aria-expanded="true"
+							data-target="#notes_card_one" data-toggle="collapse">
+							Note History
+						</button>
+					</h2>
+				</div>
+
+				<div class="collapse" id="notes_card_one" aria-labelledby="Notes"
+					data-parent="#accordion_toggle">
+					<div class="card-body">
+
+						<table class="dataTable pkgbot-table" id="Notes">
+
+							<thead>
+								<tr>
+									{% for header in notes_table_headers %}
+									<th {{ "class=primary-column" if header == "Time Stamp" }}>
+										{{ header }}
+									</th>
+									{% endfor %}
+								</tr>
+							</thead>
+
+							<tbody>
+							{% for note in notes %}
+								<tr>
+									<td>{{ note["note"] }}</td>
+									<td>{{ note["submitted_by"] }}</td>
+									<td>{{ note["time_stamp"] }}</td>
+								</tr>
+							{% endfor %}
+							</tbody>
+
+						</table>
+
+					</div>
+				</div>
+
+			</div>
+
+		</div>
+
+{% endblock content %}

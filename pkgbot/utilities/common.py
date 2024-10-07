@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import hashlib
 import hmac
 import logging.config
@@ -12,6 +13,7 @@ import yaml
 
 from datetime import datetime, timezone
 from distutils.util import strtobool
+from io import StringIO
 from typing import List, Union
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
@@ -151,11 +153,17 @@ async def compute_hex_digest(key: bytes,
 	return hmac.new(key, message, hash).hexdigest()
 
 
+async def load_yaml_file(config_file):
+
+	# Open a yaml file
+	with open(config_file, 'rb') as config_file_path:
+		return load_yaml(config_file_path)
+
+
 async def load_yaml(config_file):
 
-	# Load the recipe config
-	with open(config_file, 'rb') as config_file_path:
-		return yaml.safe_load(config_file_path)
+	# Load yaml file
+	return yaml.safe_load(config_file)
 
 
 async def save_yaml(contents, config_file):
@@ -322,9 +330,6 @@ async def split_string(string: str, split_on: str = " ", split_index: int = 1):
 
 async def parse_slash_cmd_options(cmd_text: str, verb: str):
 
-	if " " not in cmd_text:
-		return cmd_text
-
 	final_options = {}
 
 	if verb in { "run", "verify-trust-info" }:
@@ -333,7 +338,7 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 			v_count = re.subn("v", '', v_count[0])[1]
 			final_options["verbose"] = f"{'v' * v_count}"
 
-		elif v_count := re.subn(r"--verbose|-v", '', cmd_text)[1]:
+		elif v_count := re.subn(r"\s--verbose|\s-v", '', cmd_text)[1]:
 			final_options["verbose"] = f"{'v' * v_count}"
 
 	options_to_parse = await split_string(cmd_text, split_index = -1)
@@ -359,7 +364,9 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 		if option == "--ignore-parent-trust-verification-errors":
 			final_options["ignore_parent_trust"] = True
 
-	final_options["overrides"] = overrides.lstrip()
+	if overrides:
+		final_options["overrides"] = overrides.lstrip()
+
 	return final_options
 
 
@@ -524,12 +531,30 @@ async def build_xml(root, parent, child, values, sub_element = None):
 	return root_element
 
 
-async def save_icon(icon: UploadFile):
-
-	pkg_dir = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir))
+async def save_file(file: UploadFile, save_dir):
 
 	try:
-		with open(f"{pkg_dir}/static/icons/{icon.filename}", "wb") as icon_obj:
-			shutil.copyfileobj(icon.file, icon_obj)
+		with open(f"{save_dir}/{file.filename}", "wb") as file_obj:
+			shutil.copyfileobj(file.file, file_obj)
 	finally:
-		await icon.close()
+		await file.close()
+
+
+async def save_icon(icon: UploadFile):
+
+	static_dir = config.PkgBot.get("jinja_static")
+	await save_file(icon, f"{static_dir}/icons")
+
+
+async def receive_file_upload(file: UploadFile):
+
+	# Read in the file contents
+	file_contents = await file.read()
+	file.file.close()
+	return file_contents
+
+
+async def parse_csv_contents(csv_file: bytes):
+
+	# Convert the file contents to a file-like object that csv.DictReader can parse
+	return csv.DictReader(StringIO(csv_file.decode()))

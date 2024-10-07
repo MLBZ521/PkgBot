@@ -55,7 +55,12 @@ JamfPro_Prod:
   # Name of the recipe that will be used when promoting packages to public
   recipe_template: com.github.mlbz521.ProductionTemplate
   recipe_template_pkg_only: com.github.mlbz521.ProductionTemplate
-
+  unauthorized_sites:
+    - "Building A"
+    - "North Building"
+    - "HQ"
+    - "Europe"
+    - "Test"
 
 Git:
   # Specify non-standard binary to use
@@ -110,7 +115,8 @@ PkgBot:
     <jps_api_username>: null # Yes, _null_ -- only need to set the username here
   webhook_secret:  some_long_string to validate incoming messages
   # Jinja Template Directory
-  jinja_templates: templates
+  jinja_templates: /Library/AutoPkg/PkgBot/pkgbot/templates
+  jinja_static: /Library/AutoPkg/PkgBot/pkgbot/static
   # How long the web view token is valid for (in minutes)
   token_valid_for: 30
   # Logging info

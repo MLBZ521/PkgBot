@@ -1,35 +1,168 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
 {% block content %}
-<h1>{% block title %} Edit "{{ recipe['recipe_id'] }}" {% endblock %}</h1>
+{% include "table_css.html" %}
+{% include "table_js.html" %}
 
-<form method="post" action="/recipe/{{ recipe['recipe_id'] }}">
+		<h1><code class="black-text">{% block title %}{{ recipe['recipe_id'] }}{% endblock %}</code></h1>
 
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" name="enabled">
-        <label class="form-check-label" for="enabled">Enabled</label>
-    </div>
+		<form action="/recipe/{{ recipe['id'] }}" method="post">
+			<div class="form-group">
 
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" name="pkg_only">
-        <label class="form-check-label" for="pkg_only">Upload package only to production?</label>
-    </div>
+				<div>
+					<label class="form-label" for="recipe_id">Recipe ID: &nbsp;</label>
+					<input class="w-25" id="recipe_id" name="recipe_id" maxlength="500"
+						value="{{ recipe['recipe_id'] }}" required {{ "disabled" if not
+						user.get("full_admin") }} />
+				</div>
 
-    <div class="form-group">
-        <label for="notes">Schedule (days: int)</label>
-        <textarea name="notes" placeholder="schedule"
-                  class="form-control">{{ request.form['schedule'] or recipe['schedule'] }}</textarea>
-    </div>
+				<div class="custom-switch">
+					<input type="checkbox" class="custom-control-input" id="enabled" name="enabled"
+					{{ "checked" if recipe["enabled"] }} {{ "disabled" if not user.get("full_admin") }} />
+					<label class="custom-control-label" for="enabled">Enabled</label>
+				</div>
 
-    <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea name="notes" placeholder="Notes"
-                  class="form-control">{{ request.form['notes'] or recipe['notes'] }}</textarea>
-    </div>
+				<div class="custom-switch">
+					<input type="checkbox" class="custom-control-input" id="pkg_only"
+						name="pkg_only" {{ "checked" if recipe["pkg_only"] }}
+						{{ "disabled" if not user.get("full_admin") }} />
+					<label class="custom-control-label" for="pkg_only">Package Only</label>
+					<span class="form-text text-muted sub-help-text" id="help_block">
+						Only .pkg is uploaded to production
+					</span>
+				</div>
 
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </div>
-</form>
-<hr>
-{% endblock %}
+				<div class="custom-switch">
+					<input type="checkbox" class="custom-control-input" id="manual_only"
+						name="manual_only" {{ "checked" if recipe["manual_only"] }}
+						{{ "disabled" if not user.get("full_admin") }} />
+					<label class="custom-control-label" for="manual_only">Manual Only</label>
+					<span class="form-text text-muted sub-help-text" id="help_block">
+						Recipe is only available to run manually
+					</span>
+				</div>
+
+				<div>
+					<label class="form-label" for="schedule">Schedule (days: int): &nbsp;</label>
+					<input class="input-sm" id="schedule" name="schedule" placeholder="schedule"
+						type="number" step="1" min="0" max="90"
+						{{ "disabled" if not user.get("full_admin") }}
+						value="{{ recipe['schedule'] }}" />
+				</div>
+
+				<div>
+					<label class="form-label" for="note">Notes</label>
+					<textarea class="form-control count-text" id="note" name="note"
+						maxlength="4000" placeholder="Recipe notes."></textarea>
+					<span class="pull-left form-text text-muted counter" id="counter"></span>
+				</div>
+
+				<br />
+
+				<div>
+					<button type="submit" class="btn btn-main">Save</button>
+				</div>
+
+			</div>
+		</form>
+
+		<div class="accordion" id="accordion_toggle">
+			<div class="card">
+
+				<div class="card-header" id="Results_Card">
+					<h2 class="mb-0">
+					<button type="button" class="btn btn-link btn-block text-left"
+						aria-controls="results_card_one" aria-expanded="true"
+						data-target="#results_card_one" data-toggle="collapse">
+						Result History
+					</button>
+					</h2>
+				</div>
+
+				<div class="collapse" id="results_card_one" aria-labelledby="Results"
+					data-parent="#accordion_toggle">
+					<div class="card-body">
+
+						<table class="dataTable pkgbot-table" id="Results">
+
+							<thead>
+								<tr>
+									{% for header in results_table_headers %}
+									<th {{ "class=primary-column" if header == "Last Update" }}>
+										{{ header }}
+									</th>
+									{% endfor %}
+								</tr>
+							</thead>
+
+							<tbody>
+								{% for result in results %}
+								<tr>
+									<td>{{ result["type"] }}</td>
+									<td>{{ result["status"] }}</td>
+									<td>{{ result["last_update"] | strftime }}</td>
+									<td>{{ result["updated_by"] }}</td>
+									<td>{{ result["task_id"] }}</td>
+									{% if "https://" in result["details"] %}
+									<td>
+										<a href="{{ result['details'] }}">Slack Notification</a>
+									</td>
+									{% else %}
+									<td>{{ result["details"] }}</td>
+									{% endif %}
+								</tr>
+								{% endfor %}
+							</tbody>
+
+						</table>
+
+					</div>
+				</div>
+
+			</div>
+
+			<div class="card">
+
+				<div class="card-header" id="Notes_Card">
+					<h2 class="mb-0">
+					<button type="button" class="btn btn-link btn-block text-left"
+						aria-expanded="true" aria-controls="notes_card_one"
+						data-target="#notes_card_one" data-toggle="collapse">
+						Note History
+					</button>
+					</h2>
+				</div>
+
+				<div id="notes_card_one" class="collapse" aria-labelledby="Notes"
+					data-parent="#accordion_toggle">
+					<div class="card-body">
+
+						<table class="dataTable pkgbot-table" id="Notes">
+
+							<thead>
+								<tr>
+									{% for header in notes_table_headers %}
+									<th {{ "class=primary-column" if header == "Time Stamp" }}>
+										{{ header }}
+									</th>
+									{% endfor %}
+								</tr>
+							</thead>
+							<tbody>
+								{% for note in notes %}
+								<tr>
+									<td>{{ note["note"] }}</td>
+									<td>{{ note["submitted_by"] }}</td>
+									<td>{{ note["time_stamp"] }}</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+
+					</div>
+				</div>
+
+			</div>
+
+		</div>
+
+{% endblock content %}

@@ -5,7 +5,7 @@ import sys
 from tortoise.expressions import Q
 
 from pkgbot import core
-from pkgbot.db import models
+from pkgbot.db import schemas
 from pkgbot.utilities import common as utility
 
 PKG_ROOT = f"{os.path.dirname(os.path.abspath('PkgBot.py'))}/PkgBot"
@@ -18,7 +18,7 @@ log = utility.log
 MAX_CONTENT_SIZE = 1500
 
 
-async def new_pkg_msg(pkg_object: models.Package_In):
+async def new_pkg_msg(pkg_object: schemas.Package_In):
 
 	return await core.chatbot.SlackBot.post_message(
 		await core.chatbot.build.new_pkg_msg(pkg_object),
@@ -26,7 +26,7 @@ async def new_pkg_msg(pkg_object: models.Package_In):
 	)
 
 
-async def promote_msg(pkg_object: models.Package_In):
+async def promote_msg(pkg_object: schemas.Package_In):
 
 	blocks = await core.chatbot.build.promote_msg(pkg_object)
 	text = f"{pkg_object.pkg_name} was promoted to production"
@@ -34,7 +34,7 @@ async def promote_msg(pkg_object: models.Package_In):
 	result = await core.chatbot.SlackBot.update_message_with_response_url(
 		pkg_object.response_url,
 		blocks,
-		text=text
+		text = text
 	)
 
 	# If the first method fails, try the alternate
@@ -42,7 +42,7 @@ async def promote_msg(pkg_object: models.Package_In):
 		await core.chatbot.SlackBot.update_message(
 			blocks,
 			pkg_object.slack_ts,
-			text=text
+			text = text
 		)
 
 	return await core.chatbot.SlackBot.reaction(
@@ -52,17 +52,20 @@ async def promote_msg(pkg_object: models.Package_In):
 	)
 
 
-async def recipe_error_msg(recipe_id: str, id: int, error: str):
+async def recipe_error_msg(recipe_id: str, id: int, error: str, thread_ts: str | None = None):
 
 	redacted_error = await utility.replace_sensitive_strings(error)
 
 	if len(str(redacted_error)) > MAX_CONTENT_SIZE:
-		blocks = await core.chatbot.build.recipe_error_msg(recipe_id, id, "_See thread for details..._")
+		blocks = await core.chatbot.build.recipe_error_msg(
+			recipe_id, id, "_See thread for details..._")
 	else:
 		formatted_error = await core.chatbot.build.format_json(redacted_error)
-		blocks = await core.chatbot.build.recipe_error_msg(recipe_id, id, f"```{formatted_error}```")
+		blocks = await core.chatbot.build.recipe_error_msg(
+			recipe_id, id, f"```{formatted_error}```")
 
-	response = await core.chatbot.SlackBot.post_message(blocks, text=f"Encountered error in {recipe_id}")
+	response = await core.chatbot.SlackBot.post_message(
+		blocks, text=f"Encountered error in {recipe_id}", thread_ts=thread_ts)
 
 	if (
 		response.get("result") != "Failed to post message"
@@ -80,21 +83,22 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str):
 	return response
 
 
-async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
+async def trust_diff_msg(diff_msg: str, result_object: schemas.RecipeResult_In):
 
 	if len(diff_msg) > MAX_CONTENT_SIZE:
-		blocks = await core.chatbot.build.trust_diff_msg(trust_object.id, trust_object.recipe_id)
+		blocks = await core.chatbot.build.trust_diff_msg(
+			result_object.id, result_object.recipe.recipe_id)
 	else:
 		blocks = await core.chatbot.build.trust_diff_msg(
-			trust_object.id, trust_object.recipe_id, diff_msg)
+			result_object.id, result_object.recipe.recipe_id, diff_msg)
 
 	response = await core.chatbot.SlackBot.post_message(
 		blocks,
-		text=f"Trust verification failed for `{trust_object.recipe_id}`"
+		text = f"Trust verification failed for `{result_object.recipe.recipe_id}`"
 	)
 
-	trust_object.slack_ts = response.get('ts')
-	await trust_object.save()
+	result_object = await core.recipe.update_result(
+		{ "id": result_object.id }, { "slack_ts": response.get('ts') })
 
 	if (
 		response.get("result") != "Failed to post message"
@@ -102,55 +106,74 @@ async def trust_diff_msg(diff_msg: str, trust_object: models.TrustUpdate_In):
 	):
 		response = await core.chatbot.SlackBot.file_upload(
 			content = diff_msg,
-			filename = f"{trust_object.recipe_id}.diff",
+			filename = f"{result_object.recipe.recipe_id}.diff",
 			filetype = "diff",
-			title = trust_object.recipe_id,
-			text = f"Diff Output for {trust_object.recipe_id}",
-			thread_ts = trust_object.slack_ts
+			title = result_object.recipe.recipe_id,
+			text = f"Diff Output for {result_object.recipe.recipe_id}",
+			thread_ts = result_object.slack_ts
 		)
 
 	return response
 
 
-async def update_trust_success_msg(trust_object: models.TrustUpdate_In):
+async def update_trust_success_msg(result_object: schemas.RecipeResult_In):
 
-	blocks = await core.chatbot.build.update_trust_success_msg(trust_object)
+	blocks = await core.chatbot.build.update_trust_success_msg(result_object)
 
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"),
+		result_object.dict().get("response_url"),
 		blocks,
-		text=f"Successfully updated trust info for {trust_object.recipe_id}"
+		text = f"Successfully updated trust info for {result_object.recipe.recipe_id}"
 	)
 
 	if response.status_code == 200:
 		await core.chatbot.SlackBot.reaction(
 			action = "remove",
 			emoji = "gear",
-			ts = trust_object.slack_ts
+			ts = result_object.slack_ts
 		)
 
 	return response
 
 
-async def update_trust_error_msg(msg: str, trust_object: models.TrustUpdate_In):
+async def update_trust_error_msg(msg: str, result_object: schemas.RecipeResult_In):
 
-	blocks = await core.chatbot.build.update_trust_error_msg(msg, trust_object)
+	blocks = await core.chatbot.build.update_trust_error_msg(msg, result_object)
 
-	return await core.chatbot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"),
+	response = await core.chatbot.SlackBot.post_message(
 		blocks,
-		text=f"Failed to update trust info for {trust_object.recipe_id}"
+		text = f"Failed to update trust info for {result_object.recipe.recipe_id}",
+		thread_ts = result_object.dict().get("slack_ts")
+	)
+
+	if response.status_code == 200:
+		await core.chatbot.SlackBot.reaction(
+			action = "remove",
+			emoji = "gear",
+			ts = result_object.dict().get("slack_ts")
+		)
+
+	user_object = await core.user.get({"username": result_object.dict().get('updated_by')})
+
+	mention_blocks = await core.chatbot.build.basic_msg(
+		f"<@{user_object.dict().get('slack_id')}> Your request to update "
+		f"trust info for `{result_object.recipe.recipe_id}` failed!")
+
+	return await core.chatbot.SlackBot.post_message(
+		mention_blocks,
+		text = f"Failed to update trust info for {result_object.recipe.recipe_id}",
+		thread_ts = result_object.dict().get("slack_ts")
 	)
 
 
-async def deny_pkg_msg(pkg_object: models.Package_In):
+async def deny_pkg_msg(pkg_object: schemas.Package_In):
 
 	blocks = await core.chatbot.build.deny_pkg_msg(pkg_object)
 
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
 		pkg_object.dict().get("response_url"),
 		blocks,
-		text=f"{pkg_object.pkg_name} was not approved for production"
+		text = f"{pkg_object.pkg_name} was not approved for production"
 	)
 
 	if response.status_code == 200:
@@ -163,21 +186,30 @@ async def deny_pkg_msg(pkg_object: models.Package_In):
 	return response
 
 
-async def deny_trust_msg(trust_object: models.TrustUpdate_In):
+async def deny_trust_msg(result_object: schemas.RecipeResult_In):
 
-	blocks = await core.chatbot.build.deny_trust_msg(trust_object)
+	blocks = await core.chatbot.build.deny_trust_msg(result_object)
+	text = f"Trust info for {result_object.recipe.recipe_id} was not approved"
 
 	response = await core.chatbot.SlackBot.update_message_with_response_url(
-		trust_object.dict().get("response_url"),
+		result_object.dict().get("response_url"),
 		blocks,
-		text=f"Trust info for {trust_object.recipe_id} was not approved"
+		text = text
 	)
+
+	# If the first method fails, try the alternate
+	if json.loads(response.body).get("error") in ("used_url", "expired_url"):
+		response = await core.chatbot.SlackBot.update_message(
+			blocks,
+			result_object.slack_ts,
+			text = text
+		)
 
 	if response.status_code == 200:
 		await core.chatbot.SlackBot.reaction(
 			action = "remove",
 			emoji = "gear",
-			ts = trust_object.slack_ts
+			ts = result_object.slack_ts
 		)
 
 	return response
@@ -195,9 +227,10 @@ async def direct_msg(user, text, channel: str | None = None, image: str | None =
 	blocks = await core.chatbot.build.basic_msg(text, image, alt_image_text)
 
 	return await core.chatbot.SlackBot.post_ephemeral_message(
-		user, blocks,
-		channel=channel,
-		text=alt_text
+		user,
+		blocks,
+		channel = channel,
+		text = alt_text
 	)
 
 
@@ -211,7 +244,8 @@ async def basic_msg(text, image: str | None = None,
 async def modal_notification(trigger_id: str, title_txt: str, msg_text: str,
 	button_text: str, image: str | None = None, alt_image_text: str | None = None):
 
-	blocks = await core.chatbot.build.modal_notification(title_txt, msg_text, button_text, image, alt_image_text)
+	blocks = await core.chatbot.build.modal_notification(
+		title_txt, msg_text, button_text, image, alt_image_text)
 	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
 
 

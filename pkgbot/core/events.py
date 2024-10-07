@@ -6,7 +6,7 @@ from tempfile import SpooledTemporaryFile
 from fastapi import UploadFile
 
 from pkgbot import config, core
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -36,7 +36,7 @@ async def event_handler(task_id, loop_count=0):
 
 		log.error(f"FAILED GETTING TASK RESULTS for {task_id} -- WHY?!?")
 		log.debug(f"task_results:  {task_results}")
-		# log.debug(f"task_results.result:  {task_results.result}")
+		# log.debug(f"task_results:  {task_results}")
 		log.debug("Sleeping for one second...")
 		time.sleep(1)
 		return await event_handler(task_id, loop_count + 1)
@@ -63,7 +63,7 @@ async def event_handler(task_id, loop_count=0):
 		case "disk_space_warning":
 			await event_disk_space_warning(task_results)
 
-		case "error" | "error" if not task_results.result.get("success"):
+		case "error" | "error" if not task_results.get("success"):
 			await event_error(task_results)
 
 		case event if event in ("recipe_run_dev", "recipe_run_prod"):
@@ -81,20 +81,20 @@ async def event_details(task_results):
 	return (
 		task_results.get("event"),
 		task_results.get("event_id", ""),
-		models.AutoPkgCMD(**task_results.get("autopkg_cmd")),
+		models.AutoPkgCMD(**task_results.get("autopkg_cmd")) if task_results.get("autopkg_cmd") else {},
 		task_results.get("recipe_id") if "recipe_id" in task_results.keys() else task_results.get("repo"),
 		task_results.get("success"),
 		task_results.get("stdout"),
 		task_results.get("stderr")
 	)
 	# or: {
-		# "event": task_results.result.get("event"),
-		# "event_id": task_results.result.get("event_id", ""),
-		# "autopkg_cmd": task_results.result.get("autopkg_cmd"),
-		# "recipe_id": task_results.result.get("recipe_id"),
-		# "success": task_results.result.get("success"),
-		# "stdout": task_results.result.get("stdout"),
-		# "stderr": task_results.result.get("stderr")
+		# "event": task_results.get("event"),
+		# "event_id": task_results.get("event_id", ""),
+		# "autopkg_cmd": task_results.get("autopkg_cmd"),
+		# "recipe_id": task_results.get("recipe_id"),
+		# "success": task_results.get("success"),
+		# "stdout": task_results.get("stdout"),
+		# "stderr": task_results.get("stderr")
 	# }
 
 
@@ -128,7 +128,7 @@ async def event_verify_trust_info(task_results):
 	else:
 		# Send message that recipe_id failed verify-trust-info
 		redacted_error = await utility.replace_sensitive_strings(stderr)
-		await core.recipe.verify_trust_failed(recipe_id, redacted_error)
+		await core.recipe.verify_trust_failed(recipe_id, redacted_error, task_results.get("task_id"))
 
 
 async def event_update_trust_info(task_results):
@@ -137,7 +137,7 @@ async def event_update_trust_info(task_results):
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	if event_id:
-		await core.recipe.update_trust_result(success, event_id, str(stderr))
+		await core.recipe.update_trust_result(success, { "id": event_id }, str(stderr), autopkg_cmd.egress)
 
 	elif autopkg_cmd.ingress == "Slack":
 		# Post ephemeral msg to Slack user
@@ -168,12 +168,14 @@ async def event_disk_space_warning(task_results):
 		"Warning", stderr, config.PkgBot.get('icon_warning'))
 
 	# Create DB entry
-	await models.ErrorMessages.create(
-		type = event,
-		slack_ts = results.get('ts'),
-		slack_channel = results.get('channel'),
-		status = "Acknowledged"
-	)
+	await core.error.create({
+		"type": event,
+		"slack_ts": results.get("ts"),
+		"slack_channel": results.get("channel"),
+		"status": "Notified",
+		"task_id": task_results.get("task_id"),
+		"details": stderr
+	})
 
 
 async def event_failed_pre_checks(task_results):
@@ -183,12 +185,12 @@ async def event_failed_pre_checks(task_results):
 
 	for task_id in task_results.get("task_id"):
 
-		task_results = await utility.get_task_results(task_id)
-		event = task_results.get("task_results").get("event")
+		child_task_results = await utility.get_task_results(task_id)
+		event = child_task_results.get("task_results").get("event")
 
 		if event == "autopkg_repo_update":
 ##### TODO:
-	# Sent message to ChatBot
+	# Send message to ChatBot
 			log.warning("Failure during event:  autopkg_repo_update")
 
 		if event == "disk_space_critical":
@@ -196,21 +198,23 @@ async def event_failed_pre_checks(task_results):
 
 			results = await core.chatbot.send.disk_space_msg(
 				"Critical",
-				task_results.get("stderr"),
+				child_task_results.get("stderr"),
 				config.PkgBot.get('icon_error')
 			)
 
 			# Create DB entry
-			await models.ErrorMessages.create(
-				type = event,
-				slack_ts = results.get('ts'),
-				slack_channel = results.get('channel'),
-				status = "Notified"
-			)
+			await core.error.create({
+				"type": event,
+				"slack_ts": results.get("ts"),
+				"slack_channel": results.get("channel"),
+				"status": "Notified",
+				"task_id": child_task_results.get("task_id"),
+				"details": child_task_results.get("stderr")
+			})
 
 		if event == "private_git_pull":
 ##### TODO:
-	# Sent message to ChatBot
+	# Send message to ChatBot
 			log.warning("Failure during event:  private_git_pull")
 
 
@@ -243,7 +247,12 @@ async def event_recipe_run(task_results):
 		"pkg_name": pkg_name,
 		"recipe_id": recipe_id,
 		"version": pkg_processor.get("Input").get("version"),
-		"notes": pkg_processor.get("Input").get("pkg_notes")
+	}
+
+	pkg_note = {
+		"package_id": pkg_name,
+		"submitted_by": config.Slack.get('bot_name'),
+		"note": pkg_processor.get("Input").get("pkg_notes")
 	}
 
 	if event == "recipe_run_dev":
@@ -277,7 +286,7 @@ async def event_recipe_run(task_results):
 
 			# Instead, check if the package has already been created in the database, this
 			# ensures a message is posted if it failed to post previously.
-			pkg_db_object = await models.Packages.filter(pkg_name=pkg_name).first()
+			pkg_db_object = await core.package.get({ "pkg_name": pkg_name })
 
 			if pkg_db_object:
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` did not find a new version."
@@ -285,8 +294,9 @@ async def event_recipe_run(task_results):
 			else:
 				log.info(f"New package posted to dev:  {pkg_name}")
 
-				pkg_object = models.Package_In(**pkg_data)
-				await core.autopkg.workflow_dev(pkg_object)
+				pkg_object = schemas.Package_In(**pkg_data)
+				pkg_note_object = schemas.PackageNote_In(**pkg_note)
+				await core.autopkg.workflow_dev(pkg_object, pkg_note_object)
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` found a new version `{pkg_data.get('version')}`!"
 
 			if autopkg_cmd.ingress == "Slack":
@@ -300,10 +310,10 @@ async def event_recipe_run(task_results):
 				)
 
 			# Update attributes for this recipe
-			recipe_object = await models.Recipes.filter(recipe_id=recipe_id).first()
-			recipe_object.last_ran = await utility.utc_to_local(datetime.now())
-			recipe_object.recurring_fail_count = 0
-			await recipe_object.save()
+			await core.recipe.update({ "recipe_id": recipe_id }, {
+				"last_ran": await utility.utc_to_local(datetime.now()),
+				"recurring_fail_count": 0
+			})
 
 		except Exception as exception:
 
@@ -319,7 +329,7 @@ async def event_recipe_run(task_results):
 		promoted_date = datetime.strftime(datetime.now(), format_string)
 		pkg_data["promoted_date"] = promoted_date
 
-		await core.autopkg.workflow_prod(event_id, models.Package_In(**pkg_data))
+		await core.autopkg.workflow_prod(event_id, schemas.Package_In(**pkg_data))
 
 
 async def event_autopkg_version(task_results):
@@ -430,7 +440,7 @@ async def handle_autopkg_error(**kwargs):
 	# Post Ephemeral Message to PkgBot Admin?
 
 		# Get the recipe that failed to be promoted
-		pkg_db_object = await models.Packages.filter(id=event_id).first()
+		pkg_db_object = await core.package.get({ "id": event_id })
 		recipe_id = pkg_db_object.recipe_id
 		software_title = pkg_db_object.name
 		software_version = pkg_db_object.version
@@ -441,7 +451,7 @@ async def handle_autopkg_error(**kwargs):
 			"Error:": redacted_error
 		}
 
-	await core.recipe.error(recipe_id, redacted_error, task_id)
+	await core.recipe.error(recipe_id, event, redacted_error, task_id)
 
 
 async def handle_exception(**kwargs):

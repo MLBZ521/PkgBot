@@ -6,47 +6,38 @@ from typing import Literal, Optional
 from pydantic import BaseModel, validator
 from tortoise import fields
 from tortoise.models import Model
-from tortoise.contrib.pydantic import pydantic_model_creator
 
+from pkgbot import config
 from pkgbot.utilities import common as utility
 
 
-class Packages(Model):
-	id = fields.IntField(pk=True)
-	recipe_id = fields.CharField(1024)
-	name = fields.CharField(64)
-	version = fields.CharField(64)
-	pkg_name = fields.CharField(256, null=True)
-	icon = fields.CharField(1024, null=True)
-	packaged_date = fields.DatetimeField(auto_now_add=True)
-	promoted_date = fields.DatetimeField(null=True, default=None)
-	last_update = fields.DatetimeField(auto_now=True)
-	status = fields.CharField(64, default="dev")
-	updated_by = fields.CharField(64, default="PkgBot")
-	special_flags = fields.JSONField(null=True)
-	notes = fields.CharField(4096, default="", null=True)
-	slack_channel = fields.CharField(32, null=True)
-	slack_ts = fields.CharField(32, null=True)
-	response_url = fields.CharField(1024, null=True)
+config = config.load_config()
 
-Package_Out = pydantic_model_creator(Packages, name="Package_Out")
-Package_In = pydantic_model_creator(Packages, name="Package_In", exclude_readonly=True)
+
+class PkgBotAdmins(Model):
+	username = fields.CharField(max_length=64, pk=True, unique=True, generated=False)
+	slack_id = fields.CharField(max_length=64, unique=True, null=True)
+	full_admin = fields.BooleanField(default=False)
+	pkgbot_token = fields.CharField(max_length=1024, unique=True, null=True)
+	jps_token = fields.CharField(max_length=1024, unique=True, null=True)
+	jps_token_expires = fields.DatetimeField(default=None, null=True)
+	site_access = fields.CharField(max_length=1024, null=True)
+	last_update = fields.DatetimeField(auto_now=True, null=True)
 
 
 class Recipes(Model):
 	id = fields.IntField(pk=True)
-	recipe_id = fields.CharField(512, unique=True)
+	recipe_id = fields.CharField(max_length=512, unique=True)
+	packages: fields.ReverseRelation["Packages"]
 	enabled = fields.BooleanField(default=True)
 	manual_only = fields.BooleanField(default=False)
 	pkg_only = fields.BooleanField(default=False)
 	last_ran = fields.DatetimeField(null=True, default=None)
 	recurring_fail_count = fields.IntField(null=True, default=0)
 	schedule = fields.IntField(default=0)
-	status = fields.CharField(1024, default="", null=True)
-	notes = fields.CharField(4096, default="", null=True)
 
-Recipe_Out = pydantic_model_creator(Recipes, name="Recipe_Out")
-Recipe_In = pydantic_model_creator(Recipes, name="Recipe_In", exclude_readonly=True)
+	class Meta:
+		table = "recipes"
 
 
 class Recipe_Filter(BaseModel):
@@ -57,58 +48,83 @@ class Recipe_Filter(BaseModel):
 	schedule: Optional[int]
 
 
-class PkgBotAdmins(Model):
-	username = fields.CharField(64, pk=True, unique=True, generated=False)
-	slack_id = fields.CharField(64, unique=True, null=True)
-	full_admin = fields.BooleanField(default=False)
-	jps_token = fields.CharField(1024, unique=True, null=True)
-	jps_token_expires = fields.DatetimeField(default=None, null=True)
-	site_access = fields.CharField(1024, null=True)
-	last_update = fields.DatetimeField(auto_now=True, null=True)
-
-PkgBotAdmin_Out = pydantic_model_creator(PkgBotAdmins, name="PkgBotAdmin_Out")
-PkgBotAdmin_In = pydantic_model_creator(
-	PkgBotAdmins, name="PkgBotAdmin_In", exclude_readonly=False)
-
-
-class ErrorMessages(Model):
+class RecipeNotes(Model):
 	id = fields.IntField(pk=True)
-	type = fields.CharField(64, default="error")
-	status = fields.CharField(64, null=True)
-	last_update = fields.DatetimeField(auto_now=True)
-	ack_by = fields.CharField(64, null=True)
-	slack_ts = fields.CharField(32, null=True)
-	slack_channel = fields.CharField(32, null=True)
-	response_url = fields.CharField(1024, null=True)
-
-ErrorMessage_Out = pydantic_model_creator(ErrorMessages, name="ErrorMessage_Out")
-ErrorMessage_In = pydantic_model_creator(
-	ErrorMessages, name="ErrorMessage_In", exclude_readonly=True)
+	note = fields.CharField(max_length=4096, default="", null=True)
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="notes", on_delete="CASCADE", to_field="recipe_id")
+	submitted_by = fields.CharField(max_length=64)
+	time_stamp = fields.DatetimeField(auto_now_add=True)
 
 
-class TrustUpdates(Model):
+class RecipeResults(Model):
 	id = fields.IntField(pk=True)
-	recipe_id = fields.CharField(1024)
-	status = fields.CharField(64, null=True)
-	updated_by = fields.CharField(64, default="PkgBot")
+	type = fields.CharField(max_length=64)
+	status = fields.CharField(max_length=64, null=True)
 	last_update = fields.DatetimeField(auto_now=True)
-	slack_channel = fields.CharField(32, null=True)
-	slack_ts = fields.CharField(32, null=True)
-	response_url = fields.CharField(1024, null=True)
+	updated_by = fields.CharField(max_length=64, default=config.Slack.get('bot_name'))
+	slack_ts = fields.CharField(max_length=32, null=True)
+	slack_channel = fields.CharField(max_length=32, null=True)
+	response_url = fields.CharField(max_length=1024, null=True)
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="results", on_delete="CASCADE", to_field="recipe_id") 
+	task_id = fields.CharField(max_length=36, null=True)
+	details = fields.CharField(max_length=4096)
 
-TrustUpdate_Out = pydantic_model_creator(TrustUpdates, name="TrustUpdate_Out")
-TrustUpdate_In = pydantic_model_creator(
-	TrustUpdates, name="TrustUpdate_In", exclude_readonly=True)
+
+class Packages(Model):
+	id = fields.IntField(pk=True)
+	recipe: fields.ForeignKeyRelation[Recipes] = fields.ForeignKeyField("pkgbot.Recipes", related_name="recipe", null=True, on_delete="RESTRICT", to_field="recipe_id") # SET_NULL
+	name = fields.CharField(max_length=64)
+	version = fields.CharField(max_length=64)
+	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
+	icon = fields.CharField(max_length=1024, null=True)
+	packaged_date = fields.DatetimeField(auto_now_add=True)
+	promoted_date = fields.DatetimeField(null=True, default=None)
+	last_update = fields.DatetimeField(auto_now=True)
+	status = fields.CharField(max_length=64, default="dev")
+	updated_by = fields.CharField(max_length=64, default=config.Slack.get('bot_name'))
+	slack_channel = fields.CharField(max_length=32, null=True)
+	slack_ts = fields.CharField(max_length=32, null=True)
+	response_url = fields.CharField(max_length=1024, null=True)
+
+	class Meta:
+		table = "packages"
+
+
+class PackageNotes(Model):
+	id = fields.IntField(pk=True)
+	note = fields.CharField(max_length=4096, default="", null=True)
+	package = fields.ForeignKeyField("pkgbot.Packages", related_name="notes", on_delete="CASCADE", to_field="pkg_name")
+	submitted_by = fields.CharField(max_length=64)
+	time_stamp = fields.DatetimeField(auto_now_add=True)
+
+
+class PackageHold(Model):
+	id = fields.IntField(pk=True)
+	enabled = fields.BooleanField()
+	package = fields.ForeignKeyField("pkgbot.Packages", related_name="holds", on_delete="CASCADE", to_field="pkg_name")
+	site = fields.CharField(max_length=128)
+	submitted_by = fields.CharField(max_length=64)
+	time_stamp = fields.DatetimeField(auto_now=True)
+
+
+class Errors(Model):
+	id = fields.IntField(pk=True)
+	type = fields.CharField(max_length=64, default="error")
+	status = fields.CharField(max_length=64, null=True)
+	last_update = fields.DatetimeField(auto_now=True)
+	updated_by = fields.CharField(max_length=64, null=True)
+	slack_ts = fields.CharField(max_length=32, null=True)
+	slack_channel = fields.CharField(max_length=32, null=True)
+	response_url = fields.CharField(max_length=1024, null=True)
+	task_id = fields.CharField(max_length=36, null=True)
+	details = fields.CharField(max_length=4096)
 
 
 class Policies(Model):
 	id = fields.IntField(pk=True)
 	policy_id = fields.IntField(unique=True)
-	name = fields.CharField(256)
-	site = fields.CharField(128)
-
-Policy_Out = pydantic_model_creator(Policies, name="Policy_Out")
-Policy_In = pydantic_model_creator(Policies, name="Policy_In", exclude_readonly=True)
+	name = fields.CharField(max_length=256)
+	site = fields.CharField(max_length=128)
 
 
 class CallBack(BaseModel):

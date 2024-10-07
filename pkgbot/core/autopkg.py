@@ -5,27 +5,29 @@ from celery import current_app as pkgbot_celery_app
 from fastapi import HTTPException, status
 
 from pkgbot import core
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 log = utility.log
 
 
-async def workflow_dev(pkg_object: models.Package_In):
+async def workflow_dev(pkg_object: schemas.Package_In, pkg_note_object: schemas.PackageNote_In):
 	"""Workflow to create a new package in the database and then post a message to chat.
 
 	Args:
-		pkg_object (models.Package_In): Details about a package object
+		pkg_object (schemas.Package_In): Details about a package object
+		pkg_note_object (schemas.Package_In): Note about a package object
 
 	Returns:
 		[JSON]: Result of the operation
 	"""
 
 	created_pkg = await core.package.create(pkg_object.dict())
+	await core.package.create_note(pkg_note_object.dict())
 
 	results = await core.chatbot.send.new_pkg_msg(
-		await models.Package_Out.from_tortoise_orm(created_pkg))
+		await schemas.Package_Out.from_tortoise_orm(created_pkg))
 
 	await core.package.update(
 		{"id": created_pkg.id},
@@ -38,7 +40,7 @@ async def workflow_dev(pkg_object: models.Package_In):
 	return results
 
 
-async def workflow_prod(promoted_id: int, pkg_object: models.Package_In):
+async def workflow_prod(promoted_id: int, pkg_object: schemas.Package_In):
 
 	if pkg_object.promoted_date is None:
 		date_to_convert = datetime.now()
@@ -66,7 +68,7 @@ async def execute(autopkg_cmd: models.AutoPkgCMD, item: str | None = None):
 			return await run_recipes(autopkg_cmd)
 
 		case "repo-add":
-			return await repo_add(autopkg_cmd)
+			return await repo_add(item, autopkg_cmd)
 
 		case "verify-trust-info":
 			return await verify_recipe(recipe_id=item, autopkg_cmd=autopkg_cmd)
@@ -177,17 +179,16 @@ async def run_recipes(autopkg_cmd: models.AutoPkgCMD_Run):
 
 async def update_trust(
 	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo,
-	trust_object: dict | None, recipe_id: str | None = None):
+	result_object: dict | None = None, recipe_id: str | None = None):
 
 	# Get recipe object
 	if recipe_object := await core.recipe.get({"recipe_id__iexact": recipe_id}):
 		event_id = None
 		recipe_id = recipe_object.recipe_id
 
-	elif trust_object:
-
-		event_id = trust_object.id
-		recipe_id = trust_object.recipe_id
+	elif result_object:
+		event_id = result_object.id
+		recipe_id = result_object.recipe.recipe_id
 
 	else:
 

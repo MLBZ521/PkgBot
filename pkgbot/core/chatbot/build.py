@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-from pkgbot.db import models
+from pkgbot.db import schemas
 
 PKG_ROOT = f"{os.path.dirname(os.path.abspath('PkgBot.py'))}/PkgBot"
 sys.path.insert(0, f"{PKG_ROOT}/Settings")
@@ -16,7 +16,7 @@ async def format_json(the_json, indent=4):
 	return json.dumps(the_json, indent=indent)
 
 
-async def new_pkg_msg(pkg_object: models.Package_In):
+async def new_pkg_msg(pkg_object: schemas.Package_In):
 
 	return await messages.new_pkg(pkg_object)
 
@@ -31,29 +31,29 @@ async def trust_diff_msg(id: int, recipe: str, diff_msg: str = None):
 	return await messages.trust_diff(id, recipe, diff_msg)
 
 
-async def deny_pkg_msg(pkg_object: models.Package_In ):
+async def deny_pkg_msg(pkg_object: schemas.Package_In ):
 
 	return await messages.deny_pkg(pkg_object)
 
 
-async def deny_trust_msg(trust_object: models.TrustUpdate_In):
+async def deny_trust_msg(result_object: schemas.RecipeResult_In):
 
-	return await messages.deny_trust(trust_object)
+	return await messages.deny_trust(result_object)
 
 
-async def promote_msg(pkg_object: models.Package_In):
+async def promote_msg(pkg_object: schemas.Package_In):
 
 	return await messages.promote(pkg_object)
 
 
-async def update_trust_success_msg(trust_object: models.TrustUpdate_In):
+async def update_trust_success_msg(result_object: schemas.RecipeResult_In):
 
-	return await messages.update_trust_success(trust_object)
+	return await messages.update_trust_success(result_object)
 
 
-async def update_trust_error_msg(msg: str, trust_object: models.TrustUpdate_In):
+async def update_trust_error_msg(msg: str, result_object: schemas.RecipeResult_In):
 
-	return await messages.update_trust_error(msg, trust_object)
+	return await messages.update_trust_error(msg, result_object)
 
 
 async def unauthorized_msg(user: str):

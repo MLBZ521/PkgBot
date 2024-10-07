@@ -6,7 +6,7 @@ from xml.etree import ElementTree
 from tortoise.expressions import Q
 
 from pkgbot import config, core
-from pkgbot.db import models
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
@@ -19,9 +19,9 @@ async def get(policy_filter: dict | Q | None = None):
 	if not policy_filter:
 		return await models.Policies.all()
 	elif isinstance(policy_filter, dict):
-		results = await models.Policy_Out.from_queryset(models.Policies.filter(**policy_filter))
+		results = await schemas.Policy_Out.from_queryset(models.Policies.filter(**policy_filter))
 	elif isinstance(policy_filter, Q):
-		results = await models.Policy_Out.from_queryset(models.Policies.filter(policy_filter))
+		results = await schemas.Policy_Out.from_queryset(models.Policies.filter(policy_filter))
 
 	return results[0] if len(results) == 1 else results
 
@@ -41,8 +41,7 @@ async def cache_policies():
 
 	for policy in all_policies.get("policies"):
 
-		if datetime.now(timezone.utc) > (
-			datetime.fromisoformat(api_token_expires) - timedelta(minutes=5)):
+		if datetime.now(timezone.utc) > (api_token_expires - timedelta(minutes=5)):
 			log.debug("Replacing API Token...")
 			api_token, api_token_expires = await core.jamf_pro.get_token()
 

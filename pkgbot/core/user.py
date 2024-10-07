@@ -1,12 +1,13 @@
-from fastapi import Depends, HTTPException, Response, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 
-from pkgbot import core
-from pkgbot.db import models
+from pkgbot import core, config, settings
+from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 log = utility.log
+config = config.load_config()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
@@ -15,11 +16,11 @@ async def get(user_filter: dict | None = None):
 	if not user_filter:
 		return await models.PkgBotAdmins.all()
 
-	results = await models.PkgBotAdmin_Out.from_queryset(models.PkgBotAdmins.filter(**user_filter))
+	results = await schemas.PkgBotAdmin_Out.from_queryset(models.PkgBotAdmins.filter(**user_filter))
 	return results[0] if len(results) == 1 else results
 
 
-async def create_or_update(user_object: models.PkgBotAdmin_In):
+async def create_or_update(user_object: schemas.PkgBotAdmin_In):
 
 	result, result_bool = await models.PkgBotAdmins.update_or_create(
 		user_object.dict(exclude_unset=True, exclude_none=True, exclude={"username"}),
@@ -30,26 +31,60 @@ async def create_or_update(user_object: models.PkgBotAdmin_In):
 
 
 async def get_current(token: str = Depends(oauth2_scheme)):
+	"""Get current user from it's jps_token.
+
+	Args:
+		token (str): The users' jps_token. Defaults to Depends(oauth2_scheme).
+
+	Raises:
+		HTTPException: If the user doesn't exist in the database.
+
+	Returns:
+		models.PkgBotAdmins: User object for the the current user.
+	"""
 
 	try:
-		return await models.PkgBotAdmins.get(jps_token = token)
 
-	except:
-		raise HTTPException(
-			status_code = status.HTTP_401_UNAUTHORIZED,
-			detail = "You must authenticate before utilizing this endpoint."
-		)
+		if token:
+			if user := await get({ "jps_token": token }):
+				return user
+
+			raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED,
+				detail = "You must authenticate before utilizing this endpoint.")
+
+	except HTTPException as error:
+		raise error
 
 
-async def verify_admin(response: Response,
-	user_object: models.PkgBotAdmin_In = Depends(get_current)):
+async def get_current_user_from_cookie(request: Request):
+	"""Get the current user from the cookies in the request.
 
-	if not user_object.full_admin:
+	This function can be used from inside other routes to get the current user. Allowing it to be
+	used for views that should work for both logged in, and not logged in users.
+
+
+	Args:
+		request (Request): Request (from FastAPI/Starlette)
+
+	Returns:
+		models.PkgBotAdmins | None: User object for the the current user, or None.
+	"""
+
+	token = request.cookies.get(settings.api.PkgBot_Cookie)
+	return await get({ "pkgbot_token": token })
+
+
+async def verify_admin(request: Request,
+	user_object: schemas.PkgBotAdmin_In = Depends(get_current)):
+
+	if user_object:
+		if user_object.dict().get("full_admin"):
+			log.debug("API user is an admin")
+			return
+
 		log.debug("User is NOT an admin")
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
 			detail="You are not authorized to utilize this endpoint.")
-
-	# log.debug("User is an admin")
 
 
 async def authenticate(username: str, password: str):
@@ -63,12 +98,11 @@ async def authenticate(username: str, password: str):
 		user_already_exists = await get({"username": username})
 
 		return await create_or_update(
-			models.PkgBotAdmin_In(
+			schemas.PkgBotAdmin_In(
 				username = username,
 				full_admin = user_already_exists.full_admin if user_already_exists else False,
 				jps_token = api_token,
-				jps_token_expires = await utility.string_to_datetime(
-					api_token_expires, "%Y-%m-%dT%H:%M:%S"),
+				jps_token_expires = api_token_expires,
 				site_access = ', '.join(sites)
 			)
 		)
@@ -85,21 +119,15 @@ async def authorizations(token: str = Depends(oauth2_scheme)):
 		raise("Failed to get user authorizations!")
 
 	user_details = user_details_response.json()
-	site_ids = []
-	site_names = []
+
+	sites_unauthorized = config.JamfPro_Prod.get("unauthorized_sites")
 
 	try:
-
-		for group in user_details["accountGroups"]:
-			for privilege in group["privileges"]:
-				if privilege == "Enroll Computers and Mobile Devices":
-					site_ids.append(group["siteId"])
-
-		for site in user_details["sites"]:
-			if int(site["id"]) in site_ids:
-				site_names.append(site["name"])
+		return [
+			site["name"]
+			for site in user_details["sites"]
+			if site["name"] not in sites_unauthorized
+		]
 
 	except Exception:
-		pass
-
-	return site_names
+		return

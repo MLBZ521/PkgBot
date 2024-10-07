@@ -1,4 +1,4 @@
-from .bot import SlackClient, delete_messages, validate_request
+from .bot import SlackClient, check_for_thread, delete_messages, validate_request
 from . import events, send
 from .. import build
 

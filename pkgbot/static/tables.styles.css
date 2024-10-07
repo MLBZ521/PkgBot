@@ -1,0 +1,150 @@
+/* Table */
+.pkgbot-table {
+    /* border: 1px solid #000000; */
+    border-collapse: collapse;
+    table-layout: auto;
+    text-align: left;
+    width: 100%;
+}
+
+/* Table header row */
+.pkgbot-table > thead > * > th {
+    background-color: #8C1D40;
+    color: #F2F2F2;
+    padding: 10px !important;
+    white-space: nowrap;
+}
+
+/* First column header and data */
+.pkgbot-table > * > th:first-child, /* Icon column header */
+.pkgbot-table > * > * > td:first-child /* Icon column data */ {
+    padding: 5px;
+}
+
+/* Images in first column data */
+.pkgbot-table td:first-child img {
+    height: 50px;
+    width: 50px;
+}
+
+/* All data rows */
+.pkgbot-table td {
+    padding: 10px;
+}
+
+/* Table ID fields */
+.pkgbot-table-id {
+    background-color: #FFC627;
+    border-radius: 0.3rem;
+    color: #000000;
+    padding: 2px 5px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Table ID fields - Hover */
+.pkgbot-table-id:hover {
+    background-color: #8C1D40;
+    color: #F2F2F2;
+}
+
+/* Center column contents */
+.pkgbot-table > * > td:nth-child(2), /* ID column */
+.pkgbot-table > * > td:first-child /* Icon column */ {
+    text-align: center;
+}
+
+/* Stripe data rows */
+.pkgbot-table > * > tr:nth-child(even), /* Even rows */
+.pkgbot-table > * > td:not(:first-child) /* Skip first row */ {
+    background-color: #F2F2F2;
+}
+
+/* Highlight row on mouse over */
+.pkgbot-table > tbody > tr:hover /* Hover over row */
+/* .pkgbot-table > tbody > td:not(:first-child)  */
+/* Skip first row */ {
+    background-color: #FFC627;
+}
+
+/* Remove sort icons */
+.hide-sorting-icons,
+.hide-sorting-icons::before,
+.hide-sorting-icons::after
+{
+    content: "" !important;
+}
+
+/* Column sort indicators */
+.pkgbot-table > thead .sorting::before,
+.pkgbot-table > thead .sorting_asc::before,
+.pkgbot-table > thead .sorting_desc::before,
+.pkgbot-table > thead .sorting_asc_disabled::before,
+.pkgbot-table > thead .sorting_desc_disabled::before {
+    color: #000000;
+    /* content: "" !important; */
+    right: 0 !important;
+}
+
+/* Column sort indicators */
+.pkgbot-table > thead .sorting::after,
+.pkgbot-table > thead .sorting_asc::after,
+.pkgbot-table > thead .sorting_desc::after,
+.pkgbot-table > thead .sorting_asc_disabled::after,
+.pkgbot-table > thead .sorting_desc_disabled::after {
+    color: #000000;
+    /* content: "\f0de" !important; */
+    /* content: "\f0dd" !important; */
+    right: 0 !important;
+}
+
+/* Pagination Links - Not current page */
+.page-item .page-link {
+    color: #F2F2F2 !important;
+    background-color: #8C1D40 !important;
+    border: 0px;
+    padding: 10px;
+}
+
+/* Pagination Links - Disabled page - All */
+.page-item.disabled .page-link {
+    background-color: #747474 !important;
+    box-shadow: 0 0 0px !important;
+}
+
+/* Pagination Links - Current page - Clicked - All */
+.page-item.active .page-link:focus {
+    border: 1px solid #FFC627 !important;
+    box-shadow: 0 0 10px #FFC627 !important;
+    opacity: 1;
+    transition: 0s;
+}
+
+/* Pagination Links - Current page - Hover - All */
+.page-item.active .page-link:hover {
+    border: 1px solid #FFC627 !important;
+    box-shadow: 0 0 10px #FFC627 !important;
+    opacity: 1;
+    transition: 0s;
+}
+
+/* Pagination Links - Not current page - Hover */
+.page-link:hover, .page-link:focus {
+    background-color: #BB2657 !important;
+    box-shadow: 0 0 10px #BB2657 !important;
+    opacity: 1;
+    transition: 0s;
+}
+
+/* Pagination Links - Style button for current page */
+.paginate_button.page-item.active .page-link {
+    background-color: #FFC627 !important;
+    border: 1px solid #FFC627 !important;
+    color: #000000 !important;
+    padding: 9px;
+}
+
+/* Do not wrap data field contents */
+.pkgbot-table-td-nowrap {
+    white-space: nowrap;
+}
