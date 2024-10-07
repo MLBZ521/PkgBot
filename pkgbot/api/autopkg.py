@@ -94,8 +94,8 @@ async def autopkg_run_recipe(recipe_id: str = Depends(core.recipe.get),
 
 	queued_task = await core.autopkg.execute(autopkg_cmd, recipe_id.recipe_id)
 
-	if queued_task.get("result") == "Recipe is disabled":
-		return { "result": "Recipe is disabled" }
+	if isinstance(queued_task, dict):
+		return queued_task
 
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
