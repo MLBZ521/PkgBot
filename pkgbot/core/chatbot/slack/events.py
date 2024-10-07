@@ -1,4 +1,5 @@
 import re
+# import secrets
 
 from fastapi import HTTPException
 
@@ -9,6 +10,44 @@ from pkgbot.utilities import common as utility
 
 config = config.load_config()
 log = utility.log
+
+
+async def known_user(username, user_id, channel, trigger_id, user_object):
+
+	if not user_object:
+		log.warning(f"Unknown user:  `{username}` [{user_id}].")
+
+		# Considered doing this:  https://api.slack.com/tutorials/tracks/account-binding
+			# But I don't think it's needed at this time...
+		# bind_token = secrets.token_urlsafe(64)
+		# f"You can login here:  <https://{config.PkgBot.get('host')}/bind_token={bind_token}|{config.PkgBot.get('host')}/bind_token={bind_token}>"
+
+		# core.user.create_or_update({
+		# 	"username": username,
+		# 	"slack_id": user_id,
+		# 	"pkgbot_token": bind_token
+		# })
+
+		await core.chatbot.send.modal_notification(
+			trigger_id,
+			"Please login to PkgBot",
+			"Hello, before you can utilize this function, you will need to login to PkgBot.\n\n"
+				f"You can login here:  <https://{config.PkgBot.get('host')}|{config.PkgBot.get('host')}>",
+			"Done",
+			image = f"{config.PkgBot.get('icon_warning')}"
+		)
+		# Haven't decided which method to use yet...
+		# await core.chatbot.send.direct_msg(
+		# 	user_id,
+		# 	"Hello, before you can utilize this function, you will need to login to PkgBot.\n\n"
+		# 		f"You can login here:  <https://{config.PkgBot.get('host')}|{config.PkgBot.get('host')}>",
+		# 	channel,
+		# 	alt_text = "Please login to PkgBot"
+		# )
+
+		return False
+
+	return True
 
 
 async def button_click(payload):
@@ -28,6 +67,10 @@ async def button_click(payload):
 	# 	f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
 	# 	f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
 	# )
+
+	if not await known_user(username = username, user_id = user_id, channel = channel,
+		trigger_id = trigger_id, user_object = user_that_clicked):
+		return
 
 	# Verify and perform action only if a PkgBotAdmin clicked the button
 	if user_that_clicked and user_that_clicked.full_admin:
@@ -154,9 +197,13 @@ async def slash_cmd(incoming_cmd):
 
 	log.debug("Incoming details:\n"
 		f"channel:  {channel}\nuser id:  {user_id}\nusername:  {username}\n"
-		f"full admin:  {user_that_clicked.full_admin}\ncommand:  {command}\ncmd_text:  {cmd_text}"
+		f"user_that_clicked:  {user_that_clicked}\ncommand:  {command}\ncmd_text:  {cmd_text}"
 		f"\nresponse_url:  {response_url}\ntrigger_id:  {trigger_id}"
 	)
+
+	if not await known_user(username = username, user_id = user_id, channel = channel,
+		trigger_id = trigger_id, user_object = user_that_clicked):
+		return
 
 	if not user_that_clicked.full_admin and not config.Slack.get("slash_cmds_enabled"):
 		return await core.chatbot.send.modal_notification(
@@ -348,6 +395,10 @@ async def message_shortcut(payload):
 	)
 
 	user_object = await core.user.get({"username": username})
+
+	if not await known_user(username = username, user_id = user_id, channel = channel,
+		trigger_id = trigger_id, user_object = user_object):
+		return
 
 	if not user_object.full_admin and not config.Slack.get("shortcuts_enabled"):
 		return await core.chatbot.send.modal_notification(
