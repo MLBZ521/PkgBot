@@ -88,14 +88,14 @@ async def cache_policies():
 
 async def update_policy(policy_object, pkg_object, username, trigger_id):
 
-	api_token, api_token_expires = await core.jamf_pro.get_token()
+	# api_token, api_token_expires = await core.jamf_pro.get_token()
 
 	log.debug(f"Getting details for Policy ID:  {policy_object.policy_id}")
 	policy_xml_response  = await core.jamf_pro.api(
 		"get",
 		f"JSSResource/policies/id/{policy_object.policy_id}",
 		in_content_type = "xml",
-		api_token = api_token
+		# api_token = api_token
 	)
 
 	if policy_xml_response.status_code != 200:
@@ -128,7 +128,7 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 		f"JSSResource/policies/id/{policy_object.policy_id}",
 		out_content_type = "xml",
 		data = new_policy_xml,
-		api_token = api_token
+		# api_token = api_token
 	)
 
 	if update_policy_results.status_code != 201:
@@ -141,7 +141,7 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 			f"JSSResource/policies/id/{policy_object.policy_id}",
 			out_content_type = "xml",
 			data = (ElementTree.tostring(policy_xml)).decode("UTF-8"),
-			api_token = api_token
+			# api_token = api_token
 		)
 
 		if restore_policy_results.status_code != 201:

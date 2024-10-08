@@ -1,46 +1,84 @@
-from datetime import datetime, timezone
+import re
+
+from datetime import datetime, timedelta, timezone
+from xml.etree import ElementTree
 
 import httpx
 
-from xml.etree import ElementTree
+from pkgbot import config, core
+from pkgbot.utilities import common as utility
 
-from pkgbot import config
 
-
+log = utility.log
 config = config.load_config()
 JPS_URL = config.JamfPro_Prod.get("jps_url")
 API_USER = config.JamfPro_Prod.get("api_user")
 API_PASSWORD = config.JamfPro_Prod.get("api_password")
+API_TOKEN = None
+API_TOKEN_EXPIRES = 0
 
 
 async def get_token(username: str = API_USER, password: str = API_PASSWORD):
 
-	async with httpx.AsyncClient() as client:
-		response_get_token = await client.post(
-			f"{JPS_URL}/api/v1/auth/token", auth=(username, password))
+	try:
 
-	if response_get_token.status_code == 200:
+		async with httpx.AsyncClient() as client:
+			response_get_token = await client.post(
+				f"{JPS_URL}/api/v1/auth/token", auth=(username, password))
 
-		response_json = response_get_token.json()
-		return response_json["token"], await fixup_token_expiration(response_json["expires"])
+		if response_get_token.status_code == 200:
 
-	return False, False
+			response_json = response_get_token.json()
+			return response_json["token"], await fixup_token_expiration(response_json["expires"])
+
+		log.error(
+			"Failed to get token?\n"
+			f"{response_get_token.status_code = }\n"
+			f"{response_get_token.text = }"
+		)
+
+		return False, 0
+
+	except httpx.ReadTimeout as timeout:
+		log.error(f"Login timed out for:  {username}")
+		return False, False
+
 
 
 async def fixup_token_expiration(token_expires: str):
 
-	return datetime.fromisoformat(
-		token_expires.rsplit(".", maxsplit=1)[0]
-	).replace(tzinfo=timezone.utc)
-	# expires = datetime.strptime(token_expires, "%Y-%m-%dT%H:%M:%S")
+	try:
+	# token_expires.rsplit(".", maxsplit=1)[0]
+		return datetime.fromisoformat(
+			re.sub(r"(\.\d+)?Z", "", token_expires)
+		).replace(tzinfo=timezone.utc)
+		# expires = datetime.strptime(token_expires, "%Y-%m-%dT%H:%M:%S")
+
+	except:
+		log.warning(f"Failed fixing up the API Token Expiration:  {token_expires}")
+		return 0
 
 
 async def api(method: str, endpoint: str, in_content_type: str = "json", out_content_type = "xml",
-	data: str | dict | None = None, api_token: str = None, username: str = API_USER,
+	data: str | dict | None = None, api_token: str = API_TOKEN, username: str = API_USER,
 	password: str = API_PASSWORD):
 
-	if not api_token:
-		api_token, api_token_expires = await get_token(username, password)
+	if api_token:
+		API_TOKEN = api_token
+		# API_TOKEN_EXPIRES = API_TOKEN_EXPIRES
+	else:
+		API_TOKEN, API_TOKEN_EXPIRES = await get_token(username, password)
+
+	# try:
+	# if API_TOKEN_EXPIRES:
+	# 	if datetime.now(timezone.utc) > (API_TOKEN_EXPIRES - timedelta(minutes=5)):
+	# 		log.debug("Renewing API Token...")
+	# 		API_TOKEN, API_TOKEN_EXPIRES = await core.jamf_pro.get_token()
+	# except:
+		# log.warning(f"Something is wrong with API_TOKEN_EXPIRES:  {API_TOKEN_EXPIRES}")
+
+
+	# log.debug(f"{API_TOKEN = }")
 
 	async with httpx.AsyncClient() as client:
 
@@ -51,7 +89,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 				return await client.get(
 					url = f"{JPS_URL}/{endpoint}",
 					headers = {
-						"Authorization": f"jamf-token {api_token}",
+						"Authorization": f"jamf-token {API_TOKEN}",
 						"Accept": f"application/{in_content_type}"
 					}
 				)
@@ -61,7 +99,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 				return await client.post(
 					url = f"{JPS_URL}/{endpoint}",
 					headers = {
-						"Authorization": f"jamf-token {api_token}",
+						"Authorization": f"jamf-token {API_TOKEN}",
 						"Content_type": f"application/{out_content_type}"
 					},
 					data = data
@@ -72,7 +110,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 				return await client.put(
 					url = f"{JPS_URL}/{endpoint}",
 					headers = {
-						"Authorization": f"jamf-token {api_token}",
+						"Authorization": f"jamf-token {API_TOKEN}",
 						"Content_type": f"application/{out_content_type}"
 					},
 					data = data
@@ -82,7 +120,7 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 
 				return await client.delete(
 					url = f"{JPS_URL}/{endpoint}",
-					headers = { "Authorization": f"jamf-token {api_token}" }
+					headers = { "Authorization": f"jamf-token {API_TOKEN}" }
 				)
 
 	return False
