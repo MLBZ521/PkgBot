@@ -7,7 +7,7 @@ import os
 # import pickle
 import plistlib
 import re
-# import shlex
+import shlex
 import shutil
 import yaml
 
@@ -341,7 +341,7 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 		elif v_count := re.subn(r"\s--verbose|\s-v", '', cmd_text)[1]:
 			final_options["verbose"] = f"{'v' * v_count}"
 
-	options_to_parse = await split_string(cmd_text, split_index = -1)
+	options_to_parse = shlex.split(cmd_text)
 	indexes_to_ignore = []
 	overrides = ""
 
