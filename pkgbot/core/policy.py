@@ -26,6 +26,11 @@ async def get(policy_filter: dict | Q | None = None):
 	return results[0] if len(results) == 1 else results
 
 
+async def delete(recipe_filter: dict):
+
+	return await models.Policies.filter(**recipe_filter).delete()
+
+
 async def cache_policies():
 
 	log.debug("Caching Policies from Jamf Pro...")

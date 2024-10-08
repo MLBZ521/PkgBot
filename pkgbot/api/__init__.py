@@ -9,6 +9,7 @@ from . import (
 	autopkg,
 	build_msg,
 	package,
+	policy,
 	send_msg,
 	recipe,
 	user,
