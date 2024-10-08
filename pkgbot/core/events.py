@@ -185,8 +185,8 @@ async def event_failed_pre_checks(task_results):
 
 	for task_id in task_results.get("task_id"):
 
-		child_task_results = await utility.get_task_results(task_id)
-		event = child_task_results.get("task_results").get("event")
+		child_task_results = (await utility.get_task_results(task_id)).get("task_results")
+		event = child_task_results.get("event")
 
 		if event == "autopkg_repo_update":
 ##### TODO:
@@ -286,9 +286,9 @@ async def event_recipe_run(task_results):
 
 			# Instead, check if the package has already been created in the database, this
 			# ensures a message is posted if it failed to post previously.
-			pkg_db_object = await core.package.get({ "pkg_name": pkg_name })
+			pkg_object = await core.package.get({ "pkg_name": pkg_name })
 
-			if pkg_db_object:
+			if pkg_object:
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` did not find a new version."
 
 			else:
