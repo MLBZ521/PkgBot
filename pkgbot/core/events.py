@@ -189,11 +189,25 @@ async def event_failed_pre_checks(task_results):
 		event = child_task_results.get("event")
 
 		if event == "autopkg_repo_update":
-##### TODO:
-	# Send message to ChatBot
-			log.warning("Failure during event:  autopkg_repo_update")
+			""" If `autopkg repo-update` resulted in an error """
 
-		if event == "disk_space_critical":
+			results = await core.chatbot.send.acknowledge_msg(
+				"Error while updating AutoPkg recipe repos",
+				child_task_results.get("stderr"),
+				config.PkgBot.get('icon_error')
+			)
+
+			# Create DB entry
+			await core.error.create({
+				"type": event,
+				"slack_ts": results.get("ts"),
+				"slack_channel": results.get("channel"),
+				"status": "Notified",
+				"task_id": child_task_results.get("task_id"),
+				"details": child_task_results.get("stderr")
+			})
+
+		elif event == "disk_space_critical":
 			""" If cache volume has insufficient disk space """
 
 			results = await core.chatbot.send.acknowledge_msg(
@@ -212,10 +226,24 @@ async def event_failed_pre_checks(task_results):
 				"details": child_task_results.get("stderr")
 			})
 
-		if event == "private_git_pull":
-##### TODO:
-	# Send message to ChatBot
-			log.warning("Failure during event:  private_git_pull")
+		elif event == "private_git_pull":
+			""" If an error occurs during a `git pull` of priviate repo """
+
+			results = await core.chatbot.send.acknowledge_msg(
+				"Error attempting to sync private git repo",
+				f"```{child_task_results.get('stderr')}```",
+				config.PkgBot.get('icon_error')
+			)
+
+			# Create DB entry
+			await core.error.create({
+				"type": event,
+				"slack_ts": results.get("ts"),
+				"slack_channel": results.get("channel"),
+				"status": "Notified",
+				"task_id": child_task_results.get("task_id"),
+				"details": child_task_results.get("stderr")
+			})
 
 
 async def event_error(task_results):
@@ -437,21 +465,50 @@ async def handle_autopkg_error(**kwargs):
 ##### TODO:
 # Possible ideas:
 	# Thread the error message with the original message?
-	# Post Ephemeral Message to PkgBot Admin?
-
+#####	# Post Ephemeral Message to PkgBot Admin?
+##### Test/Verify working
 		# Get the recipe that failed to be promoted
-		pkg_db_object = await core.package.get({ "id": event_id })
-		recipe_id = pkg_db_object.recipe_id
-		software_title = pkg_db_object.name
-		software_version = pkg_db_object.version
-		log.error(f"Failed to promote:  {pkg_db_object.pkg_name}")
+		pkg_object = await core.package.get({ "id": event_id })
+		recipe_id = pkg_object.recipe.recipe_id
+		software_title = pkg_object.name
+		software_version = pkg_object.version
+		log.error(f"Failed to promote:  {pkg_object.pkg_name}")
 
 		redacted_error = {
 			"Failed to promote:": f"{software_title} v{software_version}",
 			"Error:": redacted_error
 		}
 
+		return await promotion_failed(recipe_id, event, redacted_error, pkg_object.slack_ts, task_id)
+
 	await core.recipe.error(recipe_id, event, redacted_error, task_id)
+
+
+async def promotion_failed(recipe_id: str, event: str, error: str, thread_ts: str, task_id: str = None):
+
+	# Create DB entry in errors table
+	recipe_result = await core.recipe.create_result({
+		"type": event,
+		"recipe_id": recipe_id,
+		"task_id": task_id,
+		"details": error
+	})
+
+	# Construct error content
+	error_dict = await core.error.construct_msg(recipe_id, error, task_id)
+
+	# Send error message
+	results = await core.chatbot.send.recipe_error_msg(recipe_id, recipe_result.id, error_dict, thread_ts)
+
+	# Update error message
+	await core.recipe.update_result(
+		{ "id": recipe_result.id },
+		{
+			"slack_channel": results.get('channel'),
+			"slack_ts": results.get('ts'),
+			"status": "Notified"
+		}
+	)
 
 
 async def handle_exception(**kwargs):
