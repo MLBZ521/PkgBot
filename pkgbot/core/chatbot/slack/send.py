@@ -215,17 +215,16 @@ async def deny_trust_msg(result_object: schemas.RecipeResult_In):
 	return response
 
 
-async def disk_space_msg(header: str, msg: str, image: str):
+async def acknowledge_msg(header: str, msg: str, image: str):
 
-	blocks = await core.chatbot.build.disk_space_msg(header, msg, image)
-	return await core.chatbot.SlackBot.post_message(blocks, text=f"Disk Space {header}")
+	blocks = await core.chatbot.build.acknowledge_msg(header, msg, image)
+	return await core.chatbot.SlackBot.post_message(blocks, text=header)
 
 
 async def direct_msg(user, text, channel: str | None = None, image: str | None = None,
 	alt_text: str | None = None, alt_image_text: str | None = None):
 
 	blocks = await core.chatbot.build.basic_msg(text, image, alt_image_text)
-
 	return await core.chatbot.SlackBot.post_ephemeral_message(
 		user,
 		blocks,

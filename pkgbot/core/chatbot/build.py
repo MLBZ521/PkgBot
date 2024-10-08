@@ -63,12 +63,22 @@ async def unauthorized_msg(user: str):
 
 async def basic_msg(text: str, image: str | None = None, alt_image_text: str | None = None):
 
-	return await messages.basic(text, image, alt_image_text)
+	return await messages.basic_msg(
+		msg_text = text,
+		image = image,
+		alt_image_text = alt_image_text
+	)
 
 
-async def disk_space_msg(header: str, msg: str, image: str | None = None):
+async def acknowledge_msg(header: str, msg: str, image: str | None = None):
 
-	return await messages.disk_space(header, msg, image)
+	return await messages.basic_msg(
+		header_txt = header,
+		msg_text = msg,
+		buttons_details = [("Acknowledge", "danger", "Error:ack")],
+		image = image,
+		alt_image_text = ":x:"
+	)
 
 
 async def modal_notification(title_txt: str, msg_text: str,

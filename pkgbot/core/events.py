@@ -164,8 +164,8 @@ async def event_disk_space_warning(task_results):
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	# Post Slack Message
-	results = await core.chatbot.send.disk_space_msg(
-		"Warning", stderr, config.PkgBot.get('icon_warning'))
+	results = await core.chatbot.send.acknowledge_msg(
+		"Disk Space Warning", stderr, config.PkgBot.get('icon_warning'))
 
 	# Create DB entry
 	await core.error.create({
@@ -196,8 +196,8 @@ async def event_failed_pre_checks(task_results):
 		if event == "disk_space_critical":
 			""" If cache volume has insufficient disk space """
 
-			results = await core.chatbot.send.disk_space_msg(
-				"Critical",
+			results = await core.chatbot.send.acknowledge_msg(
+				"Disk Space Critical",
 				child_task_results.get("stderr"),
 				config.PkgBot.get('icon_error')
 			)

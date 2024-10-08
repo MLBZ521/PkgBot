@@ -104,19 +104,28 @@ async def unauthorized(user: str):
 	return await format_json(await block.unauthorized(user))
 
 
-async def basic(text: str, image: str | None = None, alt_image_text: str | None = None):
+async def basic_msg(msg_text: str,
+	header_txt: str | None = None,
+	buttons_details: List[tuple] = None,
+	# button_text: str, button_value: str, button_style: str,
+	image: str | None = None, alt_image_text: str | None = None):
 
-	blocks = await block.brick_section_text(text)
+	blocks = []
+
+	if header_txt:
+		blocks.append(await block.brick_header(header_txt))
+
+	section_block = await block.brick_section_text(msg_text)
 
 	if image:
-		blocks = blocks | await block.brick_accessory_image(image, alt_image_text)
+		section_block = section_block | await block.brick_accessory_image(image, alt_image_text)
 
-	return await format_json([blocks])
+	blocks.append(section_block)
 
+	if buttons_details:
+		blocks.append(await block.brick_action_buttons(buttons_details))
 
-async def disk_space(header: str, msg: str, image: str | None = None):
-
-	return await format_json(await block.brick_disk_space_msg(header, msg, image))
+	return await format_json(blocks)
 
 
 async def modal_notification(title_txt: str, msg_text: str,
