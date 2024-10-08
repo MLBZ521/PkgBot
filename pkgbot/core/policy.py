@@ -44,6 +44,23 @@ async def cache_policies():
 	all_policies = all_policies_response.json()
 	log.debug(f"Number of Policies found:  {len(all_policies.get('policies'))}")
 
+	# Get the Policy IDs
+	policy_ids = [ policy.get("id") for policy in all_policies.get("policies") ]
+	# log.debug(f"Number of Policy IDs:  {len(policy_ids)}")
+
+	# Get all cached Policies and their IDs
+	all_cache_policies = await get()
+	cache_policy_ids = [ policy.policy_id for policy in all_cache_policies ]
+	# log.debug(f"Number of cached Policy IDs:  {len(cache_policy_ids)}")
+
+	# Get Policy IDs from cached Policies if they aren't in the "new" Policy IDs list
+	deleted_policy_ids = [ policy_id for policy_id in cache_policy_ids if policy_id not in policy_ids ]
+	log.debug(f"Number of cached Policies to delete:  {len(deleted_policy_ids)}")
+
+	for policy_id in deleted_policy_ids:
+		log.debug(f"Deleting Policy:  {policy_id}")
+		await delete( { "policy_id": policy_id } )
+
 	for policy in all_policies.get("policies"):
 
 		if datetime.now(timezone.utc) > (api_token_expires - timedelta(minutes=5)):
