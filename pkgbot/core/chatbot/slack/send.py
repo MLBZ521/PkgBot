@@ -31,19 +31,19 @@ async def promote_msg(pkg_object: schemas.Package_In):
 	blocks = await core.chatbot.build.promote_msg(pkg_object)
 	text = f"{pkg_object.pkg_name} was promoted to production"
 
-	result = await core.chatbot.SlackBot.update_message_with_response_url(
-		pkg_object.response_url,
+	result = await core.chatbot.SlackBot.update_message(
 		blocks,
+		pkg_object.slack_ts,
 		text = text
 	)
 
 	# If the first method fails, try the alternate
-	if json.loads(result.body).get("error") == "expired_url":
-		await core.chatbot.SlackBot.update_message(
-			blocks,
-			pkg_object.slack_ts,
-			text = text
-		)
+	if result.data.get("ok") != True:
+		await core.chatbot.SlackBot.update_message_with_response_url(
+		pkg_object.response_url,
+		blocks,
+		text = text
+	)
 
 	return await core.chatbot.SlackBot.reaction(
 		action = "remove",
