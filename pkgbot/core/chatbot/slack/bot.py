@@ -31,7 +31,8 @@ class SlackClient(object):
 		self.client = AsyncWebClient(token=self.token, ssl=ssl_context)
 
 
-	async def post_message(self, blocks: str, text: str = "Pkg status incoming...", thread_ts = None):
+	async def post_message(
+		self, blocks: str, text: str = "Pkg status incoming...", thread_ts = None):
 
 		try:
 			return await self.client.chat_postMessage(
@@ -43,7 +44,8 @@ class SlackClient(object):
 			)
 
 		except SlackApiError as error:
-			log.error(f"Failed to post message:  {error.response['error']}\n{error}")
+			log.error(f"Failed to post message:  {error.response['error']}"
+				f"\nError:\n{error}\Blocks:\n{blocks}")
 			return { "result": "Failed to post message", "error": error.response["error"] }
 
 		except asyncio.exceptions.TimeoutError as error:
@@ -55,12 +57,20 @@ class SlackClient(object):
 	async def update_message(self, blocks: str, ts: str, text: str = "Updated message..."):
 
 		try:
-			return await self.client.chat_update(
+			response = await self.client.chat_update(
 				channel = self.channel,
 				text = text,
 				blocks = blocks,
 				ts = ts
 			)
+
+			if response.status_code != 200:
+				log.error(f"Failed to update message! Status code:  "
+			  		f"{response.status_code} | Error message:  {response.body}")
+			else:
+				log.debug("Successfully updated msg via response_url")
+
+			return response
 
 		except SlackApiError as error:
 			log.error(f"Failed to update {ts}:  {error.response['error']}\n{error}")
@@ -79,16 +89,21 @@ class SlackClient(object):
 			)
 
 			if response.status_code != 200:
-				log.error(
-					f"Failed to update message! Status code:  {response.status_code} | Error message:  {response.body}")
+				if json.loads(response.body).get("error") == "expired_url":
+					log.error("Failed to update message due to expired Response URL! Status "
+						f"code:  {response.status_code} | Error message:  {response.body}")
+				else:
+					log.error(
+						f"Failed to update message! Status code:  "
+							f"{response.status_code} | Error message:  {response.body}")
 			else:
 				log.debug("Successfully updated msg via response_url")
 
 			return response
 
 		except SlackApiError as error:
-			log.error(
-				f"Failed to update {response_url}\nFull Error:\n{error}\nerror.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
+			log.error(f"Failed to update {response_url}\nFull Error:\n{error}\n"
+			 	f"error.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
 			return response
 
 		except asyncio.exceptions.TimeoutError as error:
