@@ -442,6 +442,37 @@ async def message_shortcut(payload):
 		return await core.chatbot.send.modal_add_pkg_to_policy(trigger_id, pkg_object.pkg_name)
 
 
+	elif callback_id == "promote_pkg_only":
+
+		if not user_object.full_admin:
+			return await unauthorized_function(username, user_id, trigger_id)
+
+		log.info(f"PkgBotAdmin `{username}` is promoting package id: {pkg_object.id}")
+
+		await core.chatbot.SlackBot.reaction(
+			action = "add",
+			emoji = "gear",
+			ts = message_ts
+		)
+
+		await core.package.update(
+			{ "id": pkg_object.id },
+			{ "response_url": response_url, "updated_by": username, "slack_ts": message_ts }
+		)
+
+		autopkg_cmd = models.AutoPkgCMD(
+			**{
+				"verb": "run",
+				"pkg_only": True,
+				"promote": True,
+				"match_pkg": pkg_object.pkg_name,
+				"pkg_id": pkg_object.id
+			}
+		)
+
+		await core.package.promote(pkg_object.id, autopkg_cmd)
+
+
 async def external_lists(payload):
 
 	action_id = payload.get("action_id")
