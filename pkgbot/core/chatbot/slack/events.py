@@ -50,6 +50,20 @@ async def known_user(username, user_id, channel, trigger_id, user_object):
 	return True
 
 
+async def unauthorized_function(username, user_id, trigger_id):
+
+	log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
+
+	return await core.chatbot.send.modal_notification(
+		trigger_id,
+		"PERMISSION DENIED",
+		"WARNING:  Unauthorized access attempted!\n\nOnly PkgBot Admins are authorized to "
+			f"perform this action.\n\n`{username}` will be reported to the robot overloads.",
+		"Ok",
+		image = f"{config.PkgBot.get('icon_permission_denied')}"
+	)
+
+
 async def button_click(payload):
 
 	user_id = payload.get("user").get("id")
@@ -171,16 +185,7 @@ async def button_click(payload):
 					return await core.error.update(filter_obj, updates)
 
 	else:
-		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
-
-		return await core.chatbot.send.modal_notification(
-			trigger_id,
-			"PERMISSION DENIED",
-			"WARNING:  Unauthorized access attempted!\n\nOnly PkgBot Admins are authorized to "
-				f"perform this action.\n\n`{username}` will be reported to the robot overloads.",
-			"Ok",
-			image = f"{config.PkgBot.get('icon_permission_denied')}"
-		)
+		await unauthorized_function(username, user_id, trigger_id)
 
 
 async def slash_cmd(incoming_cmd):
