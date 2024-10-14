@@ -1,6 +1,7 @@
 import asyncio
 import certifi
 import hmac
+import json
 import re
 import ssl
 import time
@@ -88,17 +89,15 @@ class SlackClient(object):
 				replace_original = True
 			)
 
-			if response.status_code != 200:
-				if json.loads(response.body).get("error") == "expired_url":
-					log.error("Failed to update message due to expired Response URL! Status "
-						f"code:  {response.status_code} | Error message:  {response.body}")
-				else:
-					log.error(
-						f"Failed to update message! Status code:  "
-							f"{response.status_code} | Error message:  {response.body}")
-			else:
+			if response.status_code == 200:
 				log.debug("Successfully updated msg via response_url")
-
+			elif json.loads(response.body).get("error") == "expired_url":
+				log.error("Failed to update message due to expired Response URL! Status "
+					f"code:  {response.status_code} | Error message:  {response.body}")
+			else:
+				log.error(
+					f"Failed to update message! Status code:  "
+						f"{response.status_code} | Error message:  {response.body}")
 			return response
 
 		except SlackApiError as error:
