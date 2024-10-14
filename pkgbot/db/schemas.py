@@ -19,6 +19,9 @@ RecipeResult_In = pydantic_model_creator(
 Package_Out = pydantic_model_creator(models.Packages, name="Package_Out")
 Package_In = pydantic_model_creator(models.Packages, name="Package_In", exclude_readonly=True)
 
+Package_Manual_Out = pydantic_model_creator(models.PackagesManual, name="Package_Manual_Out")
+Package_Manual_In = pydantic_model_creator(models.PackagesManual, name="Package_Manual_In", exclude_readonly=True)
+
 PackageNote_Out = pydantic_model_creator(models.PackageNotes, name="PackageNote_Out")
 PackageNote_In = pydantic_model_creator(models.PackageNotes, name="PackageNote_In", exclude_readonly=True)
 

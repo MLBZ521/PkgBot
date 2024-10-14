@@ -72,7 +72,13 @@ class RecipeResults(Model):
 
 class Packages(Model):
 	id = fields.IntField(pk=True)
-	recipe: fields.ForeignKeyRelation[Recipes] = fields.ForeignKeyField("pkgbot.Recipes", related_name="recipe", null=True, on_delete="RESTRICT", to_field="recipe_id") # SET_NULL
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField(
+		"pkgbot.Recipes", 
+		related_name="recipe", 
+		null=True, 
+		on_delete="RESTRICT", 
+		to_field="recipe_id"
+	) # SET_NULL
 	name = fields.CharField(max_length=64)
 	version = fields.CharField(max_length=64)
 	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
@@ -85,9 +91,21 @@ class Packages(Model):
 	slack_channel = fields.CharField(max_length=32, null=True)
 	slack_ts = fields.CharField(max_length=32, null=True)
 	response_url = fields.CharField(max_length=1024, null=True)
-
+	policies: fields.ManyToManyRelation["Policies"]
 	class Meta:
 		table = "packages"
+
+
+class PackagesManual(Model):
+	id = fields.IntField(pk=True)
+	name = fields.CharField(max_length=64)
+	version = fields.CharField(max_length=64)
+	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
+	status = fields.CharField(max_length=64, default="dev")
+	policies: fields.ManyToManyRelation["Policies"]
+
+	class Meta:
+		table = "packages_manual"
 
 
 class PackageNotes(Model):
@@ -125,6 +143,21 @@ class Policies(Model):
 	policy_id = fields.IntField(unique=True)
 	name = fields.CharField(max_length=256)
 	site = fields.CharField(max_length=128)
+
+	packages: fields.ForeignKeyRelation["Packages"] = fields.ManyToManyField(
+		model_name="pkgbot.Packages",
+		through="policy_pkg_config",
+		forward_key="packages_id",
+		backward_key="policy_id",
+		on_delete=fields.NO_ACTION,
+	)
+	packages_manual: fields.ForeignKeyRelation["PackagesManual"] = fields.ManyToManyField(
+		model_name="pkgbot.PackagesManual",
+		through="policy_pkg_manual_config",
+		forward_key="packages_manual_id",
+		backward_key="policy_id",
+		on_delete=fields.NO_ACTION,#"NO_ACTION",
+	)
 
 
 class CallBack(BaseModel):

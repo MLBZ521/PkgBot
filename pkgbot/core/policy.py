@@ -54,7 +54,8 @@ async def cache_policies():
 	# log.debug(f"Number of cached Policy IDs:  {len(cache_policy_ids)}")
 
 	# Get Policy IDs from cached Policies if they aren't in the "new" Policy IDs list
-	deleted_policy_ids = [ policy_id for policy_id in cache_policy_ids if policy_id not in policy_ids ]
+	deleted_policy_ids = [
+		policy_id for policy_id in cache_policy_ids if policy_id not in policy_ids ]
 	log.debug(f"Number of cached Policies to delete:  {len(deleted_policy_ids)}")
 
 	for policy_id in deleted_policy_ids:
@@ -74,16 +75,46 @@ async def cache_policies():
 			raise(f"Failed to get policy details for:  {policy.get('id')}:{policy.get('name')}!")
 
 		policy_details = policy_details_response.json()
+		policy_general = policy_details.get("policy").get("general")
 
 		result, result_bool = await models.Policies.update_or_create(
 			defaults = {
-				"name": policy_details.get("policy").get("general").get("name"),
-				"site": policy_details.get("policy").get("general").get("site").get("name")
+				"name": policy_general.get("name"),
+				"site": policy_general.get("site").get("name"),
 			},
-			policy_id = policy_details.get("policy").get("general").get("id")
+			policy_id = policy_general.get("id")
 		)
 
+		# Clear the current policy <-> package relationship (aka flush table of this Policy)
+		await result.packages.clear()
+		await result.packages_manual.clear()
+
+		policy_packages = policy_details.get("policy").get("package_configuration").get("packages")
+
+		for package in policy_packages:
+			pkg_object = await models.Packages.get_or_none(**{ "pkg_name": package.get("name")})
+			if pkg_object:
+				await result.packages.add(pkg_object)
+			else:
+				pkg_name = package.get("name")
+
+				try:
+					version = re.sub("\.(pkg|dmg)", "", pkg_name.rsplit("-", 1)[1])
+				except re.ex:
+					version = "1.0"
+
+				pkg_details = {
+					"name": pkg_name.rsplit("-", 1)[0],
+					"pkg_name": pkg_name,
+					"version": version,
+					"status": "prod"
+				}
+
+				pkg_object = (await models.PackagesManual.get_or_create(**pkg_details))[0]
+				await result.packages_manual.add(pkg_object)
+
 	log.debug("Caching Policies from Jamf Pro...COMPLETE")
+	return
 
 
 async def update_policy(policy_object, pkg_object, username, trigger_id):
