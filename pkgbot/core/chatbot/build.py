@@ -88,6 +88,6 @@ async def modal_notification(title_txt: str, msg_text: str,
 		title_txt, msg_text, button_text, image, alt_image_text)
 
 
-async def modal_promote_pkg(pkg_name: str):
+async def modal_add_pkg_to_policy(pkg_name: str):
 
-	return await messages.modal_promote_pkg(pkg_name)
+	return await messages.modal_add_pkg_to_policy(pkg_name)

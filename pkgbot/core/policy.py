@@ -149,14 +149,15 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 				f"Policy ID:  {policy_object.policy_id}\nReason:  {restore_policy_results.text}"
 			)
 
-	log.debug(f"{username} promoted {pkg_object.pkg_name} into {policy_object.site} "
+	log.debug(f"{username} added {pkg_object.pkg_name} into {policy_object.site} "
 		f"{policy_object.policy_id} {policy_object.name}")
 
-##### This notification doesn't seem to be working...
 	await core.chatbot.send.modal_notification(
 		trigger_id,
-		"Promoted Package",
-		f"Successfully promoted `{pkg_object.pkg_name}` into:\n*Site*:  `{policy_object.site}`\n"
+		"Added Package",
+		f"Successfully added `{pkg_object.pkg_name}` into:\n*Site*:  `{policy_object.site}`\n"
 			f"*Policy ID*:  `{policy_object.policy_id}`\n*Policy Name*:  `{policy_object.name}`",
 		":yayblob: :jamf:"
 	)
+
+	return

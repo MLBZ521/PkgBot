@@ -248,9 +248,9 @@ async def modal_notification(trigger_id: str, title_txt: str, msg_text: str,
 	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
 
 
-async def modal_promote_pkg(trigger_id: str, pkg_name: str):
+async def modal_add_pkg_to_policy(trigger_id: str, pkg_name: str):
 
-	blocks = await core.chatbot.build.modal_promote_pkg(pkg_name)
+	blocks = await core.chatbot.build.modal_add_pkg_to_policy(pkg_name)
 	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
 
 

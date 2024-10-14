@@ -113,19 +113,19 @@ async def modal_notification(title_txt: str, button_text: str):
 	}
 
 
-async def modal_promote_pkg(pkg_name: str):
+async def modal_add_pkg_to_policy(pkg_name: str):
 
 	return {
 		"type": "modal",
-		"callback_id": "promote_pkg",
+		"callback_id": "add_pkg_to_policy",
 		"private_metadata": f"{pkg_name}",
 		"title": {
 			"type": "plain_text",
-			"text": "Promote pkg to Jamf Pro"
+			"text": "Add Package to Policy in Jamf Pro"
 		},
 		"submit": {
 			"type": "plain_text",
-			"text": "Promote  :rocket:",
+			"text": "Add  :rocket:",
 			"emoji": True
 		},
 		"close": {
@@ -147,7 +147,9 @@ async def modal_promote_pkg(pkg_name: str):
 				"type": "section",
 				"text": {
 					"type": "mrkdwn",
-					"text": f"Pkg to promote:  `{pkg_name}`"
+					"text": f"Package:  `{pkg_name}`"
+					# If the value for `text`above is change, it will break logic in:
+					# 	../../pkgbot/core/chatbot/slack/events/view_submission
 				}
 			},
 			{

@@ -227,6 +227,6 @@ async def modal_notification(title_txt: str, msg_text: str,
 	return await format_json(blocks)
 
 
-async def modal_promote_pkg(pkg_name: str):
+async def modal_add_pkg_to_policy(pkg_name: str):
 
-	return await format_json(await block.modal_promote_pkg(pkg_name))
+	return await format_json(await block.modal_add_pkg_to_policy(pkg_name))

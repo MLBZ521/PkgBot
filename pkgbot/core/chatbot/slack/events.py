@@ -162,14 +162,13 @@ async def button_click(payload):
 				if button_value_type == "Recipe_Error":
 					return await core.recipe.update_result(filter_obj, updates)
 
-				else:
-					# For legacy errors...  Future cleanup/removal
-					try:
-						log.debug("Old recipe error")
-						return await core.recipe.update_result(filter_obj, updates)
-					except Exception:
-						log.debug("Generic error")
-						return await core.error.update(filter_obj, updates)
+				# For legacy errors...  Future cleanup/removal
+				try:
+					log.debug("Old recipe error")
+					return await core.recipe.update_result(filter_obj, updates)
+				except Exception:
+					log.debug("Generic error")
+					return await core.error.update(filter_obj, updates)
 
 	else:
 		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
@@ -408,24 +407,23 @@ async def message_shortcut(payload):
 			"Ok.... :disappointed:"
 		)
 
-	if callback_id == "promote_pkg":
+	if channel != config.Slack.get("channel"):
+		return await core.chatbot.send.modal_notification(
+			trigger_id,
+			"PkgBot Shortcuts :jamf:",
+			"This Shortcut is not supported in this channel!",
+			"Ok.... :disappointed:"
+		)
 
-		if channel != config.Slack.get("channel"):
-			return await core.chatbot.send.modal_notification(
-				trigger_id,
-				"PkgBot Shortcuts :jamf:",
-				"This Shortcut is not supported in this channel!",
-				"Ok.... :disappointed:"
-			)
+	for in_block in incoming_blocks:
+		if in_block.get("type") == "section":
+			message_text = in_block.get("text").get("text")
+			package_name = re.findall(r"\*Package Name:\*\s\s`(.+)`", message_text)[0]
+			break
 
-		for in_block in incoming_blocks:
-			if in_block.get("type") == "section":
-				message_text = in_block.get("text").get("text")
-				package_name = re.findall(r"\*Package Name:\*\s\s`(.+)`", message_text)[0]
-				break
+	pkg_object = await core.package.get({"pkg_name": package_name})
 
-		log.debug(f"\npackage_name:  {package_name}")
-		pkg_object = await core.package.get({"pkg_name": package_name})
+	if callback_id == "add_pkg_to_policy":
 
 		# Ensure the pkg has been promoted first
 		if pkg_object.status == "dev":
@@ -436,7 +434,7 @@ async def message_shortcut(payload):
 				"Oh... :looking:"
 			)
 
-		return await core.chatbot.send.modal_promote_pkg(trigger_id, package_name)
+		return await core.chatbot.send.modal_add_pkg_to_policy(trigger_id, pkg_object.pkg_name)
 
 
 async def external_lists(payload):
@@ -476,7 +474,7 @@ async def view_submission(payload):
 		if in_block.get("type") == "section":
 			message_text = in_block.get("text").get("text")
 
-		if match := re.findall(r"^Pkg to promote:\s\s`(.+)`", message_text):
+		if match := re.findall(r"^Package:\s\s`(.+)`", message_text):
 			package_name = match[0]
 			break
 
