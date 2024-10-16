@@ -141,6 +141,9 @@ class PkgBotPromoter(Processor):
 
 		receipts = self.get_recipe_receipts(cache_dir, name)
 
+		if not receipts:
+			raise ProcessorError("No receipts found!")
+
 		for receipt in receipts:
 
 			try:
@@ -173,8 +176,10 @@ class PkgBotPromoter(Processor):
 							self.env[key] = recipe_input.get(key)
 							self.output(f"{key}:  {self.env[key]}", verbose_level=3)
 
-						self.env["NAME"] = recipe_input.get("NAME")
-						self.output(f'NAME:  {self.env["NAME"]}', verbose_level=2)
+						for attribute in ("NAME", "GROUP_NAME", "GROUP_TEMPLATE", "POLICY_TEMPLATE"):
+							if value := recipe_input.get(attribute):
+								self.env[attribute] = value
+								self.output(f"{attribute}:  {self.env[attribute]}", verbose_level=3)
 
 					elif re.search("InputVariableTextSubstituter", processor, re.IGNORECASE):
 
