@@ -13,8 +13,7 @@ templates = core.views.jinja_templates
 router = APIRouter(
 	tags = ["view"],
 	include_in_schema = False,
-	dependencies = [Depends(api.auth.login_manager)
-	]
+	dependencies = [Depends(api.auth.login_manager)]
 )
 
 
@@ -33,7 +32,8 @@ async def index(request: Request):
 @router.get("/error", response_class=HTMLResponse)
 async def error(request: Request, error: str | None = None):
 
-	log.error(f"[ERROR] {error}")
+	if error:
+		log.error(f"{error}")
 
 	await core.views.notify(
 		request,
@@ -43,6 +43,8 @@ async def error(request: Request, error: str | None = None):
 		message = error or "Something went wrong!"
 	)
 
+### TODO:
+	# This isn't switching the page....need to figure out why...
 	return templates.TemplateResponse("error.html", { "request": request, "error": error })
 
 
@@ -62,20 +64,23 @@ async def packages(request: Request):
 @router.get("/package/{id}", response_class=HTMLResponse)
 async def package(request: Request):
 
-	pkg = await core.package.get({"id": request.path_params['id']})
+	if pkg := await core.package.get({"id": request.path_params['id']}):
 
-	notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
-	pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
+		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
+		pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
 
-	return templates.TemplateResponse("package.html",
-		{
-			"request": request,
-			"package": pkg,
-			"notes": pkg.notes,
-			"notes_table_headers": notes_table_headers,
-			"pkg_holds": pkg.holds,
-			"pkg_holds_table_headers": pkg_holds_table_headers
-	})
+		return templates.TemplateResponse("package.html",
+			{
+				"request": request,
+				"package": pkg,
+				"notes": pkg.notes,
+				"notes_table_headers": notes_table_headers,
+				"pkg_holds": pkg.holds,
+				"pkg_holds_table_headers": pkg_holds_table_headers
+		})
+
+	else:
+		await error(request, "The requested package does not exist.")
 
 
 @router.post("/package/{id}", response_class=HTMLResponse)
@@ -141,20 +146,23 @@ async def recipes(request: Request):
 @router.get("/recipe/{id}", response_class=HTMLResponse)
 async def recipe(request: Request):
 
-	recipe_object = await core.recipe.get({"id": request.path_params['id']})
+	if recipe_object := await core.recipe.get({"id": request.path_params['id']}):
 
-	notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
-	results_table_headers = [ "Event", "Status", "Last Update", "Updated By", "Task ID", "Details" ]
+		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
+		results_table_headers = [ "Event", "Status", "Last Update", "Updated By", "Task ID", "Details" ]
 
-	return templates.TemplateResponse("recipe.html",
-		{
-			"request": request,
-			"recipe": recipe_object,
-			"notes": recipe_object.notes,
-			"notes_table_headers": notes_table_headers,
-			"results": recipe_object.results,
-			"results_table_headers": results_table_headers
-	})
+		return templates.TemplateResponse("recipe.html",
+			{
+				"request": request,
+				"recipe": recipe_object,
+				"notes": recipe_object.notes,
+				"notes_table_headers": notes_table_headers,
+				"results": recipe_object.results,
+				"results_table_headers": results_table_headers
+		})
+
+	else:
+		await error(request, "The requested recipe does not exist.")
 
 
 @router.post("/recipe/{id}", response_class=HTMLResponse)
