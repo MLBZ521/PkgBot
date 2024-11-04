@@ -154,7 +154,7 @@ async def autopkg_repo_add(repo: str,
 		dict:  Dict describing the results of the ran process
 	"""
 
-	queued_task = await core.autopkg.execute(autopkg_cmd)
+	queued_task = await core.autopkg.execute(autopkg_cmd, repo)
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
