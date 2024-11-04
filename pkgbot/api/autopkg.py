@@ -45,7 +45,8 @@ async def workflow_dev(pkg_object: schemas.Package_In = Depends(schemas.Package_
 @router.post("/workflow/prod", summary="Production Workflow",
 	description="Workflow to move a package into production and update the Slack message.",
 	dependencies=[Depends(core.user.verify_admin)])
-async def workflow_prod(promoted_id: int, pkg_object: schemas.Package_In = Depends(schemas.Package_In)):
+async def workflow_prod(promoted_id: int,
+	pkg_object: schemas.Package_In = Depends(schemas.Package_In)):
 
 	return await core.autopkg.workflow_prod(promoted_id, pkg_object)
 
@@ -76,10 +77,10 @@ async def autopkg_run_recipes(autopkg_cmd: models.AutoPkgCMD_Run = Depends(model
 	return { "result": "Queued background task" , "task_id": queued_task.id }
 
 
-@router.post("/run/recipe/{recipe_id}", summary="Executes a recipes",
+@router.post("/run/{recipe_id}", summary="Executes a recipes",
 	description="Executes a recipe in a background task.",
 	dependencies=[Depends(core.user.get_current)])
-async def autopkg_run_recipe(recipe_id: str = Depends(core.recipe.get),
+async def autopkg_run_recipe(recipe_id: str,
 	autopkg_cmd: models.AutoPkgCMD_Run = Depends(models.AutoPkgCMD_Run)):
 	"""Runs the passed recipe id.
 
@@ -92,32 +93,57 @@ async def autopkg_run_recipe(recipe_id: str = Depends(core.recipe.get),
 		dict:  Dict describing the results of the ran process
 	"""
 
-	queued_task = await core.autopkg.execute(autopkg_cmd, recipe_id.recipe_id)
+	if recipe_obj := core.recipe.get(recipe_id):
+		queued_task = await core.autopkg.execute(autopkg_cmd, recipe_obj.recipe_id)
 
-	if isinstance(queued_task, dict):
-		return queued_task
+		if isinstance(queued_task, dict):
+			return queued_task
 
-	return { "result": "Queued background task" , "task_id": queued_task.id }
+		return { "result": "Queued background task" , "task_id": queued_task.id }
+
+	return { "result": "Error", "Error": "Unknown recipe id" }
 
 
-@router.post("/verify-trust/recipe/{recipe_id}", summary="Validates a recipes trust info",
+@router.post("/trust/verify/{recipe_id}", summary="Validates a recipes trust info",
 	description="Validates a recipes trust info in a background task.",
 	dependencies=[Depends(core.user.get_current)])
-async def autopkg_verify_recipe(recipe_id: str = Depends(core.recipe.get),
+async def autopkg_verify_recipe(recipe_id: str,
 	autopkg_cmd: models.AutoPkgCMD_VerifyTrustInfo = Depends(models.AutoPkgCMD_VerifyTrustInfo)):
-	"""Runs the passed recipe id.
+	"""Verifies the trust verification info for the passed recipe id is valid.
 
 	Args:
 		recipe_id (str): Recipe ID of a recipe
-		autopkg_cmd (models.AutoPkgCMD): Object containing options for `autopkg`
+		autopkg_cmd (models.AutoPkgCMD_UpdateTrustInfo): Object containing options for `autopkg`
 			and details on response method
 
 	Returns:
 		dict:  Dict describing the results of the ran process
 	"""
 
-	queued_task = await core.autopkg.execute(autopkg_cmd, recipe_id.recipe_id)
-	return { "result": "Queued background task" , "task_id": queued_task.id }
+	if recipe_obj := core.recipe.get(recipe_id):
+		queued_task = await core.autopkg.execute(autopkg_cmd, recipe_obj.recipe_id)
+		return { "result": "Queued background task" , "task_id": queued_task.id }
+	return { "result": "Error", "Error": "Unknown recipe id" }
+
+
+@router.post("/trust/update/{recipe_id}", summary="Update recipe trust info",
+	description="Update a recipe's trust information.  Runs `autopkg update-trust-info`.",
+	dependencies=[Depends(core.user.verify_admin)])
+async def autopkg_update_recipe_trust(recipe_id: str,
+	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo = Depends(models.AutoPkgCMD_UpdateTrustInfo)):
+	"""Updates the trust verification info for the passed recipe id.
+
+	Args:
+		recipe_id (str): A recipe id identifier
+		autopkg_cmd (models.AutoPkgCMD_UpdateTrustInfo): Object containing options for
+			`autopkg` and details on response method
+	Returns:
+		dict:  Dict describing the results of the ran process
+	"""
+	if recipe_obj := core.recipe.get(recipe_id):
+		queued_task = await core.autopkg.update_trust(autopkg_cmd, recipe_obj.recipe_id)
+		return { "result": "Queued background task" , "task_id": queued_task.id }
+	return { "result": "Error", "Error": "Unknown recipe id" }
 
 
 @router.get("/version", summary="Get AutoPkg version",
@@ -180,15 +206,3 @@ async def receive(request: Request, task_id = Body()):
 	log.debug(f"Receiving notification for task_id:  {task_id}")
 	await core.events.event_handler(task_id)
 	return Response(status_code=status.HTTP_200_OK)
-
-
-@router.post("/trust/update", summary="Update recipe trust info",
-	description="Update a recipe's trust information.  Runs `autopkg update-trust-info`.",
-	dependencies=[Depends(core.user.verify_admin)])
-async def autopkg_update_recipe_trust(recipe_id: str = Depends(core.recipe.get),
-	autopkg_cmd: models.AutoPkgCMD_UpdateTrustInfo = Depends(models.AutoPkgCMD_UpdateTrustInfo)):
-	# result_object: schemas.RecipeResult_In | None = Depends(schemas.RecipeResult_In)
-	# Removed -- not sure this will be used via the API...
-
-	queued_task = await core.autopkg.update_trust(autopkg_cmd, recipe_id)
-	return { "result": "Queued background task" , "task_id": queued_task.id }

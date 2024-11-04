@@ -11,19 +11,23 @@ router = APIRouter(
 )
 
 
-@router.get("/", summary="Get all packages", description="Get all packages in the database.",
+@router.get("s/", summary="Get all packages", description="Get all packages in the database.",
 	dependencies=[Depends(core.user.get_current)], response_model=dict)
 async def get_packages():
 
-	packages = await schemas.Package_Out.from_queryset(core.package.get())
+	packages = await core.package.get()
 	return { "total": len(packages), "packages": packages }
 
 
 @router.get("/id/{id}", summary="Get package by id", description="Get a package by its id.",
 	dependencies=[Depends(core.user.get_current)], response_model=schemas.Package_Out)
-async def get_package_by_id(id: int):
+async def get_by_id(id: int):
 
-	return await core.package.get({"id": id})
+	if pkg_object := await core.package.get({"id": id}):
+		return pkg_object
+
+	raise HTTPException(
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown package id:  '{id}'")
 
 
 @router.post("/", summary="Create a package", description="Create a package.",
@@ -42,7 +46,6 @@ async def update(id: int, pkg_object: schemas.Package_In = Depends(schemas.Packa
 		{"id": id},
 		pkg_object.dict(exclude_unset=True, exclude_none=True)
 	)
-
 	return await core.package.get({"id": id})
 
 
@@ -52,23 +55,26 @@ async def delete_package_by_id(id: int):
 
 	if await core.package.delete({"id": id}):
 		return { "result":  f"Successfully deleted package id:  {id}" }
-
 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package does not exist.")
 
 
-@router.post("/promote", summary="Promote package to production",
+@router.post("/promote/{id}", summary="Promote package to production",
 	description="Promote a package to production by id.",
 	dependencies=[Depends(core.user.verify_admin)])
 async def promote_package(
 	id: int, autopkg_cmd: models.AutoPkgCMD | None = Depends(models.AutoPkgCMD)):
 
-	queued_task = await core.package.promote(id, autopkg_cmd)
-	return { "result": "Queued background task" , "task_id": queued_task.id }
+	if package_obj := core.package.get(id):
+		queued_task = await core.package.promote(package_obj.id, autopkg_cmd)
+		return { "result": "Queued background task" , "task_id": queued_task.id }
+	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package does not exist.")
 
 
-@router.post("/deny", summary="Do not promote package to production",
+@router.post("/deny/{id}", summary="Do not promote package to production",
 	description="Performs the necessary actions when a package is not approved to production use.",
 	dependencies=[Depends(core.user.verify_admin)])
 async def deny_package(id: int = Depends(core.package.get)):
 
-	return await core.package.deny(id)
+	if package_obj := core.package.get(id):
+		return await core.package.deny(package_obj.id)
+	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package does not exist.")

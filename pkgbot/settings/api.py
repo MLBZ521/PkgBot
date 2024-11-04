@@ -13,21 +13,26 @@ tags_metadata = [
 	},
 	{
 		"name": "package",
-		"description": "Manage package objects.",
+		"description": "Manage **Package** objects.",
+	},
+	{
+		"name": "policy",
+		"description": "Manage **Policy** objects.",
 	},
 	{
 		"name": "recipe",
-		"description": "Manage recipe objects.",
+		"description": "Manage **Recipe** objects.",
 	},
 	{
 		"name": "slackbot",
-		"description": "Endpoints handle SlackBot messages and interactions.",
+		"description": "Endpoints handle **SlackBot** messages and interactions.",
 	},
 	{
 		"name": "user",
-		"description": "Manage user objects.",
+		"description": "Manage **User** objects.",
 	}
 ]
+
 
 
 custom_responses = {

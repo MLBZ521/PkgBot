@@ -26,7 +26,11 @@ async def get_recipes(recipe_filter: models.Recipe_Filter = Depends(models.Recip
 	dependencies=[Depends(core.user.get_current)], response_model=schemas.Recipe_Out)
 async def get_by_id(id: int):
 
-	return await core.recipe.get({"id": id})
+	if recipe_object := await core.recipe.get({"id": id}):
+		return recipe_object
+
+	raise HTTPException(
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{id}'")
 
 
 @router.get("/recipe_id/{recipe_id}", summary="Get recipe by recipe_id",
@@ -38,7 +42,7 @@ async def get_by_recipe_id(recipe_id: str):
 		return recipe_object
 
 	raise HTTPException(
-		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe identifier:  '{recipe_id}'")
 
 
 @router.post("/", summary="Create a recipe", description="Create a recipe.",
@@ -73,7 +77,7 @@ async def update_by_recipe_id(recipe_id: str,
 	):
 		return await core.recipe.get({"recipe_id__iexact": recipe_id})
 
-	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
+	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe identifier:  '{recipe_id}'")
 
 
 @router.delete("/id/{id}", summary="Delete recipe by id", description="Delete a recipe by id.",
@@ -92,10 +96,10 @@ async def delete_by_id(id: int):
 async def delete_by_recipe_id(recipe_id: str):
 
 	if await core.recipe.delete({"recipe_id__iexact": recipe_id}):
-		return { "result":  f"Successfully deleted recipe id:  {recipe_id}" }
+		return { "result":  f"Successfully deleted recipe identifier:  {recipe_id}" }
 
 	raise HTTPException(
-		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe id:  '{recipe_id}'")
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown recipe identifier:  '{recipe_id}'")
 
 
 @router.post("/error", summary="Handle recipe errors",

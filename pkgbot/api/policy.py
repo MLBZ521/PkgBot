@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from pkgbot import core, settings
-from pkgbot.db import models, schemas
+from pkgbot.db import schemas
 from pkgbot.utilities import common as utility
 
 
@@ -26,7 +26,11 @@ async def get_policies():
 	dependencies=[Depends(core.user.get_current)], response_model=schemas.Policy_Out)
 async def get_by_id(id: int):
 
-	return await core.policy.get({"id": id})
+	if policy_object := await core.policy.get({"id": id}):
+		return policy_object
+
+	raise HTTPException(
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown policy id:  '{id}'")
 
 
 @router.delete("/id/{id}", summary="Delete policy by id", description="Delete a policy by id.",
@@ -49,7 +53,7 @@ async def get_by_policy_id(policy_id: str):
 		return policy_object
 
 	raise HTTPException(
-		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown policy id:  '{policy_id}'")
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown Jamf Pro Policy ID:  '{policy_id}'")
 
 
 @router.delete("/policy_id/{policy_id}", summary="Delete policy by policy_id",
@@ -57,10 +61,10 @@ async def get_by_policy_id(policy_id: str):
 async def delete_by_policy_id(policy_id: str):
 
 	if await core.policy.delete({"policy_id__iexact": policy_id}):
-		return { "result":  f"Successfully deleted policy id:  {policy_id}" }
+		return { "result":  f"Successfully deleted Jamf Pro Policy ID:  {policy_id}" }
 
 	raise HTTPException(
-		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown policy id:  '{policy_id}'")
+		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown Jamf Pro Policy ID:  '{policy_id}'")
 
 
 @router.get("/cache_policies", summary="Adhoc policy cache",
