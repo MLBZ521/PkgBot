@@ -21,6 +21,7 @@ async def create_celery(celery_app=pkgbot_celery_app):
 			"task": "pkgbot:cache_policies",
 			"schedule": crontab(minute=0, hour=1),
 			"args": (),
+			"kwargs": { "source": "Scheduled", "called_by": "Celery Beat" },
 			"options": {
 				"priority": 10,
 				"queue": "pkgbot"

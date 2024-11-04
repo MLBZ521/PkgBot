@@ -54,6 +54,10 @@ tags_metadata = [
 		"description": "Endpoints handle **SlackBot** messages and interactions.",
 	},
 	{
+		"name": "tasks",
+		"description": "Adhoc execute PkgBot (scheduled) tasks.",
+	},
+	{
 		"name": "user",
 		"description": "Manage **User** objects.",
 	}

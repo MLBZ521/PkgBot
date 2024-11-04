@@ -54,13 +54,6 @@ def test(arg):
 	log.debug(arg)
 
 
-@shared_task(name="pkgbot:cache_policies", bind=True)
-def cache_policies(sender, **kwargs):
-
-	log.debug("Nightly policy cache...")
-	asyncio.run(core.policy.cache_policies())
-
-
 ##################################################
 # Pre-check Tasks
 
@@ -757,3 +750,131 @@ def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = N
 		}
 
 	return results
+
+
+##################################################
+# Jamf Pro Tasks
+
+
+@shared_task(name="pkgbot:cache_policies", bind=True)
+def cache_policies(self, **kwargs):
+
+	start = asyncio.run(utility.get_timestamp())
+	source = kwargs.get("source")
+	called_by = kwargs.get("called_by")
+
+	if source == "Scheduled":
+		log.info("Performing nightly task to cache Policies from Jamf Pro...")
+	else:
+		log.info(f"Cache Policies from Jamf Pro was requested by {called_by}")
+
+	api_token, api_token_expires = asyncio.run(core.jamf_pro.get_token())
+	all_policies_response = asyncio.run(core.jamf_pro.api(
+		"get", "JSSResource/policies", api_token=api_token))
+
+	if all_policies_response.status_code != 200:
+		raise("Failed to get list of Policies!")
+
+	all_policies = all_policies_response.json()
+	log.debug(f"Number of Policies in Jamf Pro:  {len(all_policies.get('policies'))}")
+
+	# Get the Policy IDs
+	policy_ids = [ policy.get("id") for policy in all_policies.get("policies") ]
+	# log.debug(f"Number of Policy IDs:  {len(policy_ids)}")
+
+	# Get all cached Policies and their IDs
+	all_cache_policies = asyncio.run(core.policy.get())
+	cache_policy_ids = [ policy.policy_id for policy in all_cache_policies ]
+	log.debug(f"Number of cached Policy IDs:  {len(cache_policy_ids)}")
+
+	# Get Policy IDs from cached Policies if they aren't in the "new" Policy IDs list
+	deleted_policy_ids = [
+		policy_id for policy_id in cache_policy_ids if policy_id not in policy_ids ]
+	log.debug(f"Number of cached Policies to delete:  {len(deleted_policy_ids)}")
+
+	for policy_id in deleted_policy_ids:
+		log.debug(f"Deleting Policy:  {policy_id}")
+		asyncio.run(core.policy.delete( { "policy_id": policy_id } ))
+
+	place_values = int(math.log10(len(all_policies.get('policies')))) + 1
+	pattern = r'^\d'
+	count = 1
+
+	if place_values == 2:
+		pattern = f"{pattern}0$"
+	elif place_values == 3:
+		pattern = f"{pattern}00$"
+	elif place_values > 3:
+		pattern = f"{pattern}+00$"
+
+	log.debug("Updating Policies...")
+
+	for policy in all_policies.get("policies"):
+
+		if count < 11 or re.match(pattern, str(count)):
+			log.debug(f"Policy Progress:  {count}")
+
+		count = count + 1
+
+		if datetime.now(timezone.utc) > (api_token_expires - timedelta(minutes=5)):
+			log.debug("Replacing API Token...")
+			api_token, api_token_expires = asyncio.run(core.jamf_pro.get_token())
+
+		policy_details_response = asyncio.run(core.jamf_pro.api(
+			"get", f"JSSResource/policies/id/{policy.get('id')}", api_token=api_token))
+
+		if policy_details_response.status_code != 200:
+			raise Exception(
+				f"Failed to get policy details for:  {policy.get('id')}:{policy.get('name')}!")
+
+		policy_details = policy_details_response.json()
+		policy_general = policy_details.get("policy").get("general")
+		policy_packages = policy_details.get("policy").get("package_configuration").get("packages")
+
+		policy_obj, created = asyncio.run(core.policy.create_or_update(
+			schemas.Policy_In(
+				name = policy_general.get("name"),
+				site = policy_general.get("site").get("name"),
+				policy_id = policy_general.get("id")
+			)
+		))
+
+		# Clear the current policy <-> package relationship (aka flush table of this Policy)
+		asyncio.run(policy_obj.packages.clear())
+		asyncio.run(policy_obj.packages_manual.clear())
+
+		for package in policy_packages:
+
+			# PkgBot Package -- if exists
+			if not (pkg_object := asyncio.run(
+				core.package.get_or_none({ "pkg_name": package.get("name") })
+			)):
+				# Manually uploaded Package
+				pkg_name = package.get("name")
+
+				try:
+					version = re.sub("\.(pkg|dmg)", "", pkg_name.rsplit("-", 1)[1])
+				except:
+					version = "1.0"
+
+				pkg_details = {
+					"name": pkg_name.rsplit("-", 1)[0],
+					"pkg_name": pkg_name,
+					"version": version,
+					"status": "prod"
+				}
+
+				pkg_object = (asyncio.run(core.package.get_or_create_manual_pkg(pkg_details)))[0]
+
+			asyncio.run(pkg_object.policies.add(policy_obj))
+
+	log.info("Caching Policies from Jamf Pro...COMPLETE")
+	return {
+		"event": "cache-policies",
+		"source": source,
+		"called_by": called_by,
+		"start": start,
+		"completed": asyncio.run(utility.get_timestamp()),
+		"result": "Successfully cached all Policies from Jamf Pro.",
+		"task_id": self.request.id
+	}

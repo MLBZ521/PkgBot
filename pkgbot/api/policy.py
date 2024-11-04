@@ -65,12 +65,3 @@ async def delete_by_policy_id(policy_id: str):
 
 	raise HTTPException(
 		status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown Jamf Pro Policy ID:  '{policy_id}'")
-
-
-@router.get("/cache_policies", summary="Adhoc policy cache",
-	description="Force an adhoc cache of Jamf Pro Policies.",
-	dependencies=[Depends(core.user.get_current)], response_model=dict)
-async def cache_policies():
-
-	await core.policy.cache_policies()
-	return { "result": "Caching Policies..." }

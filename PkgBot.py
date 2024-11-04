@@ -34,6 +34,7 @@ app.include_router(api.chatbot.router)
 app.include_router(api.build_msg.router)
 app.include_router(api.send_msg.router)
 app.include_router(api.user.router)
+app.include_router(api.tasks.router)
 
 # Add an exception handler to the app instance
 # Used for the login/auth logic for the HTTP views

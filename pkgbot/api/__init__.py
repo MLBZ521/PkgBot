@@ -12,6 +12,7 @@ from . import (
 	policy,
 	send_msg,
 	recipe,
+	tasks,
 	user,
 	views
 )

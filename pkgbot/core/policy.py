@@ -1,7 +1,8 @@
 import re
 
-from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree
+
+from celery import current_app as pkgbot_celery_app
 
 from tortoise.expressions import Q
 
@@ -26,107 +27,43 @@ async def get(policy_filter: dict | Q | None = None):
 	return results[0] if len(results) == 1 else results
 
 
-async def delete(recipe_filter: dict):
+async def create_or_update(policy_object: schemas.Policy_In):
 
-	return await models.Policies.filter(**recipe_filter).delete()
+	return await models.Policies.update_or_create(
+		defaults = {
+			"name": policy_object.dict().get("name"),
+			"site": policy_object.dict().get("site"),
+		},
+		policy_id = policy_object.dict().get("policy_id")
+	)
 
 
-async def cache_policies():
+async def delete(policy_filter: dict):
 
-	log.debug("Caching Policies from Jamf Pro...")
-	api_token, api_token_expires = await core.jamf_pro.get_token()
-	all_policies_response = await core.jamf_pro.api(
-		"get", "JSSResource/policies", api_token=api_token)
+	policy_obj = await models.Policies.filter(**policy_filter).first()
+	return await policy_obj.delete()
 
-	if all_policies_response.status_code != 200:
-		raise("Failed to get list of Policies!")
 
-	all_policies = all_policies_response.json()
-	log.debug(f"Number of Policies found:  {len(all_policies.get('policies'))}")
+async def cache_policies(source: str | None = None, called_by: str | None = None):
 
-	# Get the Policy IDs
-	policy_ids = [ policy.get("id") for policy in all_policies.get("policies") ]
-	# log.debug(f"Number of Policy IDs:  {len(policy_ids)}")
-
-	# Get all cached Policies and their IDs
-	all_cache_policies = await get()
-	cache_policy_ids = [ policy.policy_id for policy in all_cache_policies ]
-	# log.debug(f"Number of cached Policy IDs:  {len(cache_policy_ids)}")
-
-	# Get Policy IDs from cached Policies if they aren't in the "new" Policy IDs list
-	deleted_policy_ids = [
-		policy_id for policy_id in cache_policy_ids if policy_id not in policy_ids ]
-	log.debug(f"Number of cached Policies to delete:  {len(deleted_policy_ids)}")
-
-	for policy_id in deleted_policy_ids:
-		log.debug(f"Deleting Policy:  {policy_id}")
-		await delete( { "policy_id": policy_id } )
-
-	for policy in all_policies.get("policies"):
-
-		if datetime.now(timezone.utc) > (api_token_expires - timedelta(minutes=5)):
-			log.debug("Replacing API Token...")
-			api_token, api_token_expires = await core.jamf_pro.get_token()
-
-		policy_details_response = await core.jamf_pro.api(
-			"get", f"JSSResource/policies/id/{policy.get('id')}", api_token=api_token)
-
-		if policy_details_response.status_code != 200:
-			raise(f"Failed to get policy details for:  {policy.get('id')}:{policy.get('name')}!")
-
-		policy_details = policy_details_response.json()
-		policy_general = policy_details.get("policy").get("general")
-
-		result, result_bool = await models.Policies.update_or_create(
-			defaults = {
-				"name": policy_general.get("name"),
-				"site": policy_general.get("site").get("name"),
-			},
-			policy_id = policy_general.get("id")
-		)
-
-		# Clear the current policy <-> package relationship (aka flush table of this Policy)
-		await result.packages.clear()
-		await result.packages_manual.clear()
-
-		policy_packages = policy_details.get("policy").get("package_configuration").get("packages")
-
-		for package in policy_packages:
-			pkg_object = await models.Packages.get_or_none(**{ "pkg_name": package.get("name")})
-			if pkg_object:
-				await result.packages.add(pkg_object)
-			else:
-				pkg_name = package.get("name")
-
-				try:
-					version = re.sub("\.(pkg|dmg)", "", pkg_name.rsplit("-", 1)[1])
-				except re.ex:
-					version = "1.0"
-
-				pkg_details = {
-					"name": pkg_name.rsplit("-", 1)[0],
-					"pkg_name": pkg_name,
-					"version": version,
-					"status": "prod"
-				}
-
-				pkg_object = (await models.PackagesManual.get_or_create(**pkg_details))[0]
-				await result.packages_manual.add(pkg_object)
-
-	log.debug("Caching Policies from Jamf Pro...COMPLETE")
-	return
+	return pkgbot_celery_app.send_task(
+		"pkgbot:cache_policies",
+		kwargs = {
+			"source": source,
+			"called_by": called_by
+		},
+		queue="pkgbot",
+		priority=3
+	)
 
 
 async def update_policy(policy_object, pkg_object, username, trigger_id):
-
-	# api_token, api_token_expires = await core.jamf_pro.get_token()
 
 	log.debug(f"Getting details for Policy ID:  {policy_object.policy_id}")
 	policy_xml_response  = await core.jamf_pro.api(
 		"get",
 		f"JSSResource/policies/id/{policy_object.policy_id}",
 		in_content_type = "xml",
-		# api_token = api_token
 	)
 
 	if policy_xml_response.status_code != 200:
@@ -159,7 +96,6 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 		f"JSSResource/policies/id/{policy_object.policy_id}",
 		out_content_type = "xml",
 		data = new_policy_xml,
-		# api_token = api_token
 	)
 
 	if update_policy_results.status_code != 201:
@@ -172,7 +108,6 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 			f"JSSResource/policies/id/{policy_object.policy_id}",
 			out_content_type = "xml",
 			data = (ElementTree.tostring(policy_xml)).decode("UTF-8"),
-			# api_token = api_token
 		)
 
 		if restore_policy_results.status_code != 201:
