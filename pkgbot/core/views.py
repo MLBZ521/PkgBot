@@ -1,33 +1,14 @@
-from datetime import datetime
-
 from fastapi import Request, UploadFile, status
-from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 
-from pkgbot import config, core
+from pkgbot import config, core, settings
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
 log = utility.log
-jinja_templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
-
-
-def template_filter_datetime(date, date_format="%Y-%m-%d %I:%M:%S"):
-
-	if date:
-		converted = datetime.fromisoformat(str(date))
-		return converted.strftime(date_format)
-
-
-def parse_notification_messages(request: Request):
-
-	return request.session.pop("pkgbot_msg") if "pkgbot_msg" in request.session else []
-
-
-jinja_templates.env.filters.update(strftime=template_filter_datetime)
-jinja_templates.env.globals.update(parse_messages=parse_notification_messages)
+jinja_templates = settings.api.jinja_templates
 
 
 async def notify(request: Request, message: any, emphasize: str = "",
@@ -200,7 +181,7 @@ async def from_web_create_recipes(request: Request, file: UploadFile):
 
 	# Dynamically generate the columns that should be expected in the csv
 	data_fields = models.Recipes.describe().get("data_fields")
-	expected_columns = [ 
+	expected_columns = [
 		field.get("name") for field in data_fields if not field.get("nullable") ] + [ "notes" ]
 
 	if {field.lower() for field in fieldnames}.difference(set(expected_columns)):
@@ -232,7 +213,7 @@ async def from_web_create_recipes(request: Request, file: UploadFile):
 
 			_, _, result = await core.views.from_web_create_recipe(recipe_row, recipe_note)
 
-			# # Update the result tracking
+			# Update the result tracking
 			notify_results[result] += 1
 
 		await core.views.notify_create_recipe_result(request, **notify_results)

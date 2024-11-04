@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from fastapi.responses import RedirectResponse, HTMLResponse
 
-from pkgbot import api, config, core
+from pkgbot import api, config, core, settings
 from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
 log = utility.log
-templates = core.views.jinja_templates
+jinja_templates = settings.api.jinja_templates
 
 router = APIRouter(
 	tags = ["view"],
@@ -20,13 +20,13 @@ router = APIRouter(
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
 
-	return templates.TemplateResponse("index.html", { "request": request })
+	return jinja_templates.TemplateResponse("index.html", { "request": request })
 
 
 # @router.get("/login", response_class=HTMLResponse)
 # async def userlogin(request: Request):
 
-#	return templates.TemplateResponse("login.html", { "request": request })
+#	return jinja_templates.TemplateResponse("login.html", { "request": request })
 
 
 @router.get("/error", response_class=HTMLResponse)
@@ -45,7 +45,7 @@ async def error(request: Request, error: str | None = None):
 
 ### TODO:
 	# This isn't switching the page....need to figure out why...
-	return templates.TemplateResponse("error.html", { "request": request, "error": error })
+	return jinja_templates.TemplateResponse("error.html", { "request": request, "error": error })
 
 
 @router.get("/packages", response_class=HTMLResponse)
@@ -57,7 +57,7 @@ async def packages(request: Request):
 		"", "ID", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
 	]
 
-	return templates.TemplateResponse("packages.html",
+	return jinja_templates.TemplateResponse("packages.html",
 		{ "request": request, "table_headers": table_headers, "packages": pkgs })
 
 
@@ -69,7 +69,7 @@ async def package(request: Request):
 		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
 		pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
 
-		return templates.TemplateResponse("package.html",
+		return jinja_templates.TemplateResponse("package.html",
 			{
 				"request": request,
 				"package": pkg,
@@ -139,7 +139,7 @@ async def recipes(request: Request):
 	table_headers = [ "ID", "Recipe ID", "Enable", "Manual Only",
 		"Pkg Only", "Last Ran", "Schedule", "Notes" ]
 
-	return templates.TemplateResponse("recipes.html",
+	return jinja_templates.TemplateResponse("recipes.html",
 		{ "request": request, "table_headers": table_headers, "recipes": all_recipes })
 
 
@@ -151,7 +151,7 @@ async def recipe(request: Request):
 		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
 		results_table_headers = [ "Event", "Status", "Last Update", "Updated By", "Task ID", "Details" ]
 
-		return templates.TemplateResponse("recipe.html",
+		return jinja_templates.TemplateResponse("recipe.html",
 			{
 				"request": request,
 				"recipe": recipe_object,
@@ -196,7 +196,7 @@ async def create_recipe_form(request: Request,
 	if not user_object or not user_object.dict().get("full_admin"):
 		return await core.views.notify_not_authorized(request, "recipes")
 
-	return templates.TemplateResponse("recipe_create.html", { "request": request })
+	return jinja_templates.TemplateResponse("recipe_create.html", { "request": request })
 
 
 @router.post("/create/recipe", response_class=HTMLResponse)
