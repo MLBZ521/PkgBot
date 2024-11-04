@@ -51,14 +51,14 @@ async def error(request: Request, error: str | None = None):
 @router.get("/packages", response_class=HTMLResponse)
 async def packages(request: Request):
 
-	pkgs = await schemas.Package_Out.from_queryset(models.Packages.all())
+	packages = await schemas.Packages_Out.from_queryset(models.Packages.all())
 
 	table_headers = [
 		"", "ID", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
 	]
 
 	return jinja_templates.TemplateResponse("packages.html",
-		{ "request": request, "table_headers": table_headers, "packages": pkgs })
+		{ "request": request, "table_headers": table_headers, "packages": packages })
 
 
 @router.get("/package/{id}", response_class=HTMLResponse)

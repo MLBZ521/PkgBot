@@ -16,6 +16,8 @@ RecipeResult_Out = pydantic_model_creator(models.RecipeResults, name="RecipeResu
 RecipeResult_In = pydantic_model_creator(
     models.RecipeResults, name="RecipeResult_In", exclude_readonly=True)
 
+Packages_Out = pydantic_model_creator(models.Packages, name="Packages_Out", exclude={ "last_update",
+	"pkg_name", "policiess", "recipe", "recipe_id", "response_url", "slack_channel", "slack_ts" })
 Package_Out = pydantic_model_creator(models.Packages, name="Package_Out")
 Package_In = pydantic_model_creator(models.Packages, name="Package_In", exclude_readonly=True)
 
