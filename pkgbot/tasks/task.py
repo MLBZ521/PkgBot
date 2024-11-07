@@ -564,7 +564,8 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	# log.debug(f"Command to execute:  {cmd}")
 	results = asyncio.run(utility.execute_process(cmd))
 
-	if autopkg_cmd.get("ingress") in {"api", "Slack"} and autopkg_cmd.get("verb") == "verify-trust-info":
+	if autopkg_cmd.get("ingress") in { "api", "Slack" } and \
+		autopkg_cmd.get("verb") == "verify-trust-info":
 		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {

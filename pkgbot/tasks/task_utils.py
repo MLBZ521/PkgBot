@@ -49,7 +49,9 @@ def check_recipe_schedule(interval, last_ran):
 
 def api_url_helper():
 	secure = "s" if config.PkgBot.get("enable_ssl") else ""
-	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
+	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}"
+	if config.PkgBot.get('port'):
+		pkgbot_server = f"{pkgbot_server}:{config.PkgBot.get('port')}"
 	headers = { "Content-Type": "application/json" }
 	return pkgbot_server, headers
 

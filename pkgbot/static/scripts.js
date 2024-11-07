@@ -38,7 +38,7 @@ function config_table(tables) {
 				{
 					"targets": $('.sorting-disabled').index(),
 					"orderable": false
-				} 
+				}
 			]
 		}
 	);

@@ -1,10 +1,6 @@
 from pkgbot import core
 from pkgbot.db import models, schemas
 from pkgbot.tasks import task
-from pkgbot.utilities import common as utility
-
-
-log = utility.log
 
 
 async def get(package_filter: dict | None = None):
@@ -63,8 +59,8 @@ async def delete(package_filter: dict):
 
 async def promote(id: int, autopkg_cmd: models.AutoPkgCMD | None = None):
 
-	pkg_object = await get({"id": id})
-	recipe = await core.recipe.get({"recipe_id": pkg_object.recipe.recipe_id})
+	pkg_object = await get({ "id": id })
+	recipe = await core.recipe.get({ "recipe_id": pkg_object.recipe.recipe_id })
 
 	if autopkg_cmd is None:
 		autopkg_cmd = models.AutoPkgCMD(

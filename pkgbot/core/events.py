@@ -462,11 +462,7 @@ async def handle_autopkg_error(**kwargs):
 
 	if event == "recipe_run_prod":
 		# Promotion Failed
-##### TODO:
-# Possible ideas:
-	# Thread the error message with the original message?
-#####	# Post Ephemeral Message to PkgBot Admin?
-##### Test/Verify working
+
 		# Get the recipe that failed to be promoted
 		pkg_object = await core.package.get({ "id": event_id })
 		recipe_id = pkg_object.recipe.recipe_id

@@ -7,8 +7,9 @@ from pkgbot import config
 config = config.load_config()
 
 SECURE = "s" if config.PkgBot.get("enable_ssl") else ""
-PKGBOT_SERVER = f"http{SECURE}://{config.PkgBot.get('host')}:{config.PkgBot.get('port')}"
-
+PKGBOT_SERVER = f"http{SECURE}://{config.PkgBot.get('host')}"
+if config.PkgBot.get('port'):
+	PKGBOT_SERVER = f"{PKGBOT_SERVER}:{config.PkgBot.get('port')}"
 
 async def brick_header(text):
 
@@ -66,7 +67,7 @@ async def button_element_creator(text: str, style: str, value: str):
 async def brick_action_buttons(button_details: list):
 	# button_details = [("Approve", "primary", "Package:1"), ("Deny", "danger", "Deny:1")]
 
-	elements = [ 
+	elements = [
 		await button_element_creator(text, type, value) for text, type, value in button_details ]
 
 	return	(

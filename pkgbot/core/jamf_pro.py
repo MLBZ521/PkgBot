@@ -1,11 +1,11 @@
 import re
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from xml.etree import ElementTree
 
 import httpx
 
-from pkgbot import config, core
+from pkgbot import config
 from pkgbot.utilities import common as utility
 
 

@@ -155,14 +155,14 @@ async def compute_hex_digest(key: bytes,
 
 async def load_yaml_file(config_file):
 
-	# Open a yaml file
+	# Open and load a yaml file
 	with open(config_file, 'rb') as config_file_path:
 		return load_yaml(config_file_path)
 
 
 async def load_yaml(config_file):
 
-	# Load yaml file
+	# Load yaml formatted string
 	return yaml.safe_load(config_file)
 
 
