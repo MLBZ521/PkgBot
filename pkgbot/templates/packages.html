@@ -33,6 +33,10 @@
 					<td>{{ pkg.updated_by }}</td>
 					<td class="pkgbot-table-td-nowrap">{{ pkg.packaged_date | strftime }}</td>
 					<td class="pkgbot-table-td-nowrap">{{ pkg.promoted_date | strftime if pkg.promoted_date else "" }}</td>
+					<td>{% if pkg.holds %}{% set hold = pkg.holds | find_max(key="time_stamp") %}
+						{% if hold["enabled"] == True %}{{ pkg.holds | length }}{% endif %}{% endif %}
+					</td>
+					<!-- <td>{% if pkg.policies %}{{ pkg.policies | length }}{% endif %}</td> -->
 					<td>{% if pkg.notes %} {{ pkg.notes[0].note if pkg.notes[0] }} {% endif %}</td>
 				</tr>
 			{% endfor %}

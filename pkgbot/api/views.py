@@ -54,7 +54,8 @@ async def packages(request: Request):
 	packages = await schemas.Packages_Out.from_queryset(models.Packages.all())
 
 	table_headers = [
-		"", "ID", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
+		"", "ID", "Name", "Version", "Status", "Updated By",
+		"Packaged", "Promoted", "Holds", "Notes"
 	]
 
 	return jinja_templates.TemplateResponse("packages.html",
@@ -89,10 +90,12 @@ async def package(request: Request):
 @router.post("/package/{id}", response_class=HTMLResponse)
 async def update_package(request: Request):
 
+	site_admin = request.state.user.get('username')
+	site_admin_access = request.state.user.get('site_access')
 	db_id = request.path_params.get("id")
 	await core.package.get({"id": db_id})
 
-	updates, pkg_note, site_tags = await core.views.parse_form(request)
+	updates, pkg_note, enabled_sites_holds = await core.views.parse_form(request)
 
 	await core.package.update({"id": db_id}, updates)
 
@@ -100,27 +103,41 @@ async def update_package(request: Request):
 		pkg_note["package_id"] = updates.get("pkg_name")
 		await core.package.create_note(pkg_note)
 
-##### Need to setup
-	# remove_site_tags = [ site for site in (request.state.user.site_access).split(", ") if site not in site_tags ]
+	remove_sites_holds = [
+		site for site in request.state.user.get("site_access") if site not in enabled_sites_holds ]
 
-	# for site in site_tags:
-		# await core.package.create_hold({
-		# 	"enabled": True,
-		# 	"package_id": updates.get("pkg_name"),
-		# 	"site": site,
-		# 	"submitted_by": request.state.user.get("username")
-		# })
-##### Determine which version to use...
-		# Maintains a single record for package/site combination...
-		# result, result_bool = await models.PackageHold.update_or_create(
-		# 	{
-		# 			"enabled": True,
-		# 			"package_id": updates.get("pkg_name"),
-		# 			"site": site,
-		# 			"submitted_by": request.state.user.get("username")
-		# 	},
-		# 	site=site
-		# )
+	for site in site_admin_access:
+
+		pkg_hold_object = {
+			"package_id": updates.get("pkg_name"),
+			"site": site,
+		}
+
+		if enabled_sites_holds or remove_sites_holds:
+
+			# Check for existing holds
+			hold = await core.package.get_hold(pkg_hold_object)
+
+			if site in enabled_sites_holds and ( not hold or not hold.enabled ):
+				# Add Site Hold
+				log.debug(
+					f"Creating hold for `{site}` on {updates.get('pkg_name')} by `{site_admin}`.")
+				pkg_hold_object |= {
+					"enabled": True,
+					"submitted_by": site_admin
+				}
+				await core.package.create_hold(pkg_hold_object)
+
+			elif site in remove_sites_holds and hold and hold.enabled:
+				# Remove Site Hold
+				log.debug(
+					f"Removing hold for `{site}` on {updates.get('pkg_name')} by `{site_admin}`.")
+				pkg_hold_object |= {
+					"enabled": False,
+					"submitted_by": site_admin
+				}
+				await core.package.remove_hold(pkg_hold_object)
+
 
 	await core.views.notify(
 		request,

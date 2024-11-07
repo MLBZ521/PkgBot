@@ -92,11 +92,11 @@ async def parse_form(request):
 	check_box_attributes = { "enabled", "pkg_only", "manual_only" }
 	restricted_form_items = check_box_attributes.union({
 		"recipe_id", "schedule", "pkg_name",
-		"packaged_date", "promoted_date", "last_update", "pkg_status"
+		"packaged_date", "promoted_date", "last_update", "status"
 	})
-	form_items = restricted_form_items.union({ "note", "site_tag" })
+	form_items = restricted_form_items.union({ "note", "site_hold" })
 	note = {}
-	site_tags = []
+	site_holds = []
 	updates = {}
 
 	for key, value in form_submission.multi_items():
@@ -106,8 +106,8 @@ async def parse_form(request):
 		):
 			continue
 
-		elif key == "site_tag":
-			site_tags.append(value)
+		elif key == "site_hold":
+			site_holds.append(value)
 
 		elif key == "note":
 			if value:
@@ -123,7 +123,7 @@ async def parse_form(request):
 		for check_box in check_box_attributes:
 			updates[check_box] = form_submission.get(check_box, False)
 
-	return updates, note, site_tags
+	return updates, note, site_holds
 
 
 async def from_web_create_recipe(recipe: dict, recipe_note: dict):

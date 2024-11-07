@@ -2,6 +2,7 @@
 {% block content %}
 {% include "table_css.html" %}
 {% include "table_js.html" %}
+{% set hold = pkg_holds | find_max(key="time_stamp") %}
 {% set package_icon = package["icon"] or ["package.png", "metapackage.png"] | random %}
 
 		<h1>
@@ -72,9 +73,9 @@
 					{% for site in user.get("site_access") | sort(attribute = sort_on, reverse = True) %}
 						<div class="custom-switch form-check-inline">
 							<input type="checkbox" class="custom-control-input"
-								id="site_tag__{{ site }}" name="site_tag" value="{{ site }}"
-								{{ "checked" if site in pkg_holds["pkg_holds"] }} />
-							<label class="custom-control-label" for="site_tag__{{ site }}">
+								id="site_hold__{{ site }}" name="site_hold" value="{{ site }}"
+								{% if site == hold["site"] and hold["enabled"] == True %} {{ "checked" }}{% endif %} />
+							<label class="custom-control-label" for="site_hold__{{ site }}">
 								{{ site }}
 							</label>
 						</div>
@@ -93,21 +94,21 @@
 		<div class="accordion" id="accordion_toggle">
 
 			<div class="card">
-				<div class="card-header" id="Results_Card">
+				<div class="card-header" id="Holds_Card">
 					<h2 class="mb-0">
 					<button type="button" class="btn btn-link btn-block text-left"
-						aria-controls="results_card_one" aria-expanded="true"
-						data-target="#results_card_one" data-toggle="collapse">
+						aria-controls="holds_card_one" aria-expanded="true"
+						data-target="#holds_card_one" data-toggle="collapse">
 						Sites that have flagged pkg
 					</button>
 					</h2>
 				</div>
 
-				<div class="collapse" id="results_card_one" aria-labelledby="Results"
+				<div class="collapse" id="holds_card_one" aria-labelledby="Holds"
 					data-parent="#accordion_toggle">
 					<div class="card-body">
 
-						<table class="dataTable pkgbot-table" id="SiteFlags">
+						<table class="dataTable pkgbot-table" id="SiteHolds">
 
 							<thead>
 								<tr>

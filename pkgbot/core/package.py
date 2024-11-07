@@ -45,6 +45,16 @@ async def create_hold(pkg_hold_object: dict):
 	return await models.PackageHold.create(**pkg_hold_object)
 
 
+async def remove_hold(pkg_hold_object: dict):
+
+	return await models.PackageHold.create(**pkg_hold_object)
+
+
+async def delete_hold(pkg_note_object: dict):
+	# Not using at this time, so history can be maintained
+	return await models.PackageHold.filter(**pkg_note_object).delete()
+
+
 async def update(package_filter: dict, updates: dict):
 
 	await models.Packages.filter(**package_filter).update(**updates)
