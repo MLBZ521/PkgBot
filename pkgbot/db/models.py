@@ -156,6 +156,25 @@ class PackageHold(Model):
 		table = "package_holds"
 
 
+class PackagesManual(Model):
+	id = fields.IntField(pk=True)
+	name = fields.CharField(max_length=64)
+	version = fields.CharField(max_length=64)
+	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
+	status = fields.CharField(max_length=64, default="dev")
+	policies: fields.ManyToManyRelation["Policies"] = fields.ManyToManyField(
+		model_name = "pkgbot.Policies",
+		through = "manual_pkgs_in_policies",
+		related_name = "packages_manual",
+		null = True,
+		on_delete = fields.SET_NULL,
+		create_unique_index = False
+	)
+
+	class Meta:
+		table = "packages_manual"
+
+
 class Errors(Model):
 	id = fields.IntField(pk=True)
 	type = fields.CharField(max_length=64, default="error")

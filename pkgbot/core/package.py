@@ -12,6 +12,11 @@ async def get(package_filter: dict | None = None):
 	return results[0] if len(results) == 1 else results
 
 
+async def get_or_none(pkg_object: dict):
+
+	return await models.Packages.get_or_none(**pkg_object)
+
+
 async def get_note(note_filter: dict | None = None):
 
 	if not note_filter:
@@ -104,3 +109,8 @@ async def promote(id: int, autopkg_cmd: models.AutoPkgCMD | None = None):
 async def deny(id: int):
 
 	return await core.chatbot.send.deny_pkg_msg(await update({"id": id}, {"status": "Denied"}))
+
+
+async def get_or_create_manual_pkg(pkg_object: dict):
+
+	return await models.PackagesManual.get_or_create(**pkg_object)
