@@ -47,9 +47,8 @@ async def create_hold(pkg_hold_object: dict):
 
 async def update(package_filter: dict, updates: dict):
 
-	result = await models.Packages.filter(**package_filter).first()
-	await (result.update_from_dict(updates)).save()
-	return await schemas.Package_Out.from_tortoise_orm(result)
+	await models.Packages.filter(**package_filter).update(**updates)
+	return await get({ "id": package_filter.get("id") })
 
 
 async def delete(package_filter: dict):

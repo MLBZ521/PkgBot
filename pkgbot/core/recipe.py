@@ -55,7 +55,9 @@ async def create_note(note_object: dict):
 
 async def update(recipe_filter: dict, updates: dict):
 
-	return await models.Recipes.filter(**recipe_filter).update(**updates)
+	result = await models.Recipes.filter(**recipe_filter).first()
+	await (result.update_from_dict(updates)).save()
+	return await schemas.Recipe_Out.from_tortoise_orm(result)
 
 
 async def update_result(result_filter: dict, updates: dict):
