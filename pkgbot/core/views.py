@@ -117,6 +117,10 @@ async def parse_form(request):
 				}
 
 		elif value:
+			# Convert date string values to datetime objects
+			try:
+				updates[key] = await utility.string_to_datetime(value, "%Y-%m-%d %H:%M:%S.%f%z")
+			except:
 				updates[key] = value
 
 	if "recipe_id" in form_submission.keys():
