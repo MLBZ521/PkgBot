@@ -5,9 +5,10 @@
 {% set package_icon = package["icon"] or ["package.png", "metapackage.png"] | random %}
 
 		<h1>
+
 			<img src="{{ url_for('static', path='/icons/%s' % package_icon) }}"
 				width="100" height="100" />
-			<code class="black-text">{% block title %}{{ package['name'] }} v{{ package['version'] }}{% endblock %}</code>
+			<code class="black-text">{% block title %}{{ package["name"] }} v{{ package["version"] }}{% endblock %}</code>
 		</h1>
 
 		<p>
@@ -48,9 +49,9 @@
 							value="{{ package['updated_by'] }}" disabled />
 					</div>
 
-					<label class="d-inline-block" for="pkg_status">Status:</label>
+					<label class="d-inline-block" for="status">Status:</label>
 					<select class="form-control form-control-sm w-25 d-inline-block selectpicker"
-						name="pkg_status" id="pkg_status"
+						name="status" id="status"
 						{{ "disabled" if not user.get("full_admin") }} >
 						<option {{ "selected" if package["status"] == "dev" }}>dev</option>
 						<option {{ "selected" if package["status"] == "prod" }}>prod</option>
@@ -133,6 +134,51 @@
 
 					</div>
 				</div>
+			</div>
+
+			<div class="card">
+
+				<div class="card-header" id="Policies_Card">
+					<h2 class="mb-0">
+						<button type="button" class="btn btn-link btn-block text-left"
+							aria-controls="policies_card_one" aria-expanded="true"
+							data-target="#policies_card_one" data-toggle="collapse">
+							Assigned to Policies
+						</button>
+					</h2>
+				</div>
+
+				<div class="collapse" id="policies_card_one" aria-labelledby="Policies"
+					data-parent="#accordion_toggle">
+					<div class="card-body">
+
+						<table class="dataTable pkgbot-table" id="Policies">
+
+							<thead>
+								<tr>
+									{% for header in policies_table_headers %}
+									<th {{ "class=primary-column" if header == "Policy ID" }}>
+										{{ header }}
+									</th>
+									{% endfor %}
+								</tr>
+							</thead>
+
+							<tbody>
+							{% for policy in policies %}
+								<tr>
+									<td>{{ policy["site"] }}</td>
+									<td>{{ policy["policy_id"] }}</td>
+									<td>{{ policy["name"] }}</td>
+								</tr>
+							{% endfor %}
+							</tbody>
+
+						</table>
+
+					</div>
+				</div>
+
 			</div>
 
 			<div class="card">

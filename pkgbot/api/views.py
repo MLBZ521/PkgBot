@@ -68,6 +68,7 @@ async def package(request: Request):
 
 		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
 		pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
+		policies_table_headers = [ "Site", "Policy ID", "Name" ]
 
 		return jinja_templates.TemplateResponse("package.html",
 			{
@@ -76,7 +77,9 @@ async def package(request: Request):
 				"notes": pkg.notes,
 				"notes_table_headers": notes_table_headers,
 				"pkg_holds": pkg.holds,
-				"pkg_holds_table_headers": pkg_holds_table_headers
+				"pkg_holds_table_headers": pkg_holds_table_headers,
+				"policies": pkg.policies,
+				"policies_table_headers": policies_table_headers
 		})
 
 	else:
