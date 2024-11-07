@@ -124,7 +124,10 @@ async def plist_reader(plistFile):
 		return plist_contents
 
 
-async def utc_to_local(utc_dt):
+async def utc_to_local(utc_dt: datetime | str):
+
+	if isinstance(utc_dt, str):
+		utc_dt = await string_to_datetime(utc_dt)
 
 	return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
@@ -134,17 +137,16 @@ async def string_to_datetime(datetime_string: str, format_string: str = "%Y-%m-%
 	return datetime.strptime(datetime_string, format_string)
 
 
-async def datetime_to_string(datetime_string: str, format_string: str = "%Y-%m-%d %I:%M:%S"):
+async def datetime_to_string(date_time: datetime, format_string: str = "%Y-%m-%d %I:%M:%S"):
 
-	converted = datetime.fromisoformat(datetime_string)
-	return converted.strftime(format_string)
+	return date_time.strftime(format_string)
 
 
 async def get_timestamp(format_string: str = None):
 
 	if format_string:
-		return await datetime_to_string(str(datetime.now()), format_string)
-	return await datetime_to_string(str(datetime.now()))
+		return await datetime_to_string(datetime.now(), format_string)
+	return datetime.now()
 
 
 async def compute_hex_digest(key: bytes,

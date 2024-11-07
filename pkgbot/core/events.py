@@ -339,7 +339,7 @@ async def event_recipe_run(task_results):
 
 			# Update attributes for this recipe
 			await core.recipe.update({ "recipe_id": recipe_id }, {
-				"last_ran": await utility.utc_to_local(datetime.now()),
+				"last_ran": await utility.utc_to_local(await utility.get_timestamp()),
 				"recurring_fail_count": 0
 			})
 
@@ -352,11 +352,7 @@ async def event_recipe_run(task_results):
 
 	elif event == "recipe_run_prod":
 		log.info(f"Package promoted to production:  {pkg_name}")
-
-		format_string = "%Y-%m-%d %H:%M:%S.%f"
-		promoted_date = datetime.strftime(datetime.now(), format_string)
-		pkg_data["promoted_date"] = promoted_date
-
+		pkg_data["promoted_date"] = await utility.get_timestamp("%Y-%m-%d %H:%M:%S.%f")
 		await core.autopkg.workflow_prod(event_id, schemas.Package_In(**pkg_data))
 
 
