@@ -91,3 +91,8 @@ async def modal_notification(title_txt: str, msg_text: str,
 async def modal_add_pkg_to_policy(pkg_name: str):
 
 	return await messages.modal_add_pkg_to_policy(pkg_name)
+
+
+async def package_cleanup_report(total_package_count, packages_in_use):
+
+	return await messages.package_cleanup_report(total_package_count, packages_in_use)

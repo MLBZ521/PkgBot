@@ -1,9 +1,11 @@
 import asyncio
+import collections
 import hashlib
 import json
 import math
 import os
 import re
+import threading
 
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +22,7 @@ from pkgbot.utilities import common as utility
 
 config = config.load_config()
 log = utility.log
+thread_local = threading.local()
 
 
 ##################################################
@@ -48,6 +51,13 @@ def send_webhook(self, task_id):
 		headers=headers,
 		data=json.dumps(data),
 	)
+
+
+def get_or_create_event_loop():
+	if not hasattr(thread_local, "loop") or thread_local.loop.is_closed():
+		thread_local.loop = asyncio.new_event_loop()
+		asyncio.set_event_loop(thread_local.loop)
+	return thread_local.loop
 
 
 ##################################################
@@ -873,5 +883,129 @@ def cache_policies(self, **kwargs):
 		"start": start,
 		"completed": asyncio.run(utility.get_timestamp()),
 		"result": "Successfully cached all Policies from Jamf Pro.",
+		"task_id": self.request.id
+	}
+
+
+@shared_task(name="pkgbot:package_cleanup", bind=True)
+def package_cleanup(self, **kwargs):
+
+	loop = get_or_create_event_loop()
+	start = loop.run_until_complete(utility.get_timestamp())
+	source = kwargs.get("source")
+	called_by = kwargs.get("called_by")
+
+	if source == "Scheduled":
+		log.info("Running scheduled Package Cleanup Task...")
+	else:
+		log.info(f"Adhoc Package Cleanup was requested by {called_by}")
+
+	log.debug("Getting all packages...")
+	pkg_cleanup_config = config.PkgBot.get("Package_Cleanup")
+	versions_to_keep = kwargs.get("versions_to_keep", pkg_cleanup_config.get("versions_to_keep"))
+	dry_run = kwargs.get("dry_run", pkg_cleanup_config.get("dry_run"))
+	max_allowed_pkgs_to_delete = kwargs.get("maximum_allowed_packages_to_delete")
+
+	packages_json_response = loop.run_until_complete(
+		core.jamf_pro.api("get", "JSSResource/packages"))
+	pkgs = packages_json_response.json().get("packages")
+	groups = collections.defaultdict(list)
+	report = []
+
+	for pkg in pkgs:
+
+		try:
+			head = re.sub(
+				r'\s\((Universal|ARM|Intel)\)',
+				"",
+				re.findall(r'.+?(?=-)', pkg["name"])[0]
+			)
+		except IndexError:
+			head = pkg["name"]
+
+		groups[head].append(pkg)
+
+	for k,v in groups.items():
+		log.debug(f"Software Title:  {k}")
+		# log.debug(f"Software Title:  {k}\nVersions:  {v}")
+
+		if len(v) > versions_to_keep:
+			# Sort by ID -- presumed newer pkg versions have higher integers
+			v = sorted(v, key=lambda item: item["id"], reverse=False)[:-2]
+
+			# Check that we're not going to delete too many packages
+			if len(v) > max_allowed_pkgs_to_delete:
+				log.debug(
+					f"Found {len(v)} packages.  "
+					f"Maximum allowed is {max_allowed_pkgs_to_delete}.  "
+					"Override by setting the 'maximum_allowed_packages_to_delete' argument."
+				)
+
+			# Divide the packages into those to keep and those to delete
+			if packages_to_delete := v[:max_allowed_pkgs_to_delete]:
+				packages_in_use = 0
+
+				for pkg in packages_to_delete:
+
+					if pkgbot_pkg := loop.run_until_complete(
+						core.package.get({ "pkg_name": pkg.get("name") })):
+						pass
+					elif manual_pkg := (loop.run_until_complete(
+						schemas.Package_Manual_Out.from_queryset(
+							models.PackagesManual.filter(**{ "pkg_name": pkg.get("name") })
+					))):
+						pkgbot_pkg = manual_pkg[0]
+
+					if pkgbot_pkg:
+						policy_report = pkgbot_pkg.dict(
+							exclude = { "recipe", "icon", "notes",
+				  				"slack_channel", "slack_ts", "response_url" },
+							exclude_unset = True
+						)
+
+						# Check if packages are in use...
+						if policy_report.get("policies"):
+							packages_in_use = packages_in_use + 1
+
+							for policy in policy_report.get("policies"):
+								# log.debug(f'{policy = }')
+								policy.pop("packages", None)
+								policy.pop("packages_manual", None)
+
+						report.append(policy_report)
+					else:
+						report.append(pkg)
+
+				log.debug(f"Number of packages to delete:  {len(packages_to_delete)}")
+				log.debug(f"Number of packages in use:  {packages_in_use}")
+
+	total_in_use = len([ pkg for pkg in report if pkg.get("policies") ])
+	log.debug(f"Total packages in report:  {len(report) }")
+	log.debug(f"Total packages in use:  {total_in_use}")
+
+	header = ("id", "name", "version", "pkg_name", "packaged_date", "promoted_date",
+		"last_update", "status", "updated_by", "holds", "notes", "policies")
+
+	csv_file = loop.run_until_complete(utility.create_csv(
+		data = report,
+		header = header,
+		file_name = "Package Retirement Report.csv",
+		save_path = "/tmp"
+	))
+
+	send_webhook.apply_async((self.request.id,), queue="pkgbot", priority=9)
+
+	return {
+		"event": "package-cleanup",
+		"source": source,
+		"called_by": called_by,
+		"start": start,
+		"completed": loop.run_until_complete(utility.get_timestamp()),
+		"result": "Package cleanup report has been generated.",
+		"results": {
+			"packages_to_delete": len(report),
+			"packages_in_use": total_in_use,
+			"csv_file": csv_file,
+		},
 		"task_id": self.request.id
 	}

@@ -1,3 +1,5 @@
+from celery import current_app as pkgbot_celery_app
+
 from pkgbot import core
 from pkgbot.db import models, schemas
 from pkgbot.tasks import task
@@ -114,3 +116,13 @@ async def deny(id: int):
 async def get_or_create_manual_pkg(pkg_object: dict):
 
 	return await models.PackagesManual.get_or_create(**pkg_object)
+
+
+async def package_cleanup(kwargs: dict | None = None):
+
+	return pkgbot_celery_app.send_task(
+		"pkgbot:package_cleanup",
+		kwargs = kwargs,
+		queue = "pkgbot",
+		priority = 3
+	)

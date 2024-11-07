@@ -27,6 +27,17 @@ async def create_celery(celery_app=pkgbot_celery_app):
 				"queue": "pkgbot"
 			}
 		},
+		# Executes daily at 1:30 A.M.
+		"package_cleanup": {
+			"task": "pkgbot:package_cleanup",
+			"schedule": crontab(minute=5, hour=9, day_of_month=1),
+			"args": (),
+			"kwargs": { "source": "Scheduled", "called_by": "Celery Beat" },
+			"options": {
+				"priority": 10,
+				"queue": "pkgbot"
+			}
+		},
 		# Test Task
 		# "test": {
 		# 	"task": "pkgbot.tasks.task.test",

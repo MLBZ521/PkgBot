@@ -14,6 +14,7 @@ import yaml
 from datetime import datetime, timezone
 from distutils.util import strtobool
 from io import StringIO
+from tempfile import NamedTemporaryFile, SpooledTemporaryFile, TemporaryDirectory
 from typing import List, Union
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
@@ -560,3 +561,21 @@ async def parse_csv_contents(csv_file: bytes):
 
 	# Convert the file contents to a file-like object that csv.DictReader can parse
 	return csv.DictReader(StringIO(csv_file.decode()))
+
+
+async def create_csv(data: list, header: list | set, file_name: str, save_path: str | None = None):
+
+	if not save_path:
+		save_path = TemporaryDirectory()
+	if not header:
+		header = data[0].keys()
+
+	file = f"{save_path}/{file_name}"
+
+	with open(file, "w", newline="") as csv_path:
+		dict_writer = csv.DictWriter(csv_path, header)
+		dict_writer.writeheader()
+		dict_writer.writerows(data)
+		_ = csv_path.seek(0)
+
+	return file

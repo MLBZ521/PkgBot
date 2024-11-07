@@ -1,3 +1,4 @@
+import os.path
 import time
 
 from datetime import datetime
@@ -74,6 +75,9 @@ async def event_handler(task_id, loop_count=0):
 
 		case "repo-add":
 			await event_autopkg_repo_add(task_results)
+
+		case "package-cleanup":
+			await event_package_cleanup_report(task_results)
 
 
 async def event_details(task_results):
@@ -531,3 +535,25 @@ async def handle_exception(**kwargs):
 	}
 
 	await core.recipe.error(recipe_id, redacted_error, task_id)
+
+
+async def event_package_cleanup_report(task_results):
+	""" When a Package Cleanup Report is generated """
+
+	date_stamp = await utility.get_timestamp(format_string="%Y-%m-%d")
+	report_results = task_results.get("results")
+	packages_to_delete = report_results.get("packages_to_delete")
+	packages_in_use = report_results.get("packages_in_use")
+	csv_file = report_results.get("csv_file")
+	csv_file = {
+		"path": csv_file,
+		"filename": (os.path.basename(csv_file)).replace(".csv", f" {date_stamp}.csv"),
+	}
+	notification_text = f"Package Cleanup Report {date_stamp}"
+
+	# Construct message text
+	msg_blocks = await core.chatbot.build.package_cleanup_report(
+		packages_to_delete, packages_in_use)
+
+	# Send message and upload report
+	return await core.chatbot.send.msg_with_file(msg_blocks, notification_text, csv_file)

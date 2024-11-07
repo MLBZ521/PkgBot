@@ -4,10 +4,14 @@ from typing import List
 
 from pkgbot import config
 from pkgbot.db import schemas
+from pkgbot.utilities import common as utility
 from . import blocks as block
 
 
 config = config.load_config()
+SECURE = "s" if config.PkgBot.get("enable_ssl") else ""
+PKGBOT_HOST = config.PkgBot.get('host')
+PKGBOT_SERVER = f"http{SECURE}://{PKGBOT_HOST}:{config.PkgBot.get('port')}"
 
 
 async def format_json(the_json, indent=4):
@@ -230,3 +234,23 @@ async def modal_notification(title_txt: str, msg_text: str,
 async def modal_add_pkg_to_policy(pkg_name: str):
 
 	return await format_json(await block.modal_add_pkg_to_policy(pkg_name))
+
+
+async def package_cleanup_report(total_package_count, packages_in_use, **kwargs):
+
+	date_stamp = await utility.get_timestamp(format_string="%Y-%m-%d")
+	message = (f"Package retirement report is attached.  Identified packages will be removed "
+		"after the 1st of the following month.\n\nWe highly recommend that Site Admins review the "
+		"list of packages in the attached report and the Policies that are still using these "
+		f"packages.\n\nDetails:\n• {total_package_count} packages identified\n• {packages_in_use} "
+		"packages currently assigned to Policies\n\nIf a specific package version is required by "
+		f"your Site, you can \"hold\" it on <{PKGBOT_SERVER}|{PKGBOT_HOST}>")
+
+	blocks = [
+		await block.brick_header(
+			f":mega::bangbang: Jamf Pro Monthly Package Retirement Report {date_stamp} :bangbang::mega:"),
+		await block.brick_section_text(message) # | \
+			# await block.brick_accessory_image(config.PkgBot.get("icon_warning"), ":warning:")
+	]
+
+	return await format_json(blocks)

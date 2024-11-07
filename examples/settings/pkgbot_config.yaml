@@ -181,7 +181,10 @@ PkgBot:
         handlers:
           - default
           - debugging
-
+  Package_Cleanup:
+    versions_to_keep: 2
+    maximum_allowed_packages_to_delete: 10
+    dry_run: false # Not yet implemented
 
 Common:
   # Strings that you do not want to be be printed "publicly" in notifications
