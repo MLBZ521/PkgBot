@@ -32,12 +32,12 @@ class SlackClient(object):
 		self.client = AsyncWebClient(token=self.token, ssl=ssl_context)
 
 
-	async def post_message(
-		self, blocks: str, text: str = "Pkg status incoming...", thread_ts = None):
+	async def post_message(self, blocks: str,
+		text: str = "Pkg status incoming...", thread_ts: str = None, channel: str = None):
 
 		try:
 			return await self.client.chat_postMessage(
-				channel = self.channel,
+				channel = channel or self.channel,
 				text = text,
 				blocks = blocks,
 				username = self.bot_name,
@@ -55,11 +55,12 @@ class SlackClient(object):
 			return { "result": "Failed to post message", "error": error }
 
 
-	async def update_message(self, blocks: str, ts: str, text: str = "Updated message..."):
+	async def update_message(
+		self, blocks: str, ts: str, text: str = "Updated message...", channel: str = None):
 
 		try:
 			response = await self.client.chat_update(
-				channel = self.channel,
+				channel = channel or self.channel,
 				text = text,
 				blocks = blocks,
 				ts = ts
@@ -215,11 +216,11 @@ class SlackClient(object):
 
 
 	async def file_upload(self, content=None, file=None, filename=None, filetype=None,
-		title=None, text=None, thread_ts=None):
+		title=None, text=None, thread_ts=None, channel=None):
 
 		try:
 			return await self.client.files_upload(
-				channels = self.channel,
+				channels = channel or self.channel,
 				content = content,
 				file = file,
 				filename = filename,
@@ -257,7 +258,8 @@ class SlackClient(object):
 				return { "Failed to delete": file_id, "result": error.response["error"] }
 
 
-	async def reaction(self, action: str = None, emoji: str = None, ts: str = None, **kwargs):
+	async def reaction(self,
+		action: str = None, emoji: str = None, ts: str = None, channel: str = None, **kwargs):
 
 		try:
 
@@ -265,20 +267,20 @@ class SlackClient(object):
 
 				case "get":
 					return await self.client.reactions_get(
-						channel = self.channel,
+						channel = channel or self.channel,
 						timestamp= ts
 					)
 
 				case "add":
 					return await self.client.reactions_add(
-						channel = self.channel,
+						channel = channel or self.channel,
 						name = emoji,
 						timestamp = ts
 					)
 
 				case "remove":
 					return await self.client.reactions_remove(
-						channel = self.channel,
+						channel = channel or self.channel,
 						name = emoji,
 						timestamp = ts
 					)

@@ -273,3 +273,41 @@ async def policy_list(filter_values: str, username: str):
 
 	policies = [ policy.dict() for policy in policies_object ]
 	return await block.policy_list(policies)
+
+
+async def msg_with_file(msg_blocks: str, notification_text: str, file):
+
+	response = await core.chatbot.SlackBot.file_upload(
+		file = file.get("path"),
+		filename = file.get("filename"),
+		title = file.get("filename"),
+		text = notification_text,
+	)
+
+	if (response.status_code == 200):
+		uploaded_file_data = response.data.get("file")
+
+		# Find the Channel the file was uploaded to
+		if channels := uploaded_file_data.get("channels"):
+			channel_id = channels[0]
+		elif groups := uploaded_file_data.get("groups"):
+			channel_id = groups[0]
+		elif ims := uploaded_file_data.get("ims"):
+			channel_id = ims[0]
+		else:
+			log.error("Unable to determine where the file was uploaded...\n"
+				f"Slack response was:\n{response.data}")
+
+		# Find the timestamp for the message
+		if not (share_type := uploaded_file_data.get("shares").get("public")):
+			share_type = uploaded_file_data.get("shares").get("private")
+		ts = share_type.get(channel_id)[0].get("ts")
+
+		response = await core.chatbot.SlackBot.update_message(
+			msg_blocks,
+			text = notification_text,
+			ts = ts,
+			channel = channel_id
+		)
+
+	return response
