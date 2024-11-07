@@ -30,7 +30,7 @@
 					<td>{{ recipe.pkg_only }}</td>
 					<td class="pkgbot-table-td-nowrap">{{ recipe.last_ran | strftime }}</td>
 					<td>{{ recipe.schedule }}</td>
-					<td>{{ recipe.notes[0].note if recipe.notes[0] }}</td>
+					<td>{{ recipe.notes[-1].note if recipe.notes[-1] }}</td>
 				</tr>
 				{% endfor %}
 			</tbody>
