@@ -1,14 +1,19 @@
 import asyncio
 import hashlib
 import json
+import math
 import os
-import requests
+import re
+
+from datetime import datetime, timedelta, timezone
 
 import git
+import requests
 
 from celery import chain, group, shared_task
 
 from pkgbot import config, core
+from pkgbot.db import models, schemas
 from pkgbot.tasks import task_utils
 from pkgbot.utilities import common as utility
 
@@ -119,7 +124,9 @@ def check_space(self):
 	success = True
 	status = 0
 
-	if current_free_space_unit in {"B", "KB", "MB"} or float(current_free_space_int) <= minimum_free_space:
+	if ( current_free_space_unit in {"B", "KB", "MB"} or
+		float(current_free_space_int) <= minimum_free_space ):
+
 		event = "disk_space_critical"
 		msg = f"Not enough free space available to execute an AutoPkg run:  {current_free_space}"
 		success = False
@@ -270,53 +277,18 @@ def autopkg_verb_parser(self, **kwargs):
 
 	match verb:
 
-		case "verify-trust-info":
-
-			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
-
-			if isinstance(results_pre_check, dict):
-				# An error occurred in a pre-check
-				return results_pre_check
-
-			queued_tasks.extend(results_pre_check)
-
-			queued_task = autopkg_verify_trust.apply_async(
-				(recipes, autopkg_cmd, self.request.id),
-				queue="autopkg", priority=4
-			)
-
-			queued_tasks.append(queued_task.id)
-			return { "Queued background tasks": queued_tasks }
-
-		case "update-trust-info":
-
-			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
-
-			if isinstance(results_pre_check, dict):
-				# An error occurred in a pre-check
-				return results_pre_check
-
-			queued_tasks.extend(results_pre_check)
-
-			queued_task = autopkg_update_trust.apply_async(
-				(recipes, autopkg_cmd, event_id, self.request.id),
-				queue="autopkg", priority=4
-			)
-
-			queued_tasks.append(queued_task.id)
-			return { "Queued background tasks": queued_tasks }
-
 		case "repo-add":
 			return autopkg_repo_add(repos, autopkg_cmd, task_id=self.request.id)
 
 		case "version":
 			return autopkg_version(autopkg_cmd, task_id=self.request.id)
 
-		case "run":
+		case _:
 
 			if not autopkg_cmd.get("promote"):
-				# Run pre-checks if not promoting a pkg
-				results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
+
+				results_pre_check = perform_pre_checks(
+					self.request.id, autopkg_cmd.get("ignore_parent_trust"))
 
 				if isinstance(results_pre_check, dict):
 					# An error occurred in a pre-check
@@ -324,8 +296,29 @@ def autopkg_verb_parser(self, **kwargs):
 
 				queued_tasks.extend(results_pre_check)
 
-			results = autopkg_run(recipes, autopkg_cmd, event_id=event_id)
-			queued_tasks.extend(results)
+			match verb:
+
+				case "verify-trust-info":
+
+					queued_task = autopkg_verify_trust.apply_async(
+						(recipes, autopkg_cmd, self.request.id),
+						queue="autopkg", priority=4
+					)
+					queued_tasks.append(queued_task.id)
+
+				case "update-trust-info":
+
+					queued_task = autopkg_update_trust.apply_async(
+						(recipes, autopkg_cmd, event_id, self.request.id),
+						queue="autopkg", priority=4
+					)
+					queued_tasks.append(queued_task.id)
+
+				case "run":
+
+					results = autopkg_run(recipes, autopkg_cmd, event_id=event_id)
+					queued_tasks.extend(results)
+
 			return { "Queued background tasks": queued_tasks }
 
 
@@ -334,10 +327,12 @@ def autopkg_repo_update(self):
 	"""Performs an `autopkg repo-update all`"""
 
 	log.info("Updating parent recipe repos...")
-	autopkg_repo_update_command = f"{config.AutoPkg.get('binary')} repo-update all --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
+	autopkg_repo_update_command = ( f"{config.AutoPkg.get('binary')} repo-update all "
+		f"--prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'" )
 
 	if task_utils.get_user_context():
-		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
+		autopkg_repo_update_command = ( f"su - {task_utils.get_console_user()} -c"
+			f"\"{autopkg_repo_update_command}\"" )
 
 	results_autopkg_repo_update = asyncio.run(utility.execute_process(autopkg_repo_update_command))
 
@@ -464,7 +459,8 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 		dict:  dict describing the results of the ran process
 	"""
 
-	run_type = "recipe_run_prod" if parent_task_results.get("event") == "promote" else "recipe_run_dev"
+	run_type = "recipe_run_prod" if \
+		parent_task_results.get("event") == "promote" else "recipe_run_dev"
 
 	# Verify not a promote run and parent tasks results were success
 	if (
