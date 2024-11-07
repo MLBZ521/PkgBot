@@ -99,7 +99,7 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 	)
 
 	if update_policy_results.status_code != 201:
-		log.error(f"Failed to promote a package!  Details:\nUser:  {username}\n"
+		log.error(f"Failed to add package to Policy!  Details:\nUser:  {username}\n"
 			f"Policy ID:  {policy_object.policy_id}\nnew_policy_xml:  {new_policy_xml}\n"
 			f"Reason:  {update_policy_results.text}"
 		)
