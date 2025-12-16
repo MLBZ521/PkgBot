@@ -87,7 +87,7 @@ async def deny_trust_msg(
 	description="Sends a message if there is a disk space size issue.")
 async def disk_space_msg(header: str, msg: str, image: str):
 
-	return await core.chatbot.send.disk_space_msg(header, msg, image)
+	return await core.chatbot.send.acknowledge_msg(header, msg, image)
 
 
 @router.post("/direct_msg", summary="Send ephemeral message",

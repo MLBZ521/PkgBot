@@ -1,7 +1,8 @@
 import re
 
-from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree
+
+from celery import current_app as pkgbot_celery_app
 
 from tortoise.expressions import Q
 
@@ -26,54 +27,43 @@ async def get(policy_filter: dict | Q | None = None):
 	return results[0] if len(results) == 1 else results
 
 
-async def cache_policies():
+async def create_or_update(policy_object: schemas.Policy_In):
 
-	log.debug("Caching Policies from Jamf Pro...")
-	api_token, api_token_expires = await core.jamf_pro.get_token()
-	all_policies_response = await core.jamf_pro.api(
-		"get", "JSSResource/policies", api_token=api_token)
+	return await models.Policies.update_or_create(
+		defaults = {
+			"name": policy_object.dict().get("name"),
+			"site": policy_object.dict().get("site"),
+		},
+		policy_id = policy_object.dict().get("policy_id")
+	)
 
-	if all_policies_response.status_code != 200:
-		raise("Failed to get list of Policies!")
 
-	all_policies = all_policies_response.json()
-	log.debug(f"Number of Policies found:  {len(all_policies.get('policies'))}")
+async def delete(policy_filter: dict):
 
-	for policy in all_policies.get("policies"):
+	policy_obj = await models.Policies.filter(**policy_filter).first()
+	return await policy_obj.delete()
 
-		if datetime.now(timezone.utc) > (api_token_expires - timedelta(minutes=5)):
-			log.debug("Replacing API Token...")
-			api_token, api_token_expires = await core.jamf_pro.get_token()
 
-		policy_details_response = await core.jamf_pro.api(
-			"get", f"JSSResource/policies/id/{policy.get('id')}", api_token=api_token)
+async def cache_policies(source: str | None = None, called_by: str | None = None):
 
-		if policy_details_response.status_code != 200:
-			raise(f"Failed to get policy details for:  {policy.get('id')}:{policy.get('name')}!")
-
-		policy_details = policy_details_response.json()
-
-		result, result_bool = await models.Policies.update_or_create(
-			defaults = {
-				"name": policy_details.get("policy").get("general").get("name"),
-				"site": policy_details.get("policy").get("general").get("site").get("name")
-			},
-			policy_id = policy_details.get("policy").get("general").get("id")
-		)
-
-	log.debug("Caching Policies from Jamf Pro...COMPLETE")
+	return pkgbot_celery_app.send_task(
+		"pkgbot:cache_policies",
+		kwargs = {
+			"source": source,
+			"called_by": called_by
+		},
+		queue="pkgbot",
+		priority=3
+	)
 
 
 async def update_policy(policy_object, pkg_object, username, trigger_id):
-
-	api_token, api_token_expires = await core.jamf_pro.get_token()
 
 	log.debug(f"Getting details for Policy ID:  {policy_object.policy_id}")
 	policy_xml_response  = await core.jamf_pro.api(
 		"get",
 		f"JSSResource/policies/id/{policy_object.policy_id}",
 		in_content_type = "xml",
-		api_token = api_token
 	)
 
 	if policy_xml_response.status_code != 200:
@@ -106,11 +96,10 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 		f"JSSResource/policies/id/{policy_object.policy_id}",
 		out_content_type = "xml",
 		data = new_policy_xml,
-		api_token = api_token
 	)
 
 	if update_policy_results.status_code != 201:
-		log.error(f"Failed to promote a package!  Details:\nUser:  {username}\n"
+		log.error(f"Failed to add package to Policy!  Details:\nUser:  {username}\n"
 			f"Policy ID:  {policy_object.policy_id}\nnew_policy_xml:  {new_policy_xml}\n"
 			f"Reason:  {update_policy_results.text}"
 		)
@@ -119,7 +108,6 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 			f"JSSResource/policies/id/{policy_object.policy_id}",
 			out_content_type = "xml",
 			data = (ElementTree.tostring(policy_xml)).decode("UTF-8"),
-			api_token = api_token
 		)
 
 		if restore_policy_results.status_code != 201:
@@ -127,14 +115,15 @@ async def update_policy(policy_object, pkg_object, username, trigger_id):
 				f"Policy ID:  {policy_object.policy_id}\nReason:  {restore_policy_results.text}"
 			)
 
-	log.debug(f"{username} promoted {pkg_object.pkg_name} into {policy_object.site} "
+	log.debug(f"{username} added {pkg_object.pkg_name} into {policy_object.site} "
 		f"{policy_object.policy_id} {policy_object.name}")
 
-##### This notification doesn't seem to be working...
 	await core.chatbot.send.modal_notification(
 		trigger_id,
-		"Promoted Package",
-		f"Successfully promoted `{pkg_object.pkg_name}` into:\n*Site*:  `{policy_object.site}`\n"
+		"Added Package",
+		f"Successfully added `{pkg_object.pkg_name}` into:\n*Site*:  `{policy_object.site}`\n"
 			f"*Policy ID*:  `{policy_object.policy_id}`\n*Policy Name*:  `{policy_object.name}`",
 		":yayblob: :jamf:"
 	)
+
+	return

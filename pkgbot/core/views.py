@@ -1,33 +1,14 @@
-from datetime import datetime
-
 from fastapi import Request, UploadFile, status
-from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 
-from pkgbot import config, core
+from pkgbot import config, core, settings
 from pkgbot.db import models
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
 log = utility.log
-jinja_templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
-
-
-def template_filter_datetime(date, date_format="%Y-%m-%d %I:%M:%S"):
-
-	if date:
-		converted = datetime.fromisoformat(str(date))
-		return converted.strftime(date_format)
-
-
-def parse_notification_messages(request: Request):
-
-	return request.session.pop("pkgbot_msg") if "pkgbot_msg" in request.session else []
-
-
-jinja_templates.env.filters.update(strftime=template_filter_datetime)
-jinja_templates.env.globals.update(parse_messages=parse_notification_messages)
+jinja_templates = settings.api.jinja_templates
 
 
 async def notify(request: Request, message: any, emphasize: str = "",
@@ -111,11 +92,11 @@ async def parse_form(request):
 	check_box_attributes = { "enabled", "pkg_only", "manual_only" }
 	restricted_form_items = check_box_attributes.union({
 		"recipe_id", "schedule", "pkg_name",
-		"packaged_date", "promoted_date", "last_update", "pkg_status"
+		"packaged_date", "promoted_date", "last_update", "status"
 	})
-	form_items = restricted_form_items.union({ "note", "site_tag" })
+	form_items = restricted_form_items.union({ "note", "site_hold" })
 	note = {}
-	site_tags = []
+	site_holds = []
 	updates = {}
 
 	for key, value in form_submission.multi_items():
@@ -125,8 +106,8 @@ async def parse_form(request):
 		):
 			continue
 
-		elif key == "site_tag":
-			site_tags.append(value)
+		elif key == "site_hold":
+			site_holds.append(value)
 
 		elif key == "note":
 			if value:
@@ -136,13 +117,17 @@ async def parse_form(request):
 				}
 
 		elif value:
+			# Convert date string values to datetime objects
+			try:
+				updates[key] = await utility.string_to_datetime(value, "%Y-%m-%d %H:%M:%S.%f%z")
+			except:
 				updates[key] = value
 
 	if "recipe_id" in form_submission.keys():
 		for check_box in check_box_attributes:
 			updates[check_box] = form_submission.get(check_box, False)
 
-	return updates, note, site_tags
+	return updates, note, site_holds
 
 
 async def from_web_create_recipe(recipe: dict, recipe_note: dict):
@@ -200,7 +185,7 @@ async def from_web_create_recipes(request: Request, file: UploadFile):
 
 	# Dynamically generate the columns that should be expected in the csv
 	data_fields = models.Recipes.describe().get("data_fields")
-	expected_columns = [ 
+	expected_columns = [
 		field.get("name") for field in data_fields if not field.get("nullable") ] + [ "notes" ]
 
 	if {field.lower() for field in fieldnames}.difference(set(expected_columns)):
@@ -232,7 +217,7 @@ async def from_web_create_recipes(request: Request, file: UploadFile):
 
 			_, _, result = await core.views.from_web_create_recipe(recipe_row, recipe_note)
 
-			# # Update the result tracking
+			# Update the result tracking
 			notify_results[result] += 1
 
 		await core.views.notify_create_recipe_result(request, **notify_results)

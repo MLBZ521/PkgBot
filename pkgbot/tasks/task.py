@@ -1,20 +1,28 @@
 import asyncio
+import collections
 import hashlib
 import json
+import math
 import os
-import requests
+import re
+import threading
+
+from datetime import datetime, timedelta, timezone
 
 import git
+import requests
 
 from celery import chain, group, shared_task
 
 from pkgbot import config, core
+from pkgbot.db import models, schemas
 from pkgbot.tasks import task_utils
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
 log = utility.log
+thread_local = threading.local()
 
 
 ##################################################
@@ -45,6 +53,13 @@ def send_webhook(self, task_id):
 	)
 
 
+def get_or_create_event_loop():
+	if not hasattr(thread_local, "loop") or thread_local.loop.is_closed():
+		thread_local.loop = asyncio.new_event_loop()
+		asyncio.set_event_loop(thread_local.loop)
+	return thread_local.loop
+
+
 ##################################################
 # Scheduled Tasks
 
@@ -52,13 +67,6 @@ def send_webhook(self, task_id):
 @shared_task
 def test(arg):
 	log.debug(arg)
-
-
-@shared_task(name="pkgbot:cache_policies", bind=True)
-def cache_policies(sender, **kwargs):
-
-	log.debug("Nightly policy cache...")
-	asyncio.run(core.policy.cache_policies())
 
 
 ##################################################
@@ -126,7 +134,9 @@ def check_space(self):
 	success = True
 	status = 0
 
-	if current_free_space_unit in {"B", "KB", "MB"} or float(current_free_space_int) <= minimum_free_space:
+	if ( current_free_space_unit in {"B", "KB", "MB"} or
+		float(current_free_space_int) <= minimum_free_space ):
+
 		event = "disk_space_critical"
 		msg = f"Not enough free space available to execute an AutoPkg run:  {current_free_space}"
 		success = False
@@ -277,53 +287,18 @@ def autopkg_verb_parser(self, **kwargs):
 
 	match verb:
 
-		case "verify-trust-info":
-
-			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
-
-			if isinstance(results_pre_check, dict):
-				# An error occurred in a pre-check
-				return results_pre_check
-
-			queued_tasks.extend(results_pre_check)
-
-			queued_task = autopkg_verify_trust.apply_async(
-				(recipes, autopkg_cmd, self.request.id),
-				queue="autopkg", priority=4
-			)
-
-			queued_tasks.append(queued_task.id)
-			return { "Queued background tasks": queued_tasks }
-
-		case "update-trust-info":
-
-			results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
-
-			if isinstance(results_pre_check, dict):
-				# An error occurred in a pre-check
-				return results_pre_check
-
-			queued_tasks.extend(results_pre_check)
-
-			queued_task = autopkg_update_trust.apply_async(
-				(recipes, autopkg_cmd, event_id, self.request.id),
-				queue="autopkg", priority=4
-			)
-
-			queued_tasks.append(queued_task.id)
-			return { "Queued background tasks": queued_tasks }
-
 		case "repo-add":
 			return autopkg_repo_add(repos, autopkg_cmd, task_id=self.request.id)
 
 		case "version":
 			return autopkg_version(autopkg_cmd, task_id=self.request.id)
 
-		case "run":
+		case _:
 
 			if not autopkg_cmd.get("promote"):
-				# Run pre-checks if not promoting a pkg
-				results_pre_check = perform_pre_checks(self.request.id, autopkg_cmd.get("ignore_parent_trust"))
+
+				results_pre_check = perform_pre_checks(
+					self.request.id, autopkg_cmd.get("ignore_parent_trust"))
 
 				if isinstance(results_pre_check, dict):
 					# An error occurred in a pre-check
@@ -331,8 +306,29 @@ def autopkg_verb_parser(self, **kwargs):
 
 				queued_tasks.extend(results_pre_check)
 
-			results = autopkg_run(recipes, autopkg_cmd, event_id=event_id)
-			queued_tasks.extend(results)
+			match verb:
+
+				case "verify-trust-info":
+
+					queued_task = autopkg_verify_trust.apply_async(
+						(recipes, autopkg_cmd, self.request.id),
+						queue="autopkg", priority=4
+					)
+					queued_tasks.append(queued_task.id)
+
+				case "update-trust-info":
+
+					queued_task = autopkg_update_trust.apply_async(
+						(recipes, autopkg_cmd, event_id, self.request.id),
+						queue="autopkg", priority=4
+					)
+					queued_tasks.append(queued_task.id)
+
+				case "run":
+
+					results = autopkg_run(recipes, autopkg_cmd, event_id=event_id)
+					queued_tasks.extend(results)
+
 			return { "Queued background tasks": queued_tasks }
 
 
@@ -341,10 +337,12 @@ def autopkg_repo_update(self):
 	"""Performs an `autopkg repo-update all`"""
 
 	log.info("Updating parent recipe repos...")
-	autopkg_repo_update_command = f"{config.AutoPkg.get('binary')} repo-update all --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
+	autopkg_repo_update_command = ( f"{config.AutoPkg.get('binary')} repo-update all "
+		f"--prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'" )
 
 	if task_utils.get_user_context():
-		autopkg_repo_update_command = f"su - {task_utils.get_console_user()} -c \"{autopkg_repo_update_command}\""
+		autopkg_repo_update_command = ( f"su - {task_utils.get_console_user()} -c"
+			f"\"{autopkg_repo_update_command}\"" )
 
 	results_autopkg_repo_update = asyncio.run(utility.execute_process(autopkg_repo_update_command))
 
@@ -471,7 +469,8 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 		dict:  dict describing the results of the ran process
 	"""
 
-	run_type = "recipe_run_prod" if parent_task_results.get("event") == "promote" else "recipe_run_dev"
+	run_type = "recipe_run_prod" if \
+		parent_task_results.get("event") == "promote" else "recipe_run_dev"
 
 	# Verify not a promote run and parent tasks results were success
 	if (
@@ -571,7 +570,8 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	# log.debug(f"Command to execute:  {cmd}")
 	results = asyncio.run(utility.execute_process(cmd))
 
-	if autopkg_cmd.get("ingress") in {"api", "Slack"} and autopkg_cmd.get("verb") == "verify-trust-info":
+	if autopkg_cmd.get("ingress") in { "api", "Slack" } and \
+		autopkg_cmd.get("verb") == "verify-trust-info":
 		send_webhook.apply_async((self.request.id,), queue="autopkg", priority=9)
 
 		return {
@@ -757,3 +757,255 @@ def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = N
 		}
 
 	return results
+
+
+##################################################
+# Jamf Pro Tasks
+
+
+@shared_task(name="pkgbot:cache_policies", bind=True)
+def cache_policies(self, **kwargs):
+
+	start = asyncio.run(utility.get_timestamp())
+	source = kwargs.get("source")
+	called_by = kwargs.get("called_by")
+
+	if source == "Scheduled":
+		log.info("Performing nightly task to cache Policies from Jamf Pro...")
+	else:
+		log.info(f"Cache Policies from Jamf Pro was requested by {called_by}")
+
+	api_token, api_token_expires = asyncio.run(core.jamf_pro.get_token())
+	all_policies_response = asyncio.run(core.jamf_pro.api(
+		"get", "JSSResource/policies", api_token=api_token))
+
+	if all_policies_response.status_code != 200:
+		raise("Failed to get list of Policies!")
+
+	all_policies = all_policies_response.json()
+	log.debug(f"Number of Policies in Jamf Pro:  {len(all_policies.get('policies'))}")
+
+	# Get the Policy IDs
+	policy_ids = [ policy.get("id") for policy in all_policies.get("policies") ]
+	# log.debug(f"Number of Policy IDs:  {len(policy_ids)}")
+
+	# Get all cached Policies and their IDs
+	all_cache_policies = asyncio.run(core.policy.get())
+	cache_policy_ids = [ policy.policy_id for policy in all_cache_policies ]
+	log.debug(f"Number of cached Policy IDs:  {len(cache_policy_ids)}")
+
+	# Get Policy IDs from cached Policies if they aren't in the "new" Policy IDs list
+	deleted_policy_ids = [
+		policy_id for policy_id in cache_policy_ids if policy_id not in policy_ids ]
+	log.debug(f"Number of cached Policies to delete:  {len(deleted_policy_ids)}")
+
+	for policy_id in deleted_policy_ids:
+		log.debug(f"Deleting Policy:  {policy_id}")
+		asyncio.run(core.policy.delete( { "policy_id": policy_id } ))
+
+	place_values = int(math.log10(len(all_policies.get('policies')))) + 1
+	pattern = r'^\d'
+	count = 1
+
+	if place_values == 2:
+		pattern = f"{pattern}0$"
+	elif place_values == 3:
+		pattern = f"{pattern}00$"
+	elif place_values > 3:
+		pattern = f"{pattern}+00$"
+
+	log.debug("Updating Policies...")
+
+	for policy in all_policies.get("policies"):
+
+		if count < 11 or re.match(pattern, str(count)):
+			log.debug(f"Policy Progress:  {count}")
+
+		count = count + 1
+
+		if datetime.now(timezone.utc) > (api_token_expires - timedelta(minutes=5)):
+			log.debug("Replacing API Token...")
+			api_token, api_token_expires = asyncio.run(core.jamf_pro.get_token())
+
+		policy_details_response = asyncio.run(core.jamf_pro.api(
+			"get", f"JSSResource/policies/id/{policy.get('id')}", api_token=api_token))
+
+		if policy_details_response.status_code != 200:
+			raise Exception(
+				f"Failed to get policy details for:  {policy.get('id')}:{policy.get('name')}!")
+
+		policy_details = policy_details_response.json()
+		policy_general = policy_details.get("policy").get("general")
+		policy_packages = policy_details.get("policy").get("package_configuration").get("packages")
+
+		policy_obj, created = asyncio.run(core.policy.create_or_update(
+			schemas.Policy_In(
+				name = policy_general.get("name"),
+				site = policy_general.get("site").get("name"),
+				policy_id = policy_general.get("id")
+			)
+		))
+
+		# Clear the current policy <-> package relationship (aka flush table of this Policy)
+		asyncio.run(policy_obj.packages.clear())
+		asyncio.run(policy_obj.packages_manual.clear())
+
+		for package in policy_packages:
+
+			# PkgBot Package -- if exists
+			if not (pkg_object := asyncio.run(
+				core.package.get_or_none({ "pkg_name": package.get("name") })
+			)):
+				# Manually uploaded Package
+				pkg_name = package.get("name")
+
+				try:
+					version = re.sub("\.(pkg|dmg)", "", pkg_name.rsplit("-", 1)[1])
+				except:
+					version = "1.0"
+
+				pkg_details = {
+					"name": pkg_name.rsplit("-", 1)[0],
+					"pkg_name": pkg_name,
+					"version": version,
+					"status": "prod"
+				}
+
+				pkg_object = (asyncio.run(core.package.get_or_create_manual_pkg(pkg_details)))[0]
+
+			asyncio.run(pkg_object.policies.add(policy_obj))
+
+	log.info("Caching Policies from Jamf Pro...COMPLETE")
+	return {
+		"event": "cache-policies",
+		"source": source,
+		"called_by": called_by,
+		"start": start,
+		"completed": asyncio.run(utility.get_timestamp()),
+		"result": "Successfully cached all Policies from Jamf Pro.",
+		"task_id": self.request.id
+	}
+
+
+@shared_task(name="pkgbot:package_cleanup", bind=True)
+def package_cleanup(self, **kwargs):
+
+	loop = get_or_create_event_loop()
+	start = loop.run_until_complete(utility.get_timestamp())
+	source = kwargs.get("source")
+	called_by = kwargs.get("called_by")
+
+	if source == "Scheduled":
+		log.info("Running scheduled Package Cleanup Task...")
+	else:
+		log.info(f"Adhoc Package Cleanup was requested by {called_by}")
+
+	log.debug("Getting all packages...")
+	pkg_cleanup_config = config.PkgBot.get("Package_Cleanup")
+	versions_to_keep = kwargs.get("versions_to_keep", pkg_cleanup_config.get("versions_to_keep"))
+	dry_run = kwargs.get("dry_run", pkg_cleanup_config.get("dry_run"))
+	max_allowed_pkgs_to_delete = kwargs.get("maximum_allowed_packages_to_delete")
+
+	packages_json_response = loop.run_until_complete(
+		core.jamf_pro.api("get", "JSSResource/packages"))
+	pkgs = packages_json_response.json().get("packages")
+	groups = collections.defaultdict(list)
+	report = []
+
+	for pkg in pkgs:
+
+		try:
+			head = re.sub(
+				r'\s\((Universal|ARM|Intel)\)',
+				"",
+				re.findall(r'.+?(?=-)', pkg["name"])[0]
+			)
+		except IndexError:
+			head = pkg["name"]
+
+		groups[head].append(pkg)
+
+	for k,v in groups.items():
+		log.debug(f"Software Title:  {k}")
+		# log.debug(f"Software Title:  {k}\nVersions:  {v}")
+
+		if len(v) > versions_to_keep:
+			# Sort by ID -- presumed newer pkg versions have higher integers
+			v = sorted(v, key=lambda item: item["id"], reverse=False)[:-2]
+
+			# Check that we're not going to delete too many packages
+			if len(v) > max_allowed_pkgs_to_delete:
+				log.debug(
+					f"Found {len(v)} packages.  "
+					f"Maximum allowed is {max_allowed_pkgs_to_delete}.  "
+					"Override by setting the 'maximum_allowed_packages_to_delete' argument."
+				)
+
+			# Divide the packages into those to keep and those to delete
+			if packages_to_delete := v[:max_allowed_pkgs_to_delete]:
+				packages_in_use = 0
+
+				for pkg in packages_to_delete:
+
+					if pkgbot_pkg := loop.run_until_complete(
+						core.package.get({ "pkg_name": pkg.get("name") })):
+						pass
+					elif manual_pkg := (loop.run_until_complete(
+						schemas.Package_Manual_Out.from_queryset(
+							models.PackagesManual.filter(**{ "pkg_name": pkg.get("name") })
+					))):
+						pkgbot_pkg = manual_pkg[0]
+
+					if pkgbot_pkg:
+						policy_report = pkgbot_pkg.dict(
+							exclude = { "recipe", "icon", "notes",
+				  				"slack_channel", "slack_ts", "response_url" },
+							exclude_unset = True
+						)
+
+						# Check if packages are in use...
+						if policy_report.get("policies"):
+							packages_in_use = packages_in_use + 1
+
+							for policy in policy_report.get("policies"):
+								# log.debug(f'{policy = }')
+								policy.pop("packages", None)
+								policy.pop("packages_manual", None)
+
+						report.append(policy_report)
+					else:
+						report.append(pkg)
+
+				log.debug(f"Number of packages to delete:  {len(packages_to_delete)}")
+				log.debug(f"Number of packages in use:  {packages_in_use}")
+
+	total_in_use = len([ pkg for pkg in report if pkg.get("policies") ])
+	log.debug(f"Total packages in report:  {len(report) }")
+	log.debug(f"Total packages in use:  {total_in_use}")
+
+	header = ("id", "name", "version", "pkg_name", "packaged_date", "promoted_date",
+		"last_update", "status", "updated_by", "holds", "notes", "policies")
+
+	csv_file = loop.run_until_complete(utility.create_csv(
+		data = report,
+		header = header,
+		file_name = "Package Retirement Report.csv",
+		save_path = "/tmp"
+	))
+
+	send_webhook.apply_async((self.request.id,), queue="pkgbot", priority=9)
+
+	return {
+		"event": "package-cleanup",
+		"source": source,
+		"called_by": called_by,
+		"start": start,
+		"completed": loop.run_until_complete(utility.get_timestamp()),
+		"result": "Package cleanup report has been generated.",
+		"results": {
+			"packages_to_delete": len(report),
+			"packages_in_use": total_in_use,
+			"csv_file": csv_file,
+		},
+		"task_id": self.request.id
+	}

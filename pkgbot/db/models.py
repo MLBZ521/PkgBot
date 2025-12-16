@@ -24,6 +24,9 @@ class PkgBotAdmins(Model):
 	site_access = fields.CharField(max_length=1024, null=True)
 	last_update = fields.DatetimeField(auto_now=True, null=True)
 
+	class Meta:
+		table = "pkgbot_admins"
+
 
 class Recipes(Model):
 	id = fields.IntField(pk=True)
@@ -51,9 +54,17 @@ class Recipe_Filter(BaseModel):
 class RecipeNotes(Model):
 	id = fields.IntField(pk=True)
 	note = fields.CharField(max_length=4096, default="", null=True)
-	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="notes", on_delete="CASCADE", to_field="recipe_id")
 	submitted_by = fields.CharField(max_length=64)
 	time_stamp = fields.DatetimeField(auto_now_add=True)
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField(
+		model_name = "pkgbot.Recipes",
+		related_name = "notes",
+		on_delete = fields.CASCADE,
+		to_field = "recipe_id"
+	)
+
+	class Meta:
+		table = "recipe_notes"
 
 
 class RecipeResults(Model):
@@ -65,14 +76,21 @@ class RecipeResults(Model):
 	slack_ts = fields.CharField(max_length=32, null=True)
 	slack_channel = fields.CharField(max_length=32, null=True)
 	response_url = fields.CharField(max_length=1024, null=True)
-	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField("pkgbot.Recipes", related_name="results", on_delete="CASCADE", to_field="recipe_id") 
 	task_id = fields.CharField(max_length=36, null=True)
 	details = fields.CharField(max_length=4096)
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField(
+		model_name = "pkgbot.Recipes",
+		related_name = "results",
+		on_delete = fields.CASCADE,
+		to_field = "recipe_id"
+	)
+
+	class Meta:
+		table = "recipe_results"
 
 
 class Packages(Model):
 	id = fields.IntField(pk=True)
-	recipe: fields.ForeignKeyRelation[Recipes] = fields.ForeignKeyField("pkgbot.Recipes", related_name="recipe", null=True, on_delete="RESTRICT", to_field="recipe_id") # SET_NULL
 	name = fields.CharField(max_length=64)
 	version = fields.CharField(max_length=64)
 	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
@@ -85,6 +103,21 @@ class Packages(Model):
 	slack_channel = fields.CharField(max_length=32, null=True)
 	slack_ts = fields.CharField(max_length=32, null=True)
 	response_url = fields.CharField(max_length=1024, null=True)
+	policies: fields.ManyToManyRelation["Policies"] = fields.ManyToManyField(
+		model_name = "pkgbot.Policies",
+		through = "pkgs_in_policies",
+		related_name = "packages",
+		null = True,
+		on_delete = fields.SET_NULL,
+		create_unique_index = False
+	)
+	recipe: fields.ForeignKeyRelation["Recipes"] = fields.ForeignKeyField(
+		model_name = "pkgbot.Recipes",
+		related_name = "recipe",
+		null = True,
+		on_delete = fields.SET_NULL,
+		to_field = "recipe_id"
+	)
 
 	class Meta:
 		table = "packages"
@@ -93,18 +126,53 @@ class Packages(Model):
 class PackageNotes(Model):
 	id = fields.IntField(pk=True)
 	note = fields.CharField(max_length=4096, default="", null=True)
-	package = fields.ForeignKeyField("pkgbot.Packages", related_name="notes", on_delete="CASCADE", to_field="pkg_name")
+	package = fields.ForeignKeyField(
+		model_name = "pkgbot.Packages",
+		related_name = "notes",
+		on_delete = fields.CASCADE,
+		to_field = "pkg_name"
+	)
 	submitted_by = fields.CharField(max_length=64)
 	time_stamp = fields.DatetimeField(auto_now_add=True)
+
+	class Meta:
+		table = "package_notes"
 
 
 class PackageHold(Model):
 	id = fields.IntField(pk=True)
 	enabled = fields.BooleanField()
-	package = fields.ForeignKeyField("pkgbot.Packages", related_name="holds", on_delete="CASCADE", to_field="pkg_name")
+	package = fields.ForeignKeyField(
+		model_name = "pkgbot.Packages",
+		related_name = "holds",
+		on_delete = fields.CASCADE,
+		to_field = "pkg_name"
+	)
 	site = fields.CharField(max_length=128)
 	submitted_by = fields.CharField(max_length=64)
 	time_stamp = fields.DatetimeField(auto_now=True)
+
+	class Meta:
+		table = "package_holds"
+
+
+class PackagesManual(Model):
+	id = fields.IntField(pk=True)
+	name = fields.CharField(max_length=64)
+	version = fields.CharField(max_length=64)
+	pkg_name = fields.CharField(max_length=256, null=True, unique=True)
+	status = fields.CharField(max_length=64, default="dev")
+	policies: fields.ManyToManyRelation["Policies"] = fields.ManyToManyField(
+		model_name = "pkgbot.Policies",
+		through = "manual_pkgs_in_policies",
+		related_name = "packages_manual",
+		null = True,
+		on_delete = fields.SET_NULL,
+		create_unique_index = False
+	)
+
+	class Meta:
+		table = "packages_manual"
 
 
 class Errors(Model):
@@ -119,12 +187,18 @@ class Errors(Model):
 	task_id = fields.CharField(max_length=36, null=True)
 	details = fields.CharField(max_length=4096)
 
+	class Meta:
+		table = "errors"
+
 
 class Policies(Model):
 	id = fields.IntField(pk=True)
 	policy_id = fields.IntField(unique=True)
 	name = fields.CharField(max_length=256)
 	site = fields.CharField(max_length=128)
+
+	class Meta:
+		table = "policies"
 
 
 class CallBack(BaseModel):

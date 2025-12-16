@@ -1,3 +1,4 @@
+import os.path
 import time
 
 from datetime import datetime
@@ -74,6 +75,9 @@ async def event_handler(task_id, loop_count=0):
 
 		case "repo-add":
 			await event_autopkg_repo_add(task_results)
+
+		case "package-cleanup":
+			await event_package_cleanup_report(task_results)
 
 
 async def event_details(task_results):
@@ -164,8 +168,8 @@ async def event_disk_space_warning(task_results):
 	event, event_id, autopkg_cmd, recipe_id, success, stdout, stderr = await event_details(task_results)
 
 	# Post Slack Message
-	results = await core.chatbot.send.disk_space_msg(
-		"Warning", stderr, config.PkgBot.get('icon_warning'))
+	results = await core.chatbot.send.acknowledge_msg(
+		"Disk Space Warning", stderr, config.PkgBot.get('icon_warning'))
 
 	# Create DB entry
 	await core.error.create({
@@ -185,19 +189,14 @@ async def event_failed_pre_checks(task_results):
 
 	for task_id in task_results.get("task_id"):
 
-		child_task_results = await utility.get_task_results(task_id)
-		event = child_task_results.get("task_results").get("event")
+		child_task_results = (await utility.get_task_results(task_id)).get("task_results")
+		event = child_task_results.get("event")
 
 		if event == "autopkg_repo_update":
-##### TODO:
-	# Send message to ChatBot
-			log.warning("Failure during event:  autopkg_repo_update")
+			""" If `autopkg repo-update` resulted in an error """
 
-		if event == "disk_space_critical":
-			""" If cache volume has insufficient disk space """
-
-			results = await core.chatbot.send.disk_space_msg(
-				"Critical",
+			results = await core.chatbot.send.acknowledge_msg(
+				"Error while updating AutoPkg recipe repos",
 				child_task_results.get("stderr"),
 				config.PkgBot.get('icon_error')
 			)
@@ -212,10 +211,43 @@ async def event_failed_pre_checks(task_results):
 				"details": child_task_results.get("stderr")
 			})
 
-		if event == "private_git_pull":
-##### TODO:
-	# Send message to ChatBot
-			log.warning("Failure during event:  private_git_pull")
+		elif event == "disk_space_critical":
+			""" If cache volume has insufficient disk space """
+
+			results = await core.chatbot.send.acknowledge_msg(
+				"Disk Space Critical",
+				child_task_results.get("stderr"),
+				config.PkgBot.get('icon_error')
+			)
+
+			# Create DB entry
+			await core.error.create({
+				"type": event,
+				"slack_ts": results.get("ts"),
+				"slack_channel": results.get("channel"),
+				"status": "Notified",
+				"task_id": child_task_results.get("task_id"),
+				"details": child_task_results.get("stderr")
+			})
+
+		elif event == "private_git_pull":
+			""" If an error occurs during a `git pull` of priviate repo """
+
+			results = await core.chatbot.send.acknowledge_msg(
+				"Error attempting to sync private git repo",
+				f"```{child_task_results.get('stderr')}```",
+				config.PkgBot.get('icon_error')
+			)
+
+			# Create DB entry
+			await core.error.create({
+				"type": event,
+				"slack_ts": results.get("ts"),
+				"slack_channel": results.get("channel"),
+				"status": "Notified",
+				"task_id": child_task_results.get("task_id"),
+				"details": child_task_results.get("stderr")
+			})
 
 
 async def event_error(task_results):
@@ -286,9 +318,9 @@ async def event_recipe_run(task_results):
 
 			# Instead, check if the package has already been created in the database, this
 			# ensures a message is posted if it failed to post previously.
-			pkg_db_object = await core.package.get({ "pkg_name": pkg_name })
+			pkg_object = await core.package.get({ "pkg_name": pkg_name })
 
-			if pkg_db_object:
+			if pkg_object:
 				slack_msg = f"`{task_results.get('task_id')}`:  Recipe run for `{recipe_id}` did not find a new version."
 
 			else:
@@ -311,7 +343,7 @@ async def event_recipe_run(task_results):
 
 			# Update attributes for this recipe
 			await core.recipe.update({ "recipe_id": recipe_id }, {
-				"last_ran": await utility.utc_to_local(datetime.now()),
+				"last_ran": await utility.utc_to_local(await utility.get_timestamp()),
 				"recurring_fail_count": 0
 			})
 
@@ -324,11 +356,7 @@ async def event_recipe_run(task_results):
 
 	elif event == "recipe_run_prod":
 		log.info(f"Package promoted to production:  {pkg_name}")
-
-		format_string = "%Y-%m-%d %H:%M:%S.%f"
-		promoted_date = datetime.strftime(datetime.now(), format_string)
-		pkg_data["promoted_date"] = promoted_date
-
+		pkg_data["promoted_date"] = await utility.get_timestamp("%Y-%m-%d %H:%M:%S.%f")
 		await core.autopkg.workflow_prod(event_id, schemas.Package_In(**pkg_data))
 
 
@@ -434,24 +462,49 @@ async def handle_autopkg_error(**kwargs):
 
 	if event == "recipe_run_prod":
 		# Promotion Failed
-##### TODO:
-# Possible ideas:
-	# Thread the error message with the original message?
-	# Post Ephemeral Message to PkgBot Admin?
 
 		# Get the recipe that failed to be promoted
-		pkg_db_object = await core.package.get({ "id": event_id })
-		recipe_id = pkg_db_object.recipe_id
-		software_title = pkg_db_object.name
-		software_version = pkg_db_object.version
-		log.error(f"Failed to promote:  {pkg_db_object.pkg_name}")
+		pkg_object = await core.package.get({ "id": event_id })
+		recipe_id = pkg_object.recipe.recipe_id
+		software_title = pkg_object.name
+		software_version = pkg_object.version
+		log.error(f"Failed to promote:  {pkg_object.pkg_name}")
 
 		redacted_error = {
 			"Failed to promote:": f"{software_title} v{software_version}",
 			"Error:": redacted_error
 		}
 
+		return await promotion_failed(recipe_id, event, redacted_error, pkg_object.slack_ts, task_id)
+
 	await core.recipe.error(recipe_id, event, redacted_error, task_id)
+
+
+async def promotion_failed(recipe_id: str, event: str, error: str, thread_ts: str, task_id: str = None):
+
+	# Create DB entry in errors table
+	recipe_result = await core.recipe.create_result({
+		"type": event,
+		"recipe_id": recipe_id,
+		"task_id": task_id,
+		"details": error
+	})
+
+	# Construct error content
+	error_dict = await core.error.construct_msg(recipe_id, error, task_id)
+
+	# Send error message
+	results = await core.chatbot.send.recipe_error_msg(recipe_id, recipe_result.id, error_dict, thread_ts)
+
+	# Update error message
+	await core.recipe.update_result(
+		{ "id": recipe_result.id },
+		{
+			"slack_channel": results.get('channel'),
+			"slack_ts": results.get('ts'),
+			"status": "Notified"
+		}
+	)
 
 
 async def handle_exception(**kwargs):
@@ -482,3 +535,25 @@ async def handle_exception(**kwargs):
 	}
 
 	await core.recipe.error(recipe_id, redacted_error, task_id)
+
+
+async def event_package_cleanup_report(task_results):
+	""" When a Package Cleanup Report is generated """
+
+	date_stamp = await utility.get_timestamp(format_string="%Y-%m-%d")
+	report_results = task_results.get("results")
+	packages_to_delete = report_results.get("packages_to_delete")
+	packages_in_use = report_results.get("packages_in_use")
+	csv_file = report_results.get("csv_file")
+	csv_file = {
+		"path": csv_file,
+		"filename": (os.path.basename(csv_file)).replace(".csv", f" {date_stamp}.csv"),
+	}
+	notification_text = f"Package Cleanup Report {date_stamp}"
+
+	# Construct message text
+	msg_blocks = await core.chatbot.build.package_cleanup_report(
+		packages_to_delete, packages_in_use)
+
+	# Send message and upload report
+	return await core.chatbot.send.msg_with_file(msg_blocks, notification_text, csv_file)

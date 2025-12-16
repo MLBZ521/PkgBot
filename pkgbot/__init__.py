@@ -19,7 +19,7 @@ def create_pkgbot() -> FastAPI:
 		title="PkgBot API",
 		description="A framework to manage software packaging, testing, and promoting from a "
 			"development to production environment.",
-		version="0.6.0",
+		version="0.7.0",
 		openapi_tags=settings.api.tags_metadata,
 		docs_url="/api",
 		middleware=middleware

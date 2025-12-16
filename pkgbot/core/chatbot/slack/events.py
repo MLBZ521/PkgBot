@@ -1,4 +1,5 @@
 import re
+# import secrets
 
 from fastapi import HTTPException
 
@@ -9,6 +10,58 @@ from pkgbot.utilities import common as utility
 
 config = config.load_config()
 log = utility.log
+
+
+async def known_user(username, user_id, channel, trigger_id, user_object):
+
+	if not user_object:
+		log.warning(f"Unknown user:  `{username}` [{user_id}].")
+
+		# Considered doing this:  https://api.slack.com/tutorials/tracks/account-binding
+			# But I don't think it's needed at this time...
+		# bind_token = secrets.token_urlsafe(64)
+		# f"You can login here:  <https://{config.PkgBot.get('host')}/bind_token={bind_token}|{config.PkgBot.get('host')}/bind_token={bind_token}>"
+
+		# core.user.create_or_update({
+		# 	"username": username,
+		# 	"slack_id": user_id,
+		# 	"pkgbot_token": bind_token
+		# })
+
+		await core.chatbot.send.modal_notification(
+			trigger_id,
+			"Please login to PkgBot",
+			"Hello, before you can utilize this function, you will need to login to PkgBot.\n\n"
+				f"You can login here:  <https://{config.PkgBot.get('host')}|{config.PkgBot.get('host')}>",
+			"Done",
+			image = f"{config.PkgBot.get('icon_warning')}"
+		)
+		# Haven't decided which method to use yet...
+		# await core.chatbot.send.direct_msg(
+		# 	user_id,
+		# 	"Hello, before you can utilize this function, you will need to login to PkgBot.\n\n"
+		# 		f"You can login here:  <https://{config.PkgBot.get('host')}|{config.PkgBot.get('host')}>",
+		# 	channel,
+		# 	alt_text = "Please login to PkgBot"
+		# )
+
+		return False
+
+	return True
+
+
+async def unauthorized_function(username, user_id, trigger_id):
+
+	log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
+
+	return await core.chatbot.send.modal_notification(
+		trigger_id,
+		"PERMISSION DENIED",
+		"WARNING:  Unauthorized access attempted!\n\nOnly PkgBot Admins are authorized to "
+			f"perform this action.\n\n`{username}` will be reported to the robot overloads.",
+		"Ok",
+		image = f"{config.PkgBot.get('icon_permission_denied')}"
+	)
 
 
 async def button_click(payload):
@@ -28,6 +81,10 @@ async def button_click(payload):
 	# 	f"{message_ts}\nresponse_url:  {response_url}\nbutton_text:  {button_text}\n"
 	# 	f"button_value_type:  {button_value_type}\nbutton_value:  {button_value}\n"
 	# )
+
+	if not await known_user(username = username, user_id = user_id, channel = channel,
+		trigger_id = trigger_id, user_object = user_that_clicked):
+		return
 
 	# Verify and perform action only if a PkgBotAdmin clicked the button
 	if user_that_clicked and user_that_clicked.full_admin:
@@ -119,26 +176,16 @@ async def button_click(payload):
 				if button_value_type == "Recipe_Error":
 					return await core.recipe.update_result(filter_obj, updates)
 
-				else:
-					# For legacy errors...  Future cleanup/removal
-					try:
-						log.debug("Old recipe error")
-						return await core.recipe.update_result(filter_obj, updates)
-					except Exception:
-						log.debug("Generic error")
-						return await core.error.update(filter_obj, updates)
+				# For legacy errors...  Future cleanup/removal
+				try:
+					log.debug("Old recipe error")
+					return await core.recipe.update_result(filter_obj, updates)
+				except Exception:
+					log.debug("Generic error")
+					return await core.error.update(filter_obj, updates)
 
 	else:
-		log.warning(f"Unauthorized user:  `{username}` [{user_id}].")
-
-		return await core.chatbot.send.modal_notification(
-			trigger_id,
-			"PERMISSION DENIED",
-			"WARNING:  Unauthorized access attempted!\n\nOnly PkgBot Admins are authorized to "
-				f"perform this action.\n\n`{username}` will be reported to the robot overloads.",
-			"Ok",
-			image = f"{config.PkgBot.get('icon_permission_denied')}"
-		)
+		await unauthorized_function(username, user_id, trigger_id)
 
 
 async def slash_cmd(incoming_cmd):
@@ -154,9 +201,13 @@ async def slash_cmd(incoming_cmd):
 
 	log.debug("Incoming details:\n"
 		f"channel:  {channel}\nuser id:  {user_id}\nusername:  {username}\n"
-		f"full admin:  {user_that_clicked.full_admin}\ncommand:  {command}\ncmd_text:  {cmd_text}"
+		f"user_that_clicked:  {user_that_clicked}\ncommand:  {command}\ncmd_text:  {cmd_text}"
 		f"\nresponse_url:  {response_url}\ntrigger_id:  {trigger_id}"
 	)
+
+	if not await known_user(username = username, user_id = user_id, channel = channel,
+		trigger_id = trigger_id, user_object = user_that_clicked):
+		return
 
 	if not user_that_clicked.full_admin and not config.Slack.get("slash_cmds_enabled"):
 		return await core.chatbot.send.modal_notification(
@@ -349,6 +400,10 @@ async def message_shortcut(payload):
 
 	user_object = await core.user.get({"username": username})
 
+	if not await known_user(username = username, user_id = user_id, channel = channel,
+		trigger_id = trigger_id, user_object = user_object):
+		return
+
 	if not user_object.full_admin and not config.Slack.get("shortcuts_enabled"):
 		return await core.chatbot.send.modal_notification(
 			trigger_id,
@@ -357,24 +412,23 @@ async def message_shortcut(payload):
 			"Ok.... :disappointed:"
 		)
 
-	if callback_id == "promote_pkg":
+	if channel != config.Slack.get("channel"):
+		return await core.chatbot.send.modal_notification(
+			trigger_id,
+			"PkgBot Shortcuts :jamf:",
+			"This Shortcut is not supported in this channel!",
+			"Ok.... :disappointed:"
+		)
 
-		if channel != config.Slack.get("channel"):
-			return await core.chatbot.send.modal_notification(
-				trigger_id,
-				"PkgBot Shortcuts :jamf:",
-				"This Shortcut is not supported in this channel!",
-				"Ok.... :disappointed:"
-			)
+	for in_block in incoming_blocks:
+		if in_block.get("type") == "section":
+			message_text = in_block.get("text").get("text")
+			package_name = re.findall(r"\*Package Name:\*\s\s`(.+)`", message_text)[0]
+			break
 
-		for in_block in incoming_blocks:
-			if in_block.get("type") == "section":
-				message_text = in_block.get("text").get("text")
-				package_name = re.findall(r"\*Package Name:\*\s\s`(.+)`", message_text)[0]
-				break
+	pkg_object = await core.package.get({"pkg_name": package_name})
 
-		log.debug(f"\npackage_name:  {package_name}")
-		pkg_object = await core.package.get({"pkg_name": package_name})
+	if callback_id == "add_pkg_to_policy":
 
 		# Ensure the pkg has been promoted first
 		if pkg_object.status == "dev":
@@ -385,7 +439,38 @@ async def message_shortcut(payload):
 				"Oh... :looking:"
 			)
 
-		return await core.chatbot.send.modal_promote_pkg(trigger_id, package_name)
+		return await core.chatbot.send.modal_add_pkg_to_policy(trigger_id, pkg_object.pkg_name)
+
+
+	elif callback_id == "promote_pkg_only":
+
+		if not user_object.full_admin:
+			return await unauthorized_function(username, user_id, trigger_id)
+
+		log.info(f"PkgBotAdmin `{username}` is promoting package id: {pkg_object.id}")
+
+		await core.chatbot.SlackBot.reaction(
+			action = "add",
+			emoji = "gear",
+			ts = message_ts
+		)
+
+		await core.package.update(
+			{ "id": pkg_object.id },
+			{ "response_url": response_url, "updated_by": username, "slack_ts": message_ts }
+		)
+
+		autopkg_cmd = models.AutoPkgCMD(
+			**{
+				"verb": "run",
+				"pkg_only": True,
+				"promote": True,
+				"match_pkg": pkg_object.pkg_name,
+				"pkg_id": pkg_object.id
+			}
+		)
+
+		await core.package.promote(pkg_object.id, autopkg_cmd)
 
 
 async def external_lists(payload):
@@ -425,7 +510,7 @@ async def view_submission(payload):
 		if in_block.get("type") == "section":
 			message_text = in_block.get("text").get("text")
 
-		if match := re.findall(r"^Pkg to promote:\s\s`(.+)`", message_text):
+		if match := re.findall(r"^Package:\s\s`(.+)`", message_text):
 			package_name = match[0]
 			break
 

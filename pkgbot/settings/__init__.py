@@ -1,3 +1,6 @@
-from . import api
-from . import celery
-from . import db
+from . import celery_queue as celery
+
+from . import (
+    api,
+    db
+)

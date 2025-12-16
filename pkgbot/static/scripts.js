@@ -24,7 +24,7 @@ function verify_file(event, file, form) {
 }
 
 
-function config_table() {
+function config_table(tables) {
 
 	$("#" + this.id).DataTable(
 		{
@@ -38,7 +38,7 @@ function config_table() {
 				{
 					"targets": $('.sorting-disabled').index(),
 					"orderable": false
-				} 
+				}
 			]
 		}
 	);

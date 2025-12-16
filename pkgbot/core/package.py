@@ -1,10 +1,8 @@
+from celery import current_app as pkgbot_celery_app
+
 from pkgbot import core
 from pkgbot.db import models, schemas
 from pkgbot.tasks import task
-from pkgbot.utilities import common as utility
-
-
-log = utility.log
 
 
 async def get(package_filter: dict | None = None):
@@ -14,6 +12,11 @@ async def get(package_filter: dict | None = None):
 
 	results = await schemas.Package_Out.from_queryset(models.Packages.filter(**package_filter))
 	return results[0] if len(results) == 1 else results
+
+
+async def get_or_none(pkg_object: dict):
+
+	return await models.Packages.get_or_none(**pkg_object)
 
 
 async def get_note(note_filter: dict | None = None):
@@ -49,11 +52,20 @@ async def create_hold(pkg_hold_object: dict):
 	return await models.PackageHold.create(**pkg_hold_object)
 
 
+async def remove_hold(pkg_hold_object: dict):
+
+	return await models.PackageHold.create(**pkg_hold_object)
+
+
+async def delete_hold(pkg_note_object: dict):
+	# Not using at this time, so history can be maintained
+	return await models.PackageHold.filter(**pkg_note_object).delete()
+
+
 async def update(package_filter: dict, updates: dict):
 
-	result = await models.Packages.filter(**package_filter).first()
-	await (result.update_from_dict(updates)).save()
-	return await schemas.Package_Out.from_tortoise_orm(result)
+	await models.Packages.filter(**package_filter).update(**updates)
+	return await get({ "id": package_filter.get("id") })
 
 
 async def delete(package_filter: dict):
@@ -63,8 +75,8 @@ async def delete(package_filter: dict):
 
 async def promote(id: int, autopkg_cmd: models.AutoPkgCMD | None = None):
 
-	pkg_object = await get({"id": id})
-	recipe = await core.recipe.get({"recipe_id": pkg_object.recipe.recipe_id})
+	pkg_object = await get({ "id": id })
+	recipe = await core.recipe.get({ "recipe_id": pkg_object.recipe.recipe_id })
 
 	if autopkg_cmd is None:
 		autopkg_cmd = models.AutoPkgCMD(
@@ -99,3 +111,18 @@ async def promote(id: int, autopkg_cmd: models.AutoPkgCMD | None = None):
 async def deny(id: int):
 
 	return await core.chatbot.send.deny_pkg_msg(await update({"id": id}, {"status": "Denied"}))
+
+
+async def get_or_create_manual_pkg(pkg_object: dict):
+
+	return await models.PackagesManual.get_or_create(**pkg_object)
+
+
+async def package_cleanup(kwargs: dict | None = None):
+
+	return pkgbot_celery_app.send_task(
+		"pkgbot:package_cleanup",
+		kwargs = kwargs,
+		queue = "pkgbot",
+		priority = 3
+	)

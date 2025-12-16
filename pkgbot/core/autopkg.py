@@ -43,7 +43,7 @@ async def workflow_dev(pkg_object: schemas.Package_In, pkg_note_object: schemas.
 async def workflow_prod(promoted_id: int, pkg_object: schemas.Package_In):
 
 	if pkg_object.promoted_date is None:
-		date_to_convert = datetime.now()
+		date_to_convert = await utility.get_timestamp()
 	else:
 		date_to_convert = pkg_object.promoted_date
 

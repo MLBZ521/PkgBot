@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Package History{% endblock %}
+{% block title %}Package History{% endblock title %}
 {% block content %}
 {% include "table_css.html" %}
 {% include "table_js.html" %}
@@ -9,7 +9,7 @@
 			<thead>
 				<tr>
 					{% for header in table_headers %}
-					<th class={% if header == "ID" %} "primary-column" {% elif header == "" %} "sorting-disabled" {% endif %}>
+					<th{% if header == "ID" %} class="primary-column" {% elif header == "" %} class="sorting-disabled" {% endif %}>
 						{{ header }}
 					</th>
 					{% endfor %}
@@ -19,17 +19,11 @@
 			<tbody>
 			{% for pkg in packages %}
 				<tr>
-				{% if pkg["icon"] %}
-					<td>
-						<img src="{{ url_for('static', path='/icons/%s' % pkg.icon) }}"/>
+					<td>{% set package_icon = pkg["icon"] or ["package.png", "metapackage.png"] | random %}
+						<img src="{{ url_for('static', path='/icons/%s' % package_icon) }}"/>
 					</td>
-				{% else %}
 					<td>
-						<img src="{{ url_for('static', path='/icons/%s.png' % ['package', 'metapackage']|random) }}"/>
-					</td>
-				{% endif %}
-					<td>
-						<a href="{{ url_for(name='package', id=pkg.id) }}">
+						<a href="{% if pkg.id %} {{ url_for(name='package', id=pkg.id) }} {% endif %}">
 							<span class="pkgbot-table-id">{{ pkg.id }}</span>
 						</a>
 					</td>
@@ -39,7 +33,11 @@
 					<td>{{ pkg.updated_by }}</td>
 					<td class="pkgbot-table-td-nowrap">{{ pkg.packaged_date | strftime }}</td>
 					<td class="pkgbot-table-td-nowrap">{{ pkg.promoted_date | strftime if pkg.promoted_date else "" }}</td>
-					<td>{{ pkg.notes[0].note if pkg.notes[0] }}</td>
+					<td>{% if pkg.holds %}{% set hold = pkg.holds | find_max(key="time_stamp") %}
+						{% if hold["enabled"] == True %}{{ pkg.holds | length }}{% endif %}{% endif %}
+					</td>
+					<!-- <td>{% if pkg.policies %}{{ pkg.policies | length }}{% endif %}</td> -->
+					<td>{% if pkg.notes %} {{ pkg.notes[0].note if pkg.notes[0] }} {% endif %}</td>
 				</tr>
 			{% endfor %}
 			</tbody>

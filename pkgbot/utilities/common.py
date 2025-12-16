@@ -7,13 +7,14 @@ import os
 # import pickle
 import plistlib
 import re
-# import shlex
+import shlex
 import shutil
 import yaml
 
 from datetime import datetime, timezone
 from distutils.util import strtobool
 from io import StringIO
+from tempfile import NamedTemporaryFile, SpooledTemporaryFile, TemporaryDirectory
 from typing import List, Union
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
@@ -124,7 +125,10 @@ async def plist_reader(plistFile):
 		return plist_contents
 
 
-async def utc_to_local(utc_dt):
+async def utc_to_local(utc_dt: datetime | str):
+
+	if isinstance(utc_dt, str):
+		utc_dt = await string_to_datetime(utc_dt)
 
 	return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
@@ -134,17 +138,16 @@ async def string_to_datetime(datetime_string: str, format_string: str = "%Y-%m-%
 	return datetime.strptime(datetime_string, format_string)
 
 
-async def datetime_to_string(datetime_string: str, format_string: str = "%Y-%m-%d %I:%M:%S"):
+async def datetime_to_string(date_time: datetime, format_string: str = "%Y-%m-%d %I:%M:%S"):
 
-	converted = datetime.fromisoformat(datetime_string)
-	return converted.strftime(format_string)
+	return date_time.strftime(format_string)
 
 
 async def get_timestamp(format_string: str = None):
 
 	if format_string:
-		return await datetime_to_string(str(datetime.now()), format_string)
-	return await datetime_to_string(str(datetime.now()))
+		return await datetime_to_string(datetime.now(), format_string)
+	return datetime.now()
 
 
 async def compute_hex_digest(key: bytes,
@@ -155,14 +158,14 @@ async def compute_hex_digest(key: bytes,
 
 async def load_yaml_file(config_file):
 
-	# Open a yaml file
+	# Open and load a yaml file
 	with open(config_file, 'rb') as config_file_path:
 		return load_yaml(config_file_path)
 
 
 async def load_yaml(config_file):
 
-	# Load yaml file
+	# Load yaml formatted string
 	return yaml.safe_load(config_file)
 
 
@@ -341,7 +344,7 @@ async def parse_slash_cmd_options(cmd_text: str, verb: str):
 		elif v_count := re.subn(r"\s--verbose|\s-v", '', cmd_text)[1]:
 			final_options["verbose"] = f"{'v' * v_count}"
 
-	options_to_parse = await split_string(cmd_text, split_index = -1)
+	options_to_parse = shlex.split(cmd_text)
 	indexes_to_ignore = []
 	overrides = ""
 
@@ -558,3 +561,21 @@ async def parse_csv_contents(csv_file: bytes):
 
 	# Convert the file contents to a file-like object that csv.DictReader can parse
 	return csv.DictReader(StringIO(csv_file.decode()))
+
+
+async def create_csv(data: list, header: list | set, file_name: str, save_path: str | None = None):
+
+	if not save_path:
+		save_path = TemporaryDirectory()
+	if not header:
+		header = data[0].keys()
+
+	file = f"{save_path}/{file_name}"
+
+	with open(file, "w", newline="") as csv_path:
+		dict_writer = csv.DictWriter(csv_path, header)
+		dict_writer.writeheader()
+		dict_writer.writerows(data)
+		_ = csv_path.seek(0)
+
+	return file

@@ -14,7 +14,6 @@ AutoPkg:
   minimum_free_space: 50
   # Warning threshold of free space (in GB) available for when a warning message will be generated
   warning_free_space: 100
-
 # Location of a yaml formatted file with defined recipe configurations
 # recipe_config: ./settings/recipe_config.yaml
 # Location a of plain text file that lists all repos that are decencies of your recipes
@@ -27,7 +26,7 @@ Celery:
 
 
 Database:
-  location: "/Library/AutoPkg/PkgBot/Database/db.sqlite3"
+  location: /Library/AutoPkg/PkgBot/Database/db.sqlite3
 
 
 JamfPro_Dev:
@@ -67,7 +66,7 @@ Git:
   # binary: 
   user_name: PkgBot
   user_email: 
-  private_repo: git@git.org:autopkg/recipes.git
+  # private_repo: git@git.org:autopkg/recipes.git
   local_repo_dir: ~/Library/AutoPkg/RecipeOverrides/
   repo_primary_branch: main
   repo_push_branch: main
@@ -96,8 +95,9 @@ Slack:
   bot_name: PkgBot
   slack_id: 
   channel: 
-  slash_cmds_enabled: False
-  shortcuts_enabled: False
+  test-channel: 
+  slash_cmds_enabled: false
+  shortcuts_enabled: false
 
 PkgBot:
   # enable_ssl: True
@@ -113,7 +113,11 @@ PkgBot:
   Admins:
     <username>: <slack_id>
     <jps_api_username>: null # Yes, _null_ -- only need to set the username here
-  webhook_secret:  some_long_string to validate incoming messages
+  icon_denied: denied.png
+  icon_error: error.png
+  icon_permission_denied: permission_denied.png
+  icon_warning: warning.png
+  webhook_secret: some_long_string to validate incoming messages
   # Jinja Template Directory
   jinja_templates: /Library/AutoPkg/PkgBot/pkgbot/templates
   jinja_static: /Library/AutoPkg/PkgBot/pkgbot/static
@@ -123,7 +127,7 @@ PkgBot:
   uvicorn_log_level: debug
   log_config:
     version: 1
-    disable_existing_loggers: False
+    disable_existing_loggers: false
     formatters:
       default:
         (): 'uvicorn.logging.DefaultFormatter'
@@ -169,7 +173,7 @@ PkgBot:
           - default
       uvicorn.access:
         level: INFO
-        propagate: False
+        propagate: false
         handlers:
           - access
       PkgBot:
@@ -177,7 +181,10 @@ PkgBot:
         handlers:
           - default
           - debugging
-
+  Package_Cleanup:
+    versions_to_keep: 2
+    maximum_allowed_packages_to_delete: 10
+    dry_run: false # Not yet implemented
 
 Common:
   # Strings that you do not want to be be printed "publicly" in notifications

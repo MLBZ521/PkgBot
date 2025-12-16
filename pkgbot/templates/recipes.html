@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}List of Recipes{% endblock %}
+{% block title %}List of Recipes{% endblock title %}
 {% block content %}
 {% include "table_css.html" %}
 {% include "table_js.html" %}
@@ -9,7 +9,7 @@
 			<thead>
 				<tr>
 					{% for header in table_headers %}
-					<th {{ "class=primary-column" if header == "ID" }}>
+					<th{% if header == "ID" %} class="primary-column" {% endif %}>
 						{{ header }}
 					</th>
 					{% endfor %}
@@ -20,7 +20,7 @@
 				{% for recipe in recipes %}
 				<tr>
 					<td>
-						<a href="{{ url_for(name='recipe', id=recipe.id) }}">
+						<a href="{% if recipe.id %} {{ url_for(name='recipe', id=recipe.id) }} {% endif %}"></a>
 							<span class="pkgbot-table-id">{{ recipe.id }}</span>
 						</a>
 					</td>
@@ -30,7 +30,7 @@
 					<td>{{ recipe.pkg_only }}</td>
 					<td class="pkgbot-table-td-nowrap">{{ recipe.last_ran | strftime }}</td>
 					<td>{{ recipe.schedule }}</td>
-					<td>{{ recipe.notes[0].note if recipe.notes[0] }}</td>
+					<td>{{ recipe.notes[-1].note if recipe.notes[-1] }}</td>
 				</tr>
 				{% endfor %}
 			</tbody>

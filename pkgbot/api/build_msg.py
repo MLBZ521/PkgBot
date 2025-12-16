@@ -100,4 +100,4 @@ async def basic_msg(text, image: str | None = None, alt_image_text: str | None =
 	description="Builds a message when there is a disk space size issue.")
 async def disk_space_msg(header, msg, image):
 
-	return await core.chatbot.build.disk_space_msg(header, msg, image)
+	return await core.chatbot.build.acknowledge_msg(header, msg, image)

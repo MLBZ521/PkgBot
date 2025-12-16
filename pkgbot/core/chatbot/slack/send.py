@@ -31,19 +31,19 @@ async def promote_msg(pkg_object: schemas.Package_In):
 	blocks = await core.chatbot.build.promote_msg(pkg_object)
 	text = f"{pkg_object.pkg_name} was promoted to production"
 
-	result = await core.chatbot.SlackBot.update_message_with_response_url(
-		pkg_object.response_url,
+	result = await core.chatbot.SlackBot.update_message(
 		blocks,
+		pkg_object.slack_ts,
 		text = text
 	)
 
 	# If the first method fails, try the alternate
-	if json.loads(result.body).get("error") == "expired_url":
-		await core.chatbot.SlackBot.update_message(
-			blocks,
-			pkg_object.slack_ts,
-			text = text
-		)
+	if result.data.get("ok") != True:
+		await core.chatbot.SlackBot.update_message_with_response_url(
+		pkg_object.response_url,
+		blocks,
+		text = text
+	)
 
 	return await core.chatbot.SlackBot.reaction(
 		action = "remove",
@@ -215,17 +215,16 @@ async def deny_trust_msg(result_object: schemas.RecipeResult_In):
 	return response
 
 
-async def disk_space_msg(header: str, msg: str, image: str):
+async def acknowledge_msg(header: str, msg: str, image: str):
 
-	blocks = await core.chatbot.build.disk_space_msg(header, msg, image)
-	return await core.chatbot.SlackBot.post_message(blocks, text=f"Disk Space {header}")
+	blocks = await core.chatbot.build.acknowledge_msg(header, msg, image)
+	return await core.chatbot.SlackBot.post_message(blocks, text=header)
 
 
 async def direct_msg(user, text, channel: str | None = None, image: str | None = None,
 	alt_text: str | None = None, alt_image_text: str | None = None):
 
 	blocks = await core.chatbot.build.basic_msg(text, image, alt_image_text)
-
 	return await core.chatbot.SlackBot.post_ephemeral_message(
 		user,
 		blocks,
@@ -249,9 +248,9 @@ async def modal_notification(trigger_id: str, title_txt: str, msg_text: str,
 	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
 
 
-async def modal_promote_pkg(trigger_id: str, pkg_name: str):
+async def modal_add_pkg_to_policy(trigger_id: str, pkg_name: str):
 
-	blocks = await core.chatbot.build.modal_promote_pkg(pkg_name)
+	blocks = await core.chatbot.build.modal_add_pkg_to_policy(pkg_name)
 	return await core.chatbot.SlackBot.open_modal(trigger_id, blocks)
 
 
@@ -274,3 +273,41 @@ async def policy_list(filter_values: str, username: str):
 
 	policies = [ policy.dict() for policy in policies_object ]
 	return await block.policy_list(policies)
+
+
+async def msg_with_file(msg_blocks: str, notification_text: str, file):
+
+	response = await core.chatbot.SlackBot.file_upload(
+		file = file.get("path"),
+		filename = file.get("filename"),
+		title = file.get("filename"),
+		text = notification_text,
+	)
+
+	if (response.status_code == 200):
+		uploaded_file_data = response.data.get("file")
+
+		# Find the Channel the file was uploaded to
+		if channels := uploaded_file_data.get("channels"):
+			channel_id = channels[0]
+		elif groups := uploaded_file_data.get("groups"):
+			channel_id = groups[0]
+		elif ims := uploaded_file_data.get("ims"):
+			channel_id = ims[0]
+		else:
+			log.error("Unable to determine where the file was uploaded...\n"
+				f"Slack response was:\n{response.data}")
+
+		# Find the timestamp for the message
+		if not (share_type := uploaded_file_data.get("shares").get("public")):
+			share_type = uploaded_file_data.get("shares").get("private")
+		ts = share_type.get(channel_id)[0].get("ts")
+
+		response = await core.chatbot.SlackBot.update_message(
+			msg_blocks,
+			text = notification_text,
+			ts = ts,
+			channel = channel_id
+		)
+
+	return response

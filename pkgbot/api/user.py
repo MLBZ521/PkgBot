@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from pkgbot import core, settings
-from pkgbot.db import models, schemas
+from pkgbot.db import schemas
 from pkgbot.utilities import common as utility
 
 

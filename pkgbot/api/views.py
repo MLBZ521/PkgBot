@@ -1,39 +1,39 @@
 from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from fastapi.responses import RedirectResponse, HTMLResponse
 
-from pkgbot import api, config, core
+from pkgbot import api, config, core, settings
 from pkgbot.db import models, schemas
 from pkgbot.utilities import common as utility
 
 
 config = config.load_config()
 log = utility.log
-templates = core.views.jinja_templates
+jinja_templates = settings.api.jinja_templates
 
 router = APIRouter(
 	tags = ["view"],
 	include_in_schema = False,
-	dependencies = [Depends(api.auth.login_manager)
-	]
+	dependencies = [Depends(api.auth.login_manager)]
 )
 
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
 
-	return templates.TemplateResponse("index.html", { "request": request })
+	return jinja_templates.TemplateResponse("index.html", { "request": request })
 
 
 # @router.get("/login", response_class=HTMLResponse)
 # async def userlogin(request: Request):
 
-#	return templates.TemplateResponse("login.html", { "request": request })
+#	return jinja_templates.TemplateResponse("login.html", { "request": request })
 
 
 @router.get("/error", response_class=HTMLResponse)
 async def error(request: Request, error: str | None = None):
 
-	log.error(f"[ERROR] {error}")
+	if error:
+		log.error(f"{error}")
 
 	await core.views.notify(
 		request,
@@ -43,48 +43,59 @@ async def error(request: Request, error: str | None = None):
 		message = error or "Something went wrong!"
 	)
 
-	return templates.TemplateResponse("error.html", { "request": request, "error": error })
+### TODO:
+	# This isn't switching the page....need to figure out why...
+	return jinja_templates.TemplateResponse("error.html", { "request": request, "error": error })
 
 
 @router.get("/packages", response_class=HTMLResponse)
 async def packages(request: Request):
 
-	pkgs = await schemas.Package_Out.from_queryset(models.Packages.all())
+	packages = await schemas.Packages_Out.from_queryset(models.Packages.all())
 
 	table_headers = [
-		"", "ID", "Name", "Version", "Status", "Updated By", "Packaged", "Promoted", "Notes"
+		"", "ID", "Name", "Version", "Status", "Updated By",
+		"Packaged", "Promoted", "Holds", "Notes"
 	]
 
-	return templates.TemplateResponse("packages.html",
-		{ "request": request, "table_headers": table_headers, "packages": pkgs })
+	return jinja_templates.TemplateResponse("packages.html",
+		{ "request": request, "table_headers": table_headers, "packages": packages })
 
 
 @router.get("/package/{id}", response_class=HTMLResponse)
 async def package(request: Request):
 
-	pkg = await core.package.get({"id": request.path_params['id']})
+	if pkg := await core.package.get({"id": request.path_params['id']}):
 
-	notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
-	pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
+		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
+		pkg_holds_table_headers = [ "Site", "State", "Time Stamp", "Submitted By" ]
+		policies_table_headers = [ "Site", "Policy ID", "Name" ]
 
-	return templates.TemplateResponse("package.html",
-		{
-			"request": request,
-			"package": pkg,
-			"notes": pkg.notes,
-			"notes_table_headers": notes_table_headers,
-			"pkg_holds": pkg.holds,
-			"pkg_holds_table_headers": pkg_holds_table_headers
-	})
+		return jinja_templates.TemplateResponse("package.html",
+			{
+				"request": request,
+				"package": pkg,
+				"notes": pkg.notes,
+				"notes_table_headers": notes_table_headers,
+				"pkg_holds": pkg.holds,
+				"pkg_holds_table_headers": pkg_holds_table_headers,
+				"policies": pkg.policies,
+				"policies_table_headers": policies_table_headers
+		})
+
+	else:
+		await error(request, "The requested package does not exist.")
 
 
 @router.post("/package/{id}", response_class=HTMLResponse)
 async def update_package(request: Request):
 
+	site_admin = request.state.user.get('username')
+	site_admin_access = request.state.user.get('site_access')
 	db_id = request.path_params.get("id")
 	await core.package.get({"id": db_id})
 
-	updates, pkg_note, site_tags = await core.views.parse_form(request)
+	updates, pkg_note, enabled_sites_holds = await core.views.parse_form(request)
 
 	await core.package.update({"id": db_id}, updates)
 
@@ -92,27 +103,41 @@ async def update_package(request: Request):
 		pkg_note["package_id"] = updates.get("pkg_name")
 		await core.package.create_note(pkg_note)
 
-##### Need to setup
-	# remove_site_tags = [ site for site in (request.state.user.site_access).split(", ") if site not in site_tags ]
+	remove_sites_holds = [
+		site for site in request.state.user.get("site_access") if site not in enabled_sites_holds ]
 
-	# for site in site_tags:
-		# await core.package.create_hold({
-		# 	"enabled": True,
-		# 	"package_id": updates.get("pkg_name"),
-		# 	"site": site,
-		# 	"submitted_by": request.state.user.get("username")
-		# })
-##### Determine which version to use...
-		# Maintains a single record for package/site combination...
-		# result, result_bool = await models.PackageHold.update_or_create(
-		# 	{
-		# 			"enabled": True,
-		# 			"package_id": updates.get("pkg_name"),
-		# 			"site": site,
-		# 			"submitted_by": request.state.user.get("username")
-		# 	},
-		# 	site=site
-		# )
+	for site in site_admin_access:
+
+		pkg_hold_object = {
+			"package_id": updates.get("pkg_name"),
+			"site": site,
+		}
+
+		if enabled_sites_holds or remove_sites_holds:
+
+			# Check for existing holds
+			hold = await core.package.get_hold(pkg_hold_object)
+
+			if site in enabled_sites_holds and ( not hold or not hold.enabled ):
+				# Add Site Hold
+				log.debug(
+					f"Creating hold for `{site}` on {updates.get('pkg_name')} by `{site_admin}`.")
+				pkg_hold_object |= {
+					"enabled": True,
+					"submitted_by": site_admin
+				}
+				await core.package.create_hold(pkg_hold_object)
+
+			elif site in remove_sites_holds and hold and hold.enabled:
+				# Remove Site Hold
+				log.debug(
+					f"Removing hold for `{site}` on {updates.get('pkg_name')} by `{site_admin}`.")
+				pkg_hold_object |= {
+					"enabled": False,
+					"submitted_by": site_admin
+				}
+				await core.package.remove_hold(pkg_hold_object)
+
 
 	await core.views.notify(
 		request,
@@ -134,27 +159,30 @@ async def recipes(request: Request):
 	table_headers = [ "ID", "Recipe ID", "Enable", "Manual Only",
 		"Pkg Only", "Last Ran", "Schedule", "Notes" ]
 
-	return templates.TemplateResponse("recipes.html",
+	return jinja_templates.TemplateResponse("recipes.html",
 		{ "request": request, "table_headers": table_headers, "recipes": all_recipes })
 
 
 @router.get("/recipe/{id}", response_class=HTMLResponse)
 async def recipe(request: Request):
 
-	recipe_object = await core.recipe.get({"id": request.path_params['id']})
+	if recipe_object := await core.recipe.get({"id": request.path_params['id']}):
 
-	notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
-	results_table_headers = [ "Event", "Status", "Last Update", "Updated By", "Task ID", "Details" ]
+		notes_table_headers = [ "Note", "Submitted By", "Time Stamp" ]
+		results_table_headers = [ "Event", "Status", "Last Update", "Updated By", "Task ID", "Details" ]
 
-	return templates.TemplateResponse("recipe.html",
-		{
-			"request": request,
-			"recipe": recipe_object,
-			"notes": recipe_object.notes,
-			"notes_table_headers": notes_table_headers,
-			"results": recipe_object.results,
-			"results_table_headers": results_table_headers
-	})
+		return jinja_templates.TemplateResponse("recipe.html",
+			{
+				"request": request,
+				"recipe": recipe_object,
+				"notes": recipe_object.notes,
+				"notes_table_headers": notes_table_headers,
+				"results": recipe_object.results,
+				"results_table_headers": results_table_headers
+		})
+
+	else:
+		await error(request, "The requested recipe does not exist.")
 
 
 @router.post("/recipe/{id}", response_class=HTMLResponse)
@@ -188,7 +216,7 @@ async def create_recipe_form(request: Request,
 	if not user_object or not user_object.dict().get("full_admin"):
 		return await core.views.notify_not_authorized(request, "recipes")
 
-	return templates.TemplateResponse("recipe_create.html", { "request": request })
+	return jinja_templates.TemplateResponse("recipe_create.html", { "request": request })
 
 
 @router.post("/create/recipe", response_class=HTMLResponse)
