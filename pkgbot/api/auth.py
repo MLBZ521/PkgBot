@@ -15,9 +15,6 @@ from pkgbot.utilities import common as utility
 
 config = config.load_config()
 log = utility.log
-LOGIN_SECRET = os.urandom(1024).hex()
-login_manager = LoginManager(LOGIN_SECRET, token_url="/auth/login", use_cookie=True)
-login_manager.cookie_name = settings.api.PkgBot_Cookie
 
 router = APIRouter(
 	prefix = "/auth",
@@ -30,7 +27,14 @@ class NotAuthenticatedException(Exception):
 	pass
 
 
-login_manager.not_authenticated_exception = NotAuthenticatedException
+LOGIN_SECRET = os.urandom(1024).hex()
+login_manager = LoginManager(
+	LOGIN_SECRET,
+	not_authenticated_exception = NotAuthenticatedException,
+	token_url = "/auth/login",
+	use_cookie = True
+)
+login_manager.cookie_name = settings.api.PkgBot_Cookie
 
 
 async def exc_handler(request, exc):

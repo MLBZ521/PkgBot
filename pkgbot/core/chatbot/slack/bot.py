@@ -103,7 +103,7 @@ class SlackClient(object):
 
 		except SlackApiError as error:
 			log.error(f"Failed to update {response_url}\nFull Error:\n{error}\n"
-			 	f"error.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
+				f"error.dir:  {dir(error)}\nerror.response['error']:  {error.response['error']}")
 			return response
 
 		except asyncio.exceptions.TimeoutError as error:

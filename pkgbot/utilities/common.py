@@ -32,29 +32,6 @@ from pkgbot import config
 config = config.load_config()
 
 
-def log_setup(name="PkgBot"):
-
-	logger = logging.getLogger(name)
-
-	if not logger.hasHandlers():
-		logger.debug("LOGGER HAS NO HANDLERS!")
-
-		# Get the log configuration
-		log_config = yaml.safe_load(f"{config.PkgBot.get('log_config')}")
-
-		# Load log configuration
-		logging.config.dictConfig(log_config)
-
-	else:
-		logger.debug("Logger has handlers!")
-
-	# Create logger
-	return logger
-
-
-log = log_setup()
-
-
 async def execute_process(command, input=None):
 	"""
 	A helper function for asyncio's subprocess.
@@ -579,3 +556,26 @@ async def create_csv(data: list, header: list | set, file_name: str, save_path: 
 		_ = csv_path.seek(0)
 
 	return file
+
+
+async def log_setup(name="PkgBot"):
+
+	logger = logging.getLogger(name)
+
+	if not logger.hasHandlers():
+		logger.debug("LOGGER HAS NO HANDLERS!")
+
+		# Get the log configuration
+		log_config = await load_yaml(f"{config.PkgBot.log_config}")
+
+		# Load log configuration
+		logging.config.dictConfig(log_config)
+
+	else:
+		logger.debug("Logger has handlers!")
+
+	# Create logger
+	return logger
+
+
+log = asyncio.run(log_setup())

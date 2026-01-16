@@ -5,7 +5,7 @@ AutoPkg:
   # Specify non-standard binary to use
   # binary:
   # FAIL_RECIPES_WITHOUT_TRUST_INFO
-  UseTrustInfo: True
+  UseTrustInfo: true
   # Location of non-standard RecipeOverrides directory
   # recipe_overrides: /path/to/RecipeOverrides
   # Volume where autopkg cache is located
@@ -32,7 +32,7 @@ Database:
 JamfPro_Dev:
   autopkg_prefs: /Library/AutoPkg/PkgBot/Settings/dev_autopkg_prefs.plist
   jps_url: https://dev.server.org:8443
-  verify_ssl: True
+  verify_ssl: true
   api_user: 
   api_password: 
   # If you are using a On Prem HTTPS/SMB/etc. Distribution Point
@@ -44,14 +44,14 @@ JamfPro_Dev:
 JamfPro_Prod:
   autopkg_prefs: /Library/AutoPkg/PkgBot/Settings/prod_autopkg_prefs.plist
   jps_url: https://prod.server.org:8443
-  verify_ssl: True
+  verify_ssl: true
   api_user: 
   api_password: 
   # If you are using a On Prem HTTPS/SMB/etc. Distribution Point
   dp1_name: 
   dp1_user: 
   dp1_password: 
-  # Name of the recipe that will be used when promoting packages to public
+  # Name of the recipe that will be used when promoting packages to production
   recipe_template: com.github.mlbz521.ProductionTemplate
   recipe_template_pkg_only: com.github.mlbz521.ProductionTemplate
   unauthorized_sites:
@@ -100,7 +100,7 @@ Slack:
   shortcuts_enabled: false
 
 PkgBot:
-  # enable_ssl: True
+  # enable_ssl: true
   # host: pkgbot.server.org
   # ip: 
   # port: 443
@@ -109,7 +109,7 @@ PkgBot:
   # ssl_keyfile: /Library/AutoPkg/PkgBot/Settings/private2022.key
   # ssl_certfile: /Library/AutoPkg/PkgBot/Settings/certificate_chain2022.pem
   # Reload the server when changes are made
-  keep_alive: True
+  keep_alive: true
   Admins:
     <username>: <slack_id>
     <jps_api_username>: null # Yes, _null_ -- only need to set the username here
@@ -189,7 +189,7 @@ PkgBot:
 Common:
   # Strings that you do not want to be be printed "publicly" in notifications
   # Any/all passwords/secrets/keys above are already included in the redaction logic
-  # These values will be parsed as *Regex*
+  # These values will be parsed as *REGEX*
   # redaction_strings: <some_internal_string>|\b<username>\b
   # additional_sensitive_key_names: _id|_hash
   # Local timezone

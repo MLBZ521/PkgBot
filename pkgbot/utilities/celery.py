@@ -1,5 +1,7 @@
 import asyncio
 
+from datetime import timedelta
+
 from celery import current_app as pkgbot_celery_app
 from celery.schedules import crontab
 
@@ -16,6 +18,17 @@ async def create_celery(celery_app=pkgbot_celery_app):
 	celery_app.conf.update(task_default_priority=5)
 	celery_app.conf.update(task_queue_max_priority=10)
 	celery_app.conf.beat_schedule = {
+		# Executes scheduled `autopkg run` tasks
+		"celery.run_recipes": {
+			"task": "pkgbot:run_recipes",
+			"schedule": config.Services.get("autopkg_service_start_interval"),
+			"args": (),
+			"kwargs": { "source": "Scheduled", "called_by": "Celery Beat" },
+			"options": {
+				"priority": 10,
+				"queue": "pkgbot"
+			}
+		},
 		# Executes daily at 1:00 A.M.
 		"cache_policies": {
 			"task": "pkgbot:cache_policies",

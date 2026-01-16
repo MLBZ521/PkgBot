@@ -23,7 +23,7 @@
 						<img src="{{ url_for('static', path='/icons/%s' % package_icon) }}"/>
 					</td>
 					<td>
-						<a href="{% if pkg.id %} {{ url_for(name='package', id=pkg.id) }} {% endif %}">
+						<a href="{% if pkg.id %} {{ url_for('package', id=pkg.id) }} {% endif %}">
 							<span class="pkgbot-table-id">{{ pkg.id }}</span>
 						</a>
 					</td>

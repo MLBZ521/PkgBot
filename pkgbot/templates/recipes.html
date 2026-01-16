@@ -20,7 +20,7 @@
 				{% for recipe in recipes %}
 				<tr>
 					<td>
-						<a href="{% if recipe.id %} {{ url_for(name='recipe', id=recipe.id) }} {% endif %}"></a>
+						<a href="{% if recipe.id %} {{ url_for('recipe', id=recipe.id) }} {% endif %}"></a>
 							<span class="pkgbot-table-id">{{ recipe.id }}</span>
 						</a>
 					</td>

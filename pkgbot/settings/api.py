@@ -2,10 +2,9 @@ from datetime import datetime
 
 from fastapi import Request, status
 from fastapi.templating import Jinja2Templates
-from tortoise.contrib.fastapi import HTTPNotFoundError
 
 from pkgbot import config
-
+from pkgbot.settings.db import HTTPNotFoundError
 
 config = config.load_config()
 
@@ -64,7 +63,6 @@ tags_metadata = [
 ]
 
 
-
 custom_responses = {
 	# 404: {"description": "Item not found"},
 	# 302: {"description": "The item was moved"},
@@ -76,11 +74,9 @@ custom_responses = {
 	status.HTTP_409_CONFLICT: { "description": "The object already exists." }
 }
 
-
 PkgBot_Cookie = "PkgBot_Cookie"
 
-
-jinja_templates = Jinja2Templates(directory=config.PkgBot.get("jinja_templates"))
+jinja_templates = Jinja2Templates(directory=config.PkgBot.jinja_templates)
 jinja_templates.env.filters.update(strftime=template_filter_datetime)
 jinja_templates.env.filters.update(find_max=template_find_max)
 jinja_templates.env.globals.update(parse_messages=parse_notification_messages)

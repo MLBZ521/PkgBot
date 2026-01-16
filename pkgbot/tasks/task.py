@@ -69,6 +69,19 @@ def test(arg):
 	log.debug(arg)
 
 
+@shared_task(name="pkgbot:run_recipes", bind=True)
+def run_recipes(self, **kwargs):
+	# A scheduled task to run all recipes.
+
+	loop = get_or_create_event_loop()
+	autopkg_cmd = models.AutoPkgCMD(**{"verb": "run", "ingress": "Schedule"})
+	log.debug(f"{kwargs = }")
+	log.debug(f"{autopkg_cmd = }")
+	queued_task = loop.run_until_complete(core.autopkg.execute(autopkg_cmd))
+
+	return { "result": "Queued background task" , "task_id": queued_task.id } | kwargs
+
+
 ##################################################
 # Pre-check Tasks
 
@@ -766,6 +779,7 @@ def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = N
 @shared_task(name="pkgbot:cache_policies", bind=True)
 def cache_policies(self, **kwargs):
 
+	loop = get_or_create_event_loop()
 	start = asyncio.run(utility.get_timestamp())
 	source = kwargs.get("source")
 	called_by = kwargs.get("called_by")
@@ -801,7 +815,7 @@ def cache_policies(self, **kwargs):
 
 	for policy_id in deleted_policy_ids:
 		log.debug(f"Deleting Policy:  {policy_id}")
-		asyncio.run(core.policy.delete( { "policy_id": policy_id } ))
+		loop.run_until_complete(core.policy.delete( { "policy_id": policy_id } ))
 
 	place_values = int(math.log10(len(all_policies.get('policies')))) + 1
 	pattern = r'^\d'
@@ -852,11 +866,10 @@ def cache_policies(self, **kwargs):
 
 		for package in policy_packages:
 
-			# PkgBot Package -- if exists
+			# If pkg_object doesn't exist, it was uploaded outside of PkgBot
 			if not (pkg_object := asyncio.run(
 				core.package.get_or_none({ "pkg_name": package.get("name") })
 			)):
-				# Manually uploaded Package
 				pkg_name = package.get("name")
 
 				try:

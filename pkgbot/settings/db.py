@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from pkgbot import config
 
 
@@ -17,3 +19,7 @@ TORTOISE_CONFIG = {
 	"use_tz": False,
 	"timezone": config.Common.get("timezone")
 }
+
+
+class HTTPNotFoundError(BaseModel):
+	detail: str

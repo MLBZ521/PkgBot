@@ -3,7 +3,7 @@
 {% include "table_css.html" %}
 {% include "table_js.html" %}
 
-		<h1><code class="black-text">{% block title %}{{ recipe['recipe_id'] }}{% endblock %}</code></h1>
+		<h1><code class="black-text">{% block title %}{{ recipe['recipe_id'] }}{% endblock title %}</code></h1>
 
 		<form action="/recipe/{{ recipe['id'] }}" method="post">
 
@@ -52,8 +52,8 @@
 
 				<div>
 					<label class="form-label" for="note">Notes</label>
-					<textarea class="form-control count-text" id="note" name="note"
-						maxlength="4000" placeholder="Recipe notes."></textarea>
+					<textarea class="form-control count-text" id="note" name="note" maxlength="4000"
+						placeholder="Recipe notes."></textarea>
 					<span class="pull-left form-text text-muted counter" id="counter"></span>
 				</div>
 

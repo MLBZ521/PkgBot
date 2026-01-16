@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Response, status
 
-from fastapi_utils.tasks import repeat_every
 
 from pkgbot import config, core, settings
 from pkgbot.db import models, schemas
@@ -43,8 +42,6 @@ async def workflow_prod(promoted_id: int,
 	return await core.autopkg.workflow_prod(promoted_id, pkg_object)
 
 
-@router.on_event("startup")
-@repeat_every(seconds=config.Services.get("autopkg_service_start_interval"), wait_first=True)
 @router.post("/run/recipes", summary="Run all recipes",
 	description="Runs all recipes in a background task.",
 	dependencies=[Depends(core.user.verify_admin)])

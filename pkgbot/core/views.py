@@ -82,7 +82,7 @@ async def notify_not_authorized(request: Request, redirect: str = "index"):
 		message = "You are not authorized to utilize this endpoint."
 	)
 
-	redirect_url = request.url_for(name=redirect)
+	redirect_url = request.url_for(redirect)
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -119,9 +119,11 @@ async def parse_form(request):
 		elif value:
 			# Convert date string values to datetime objects
 			try:
-				updates[key] = await utility.string_to_datetime(value, "%Y-%m-%d %H:%M:%S.%f%z")
+				value = await utility.string_to_datetime(value, "%Y-%m-%d %H:%M:%S.%f%z")
 			except:
-				updates[key] = value
+				pass
+
+			updates[key] = value
 
 	if "recipe_id" in form_submission.keys():
 		for check_box in check_box_attributes:
@@ -161,6 +163,7 @@ async def from_web_create_recipe(recipe: dict, recipe_note: dict):
 
 async def from_web_create_recipes(request: Request, file: UploadFile):
 
+	log.debug(f"Uploaded File content type:  {file.content_type}")
 	file_contents = await utility.receive_file_upload(file)
 
 	if file.content_type == "text/csv":
@@ -222,4 +225,4 @@ async def from_web_create_recipes(request: Request, file: UploadFile):
 
 		await core.views.notify_create_recipe_result(request, **notify_results)
 
-	return request.url_for(name="recipes")
+	return request.url_for("recipes")

@@ -77,7 +77,7 @@ async def recipe_error_msg(recipe_id: str, id: int, error: str, thread_ts: str |
 			filetype = "json",
 			title = recipe_id,
 			text = f"Error from `{recipe_id}`",
-			thread_ts = response.get('ts')
+			thread_ts = response.get("ts")
 		)
 
 	return response
@@ -98,7 +98,7 @@ async def trust_diff_msg(diff_msg: str, result_object: schemas.RecipeResult_In):
 	)
 
 	result_object = await core.recipe.update_result(
-		{ "id": result_object.id }, { "slack_ts": response.get('ts') })
+		{ "id": result_object.id }, { "slack_ts": response.get("ts") })
 
 	if (
 		response.get("result") != "Failed to post message"
@@ -153,7 +153,7 @@ async def update_trust_error_msg(msg: str, result_object: schemas.RecipeResult_I
 			ts = result_object.dict().get("slack_ts")
 		)
 
-	user_object = await core.user.get({"username": result_object.dict().get('updated_by')})
+	user_object = await core.user.get({"username": result_object.dict().get("updated_by")})
 
 	mention_blocks = await core.chatbot.build.basic_msg(
 		f"<@{user_object.dict().get('slack_id')}> Your request to update "

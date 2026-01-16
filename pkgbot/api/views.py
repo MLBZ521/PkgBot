@@ -84,7 +84,7 @@ async def package(request: Request):
 		})
 
 	else:
-		await error(request, "The requested package does not exist.")
+		await error(request=request, error="The requested package does not exist.")
 
 
 @router.post("/package/{id}", response_class=HTMLResponse)
@@ -93,10 +93,9 @@ async def update_package(request: Request):
 	site_admin = request.state.user.get('username')
 	site_admin_access = request.state.user.get('site_access')
 	db_id = request.path_params.get("id")
-	await core.package.get({"id": db_id})
+	# await core.package.get({"id": db_id})
 
 	updates, pkg_note, enabled_sites_holds = await core.views.parse_form(request)
-
 	await core.package.update({"id": db_id}, updates)
 
 	if pkg_note:
@@ -147,7 +146,7 @@ async def update_package(request: Request):
 		message = "updated the package!"
 	)
 
-	redirect_url = request.url_for(name="package", **{"id": db_id})
+	redirect_url = request.url_for("package", **{"id": db_id})
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -182,7 +181,7 @@ async def recipe(request: Request):
 		})
 
 	else:
-		await error(request, "The requested recipe does not exist.")
+		await error(request=request, "The requested recipe does not exist.")
 
 
 @router.post("/recipe/{id}", response_class=HTMLResponse)
@@ -205,7 +204,7 @@ async def update_recipe(request: Request):
 		message = "updated the recipe!"
 	)
 
-	redirect_url = request.url_for(name="recipe", **{"id": db_id})
+	redirect_url = request.url_for("recipe", **{"id": db_id})
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -229,7 +228,7 @@ async def create_recipe(request: Request,
 	recipe, recipe_note, _ = await core.views.parse_form(request)
 
 	referral, path_params, result = await core.views.from_web_create_recipe(recipe, recipe_note)
-	redirect_url = request.url_for(name=referral, **path_params)
+	redirect_url = request.url_for(referral, **path_params)
 
 	await core.views.notify_create_recipe_result(request, **{ result: 1 })
 	return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)

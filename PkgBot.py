@@ -7,20 +7,48 @@ import sys
 import secure
 import uvicorn
 
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from pkgbot import config
 
-config = config.load_config(cli_args=tuple(sys.argv[1:]))
+config = config.load_config()
 
 from pkgbot.utilities import common as utility
-from pkgbot.db import schemas
+from pkgbot.db import models, schemas
 from pkgbot import api, core, create_pkgbot
 
 
 log = utility.log
-app = create_pkgbot()
+
+
+@asynccontextmanager
+async def life_span_events(app: FastAPI):
+
+	# Ensure PkgBot Admins from PkgBot's settings are configured in the database.
+	pkgbot_admins = config.PkgBot.Admins
+
+	for admin in pkgbot_admins:
+		user_object = schemas.PkgBotAdmin_In(
+			username = admin,
+			slack_id = pkgbot_admins.get(admin),
+			full_admin =  True
+		)
+		await core.user.create_or_update(user_object)
+
+	# Run `autopkg run` on startup, if configured
+	if config.Services.execute_autopkg_run_on_start:
+		log.debug("[NOTICE] Executing `autopkg run` on startup...")
+		autopkg_cmd = models.AutoPkgCMD(**{"verb": "run", "ingress": "Schedule"})
+		await core.autopkg.run_recipes(autopkg_cmd)
+
+	yield
+
+
+app = create_pkgbot(life_span_events=life_span_events)
 celery = app.celery_app
 
 app.mount("/static", StaticFiles(directory=config.PkgBot.get("jinja_static")), name="static")
@@ -39,7 +67,7 @@ app.include_router(api.tasks.router)
 # Add an exception handler to the app instance
 # Used for the login/auth logic for the HTTP views
 app.add_exception_handler(api.auth.NotAuthenticatedException, api.auth.exc_handler)
-api.auth.login_manager.useRequest(app)
+api.auth.login_manager.attach_middleware(app)
 
 if config.PkgBot.get("enable_ssl"):
 
@@ -60,7 +88,7 @@ if config.PkgBot.get("enable_ssl"):
 	@app.middleware("http")
 	async def set_secure_headers(request, call_next):
 		response = await call_next(request)
-		secure_headers.framework.fastapi(response)
+		await secure_headers.set_headers_async(response)
 		return response
 
 
@@ -68,20 +96,6 @@ async def number_of_workers():
 	number_of_threads = (multiprocessing.cpu_count() * 2) - 1
 	log.debug(f"Number of workers:  {number_of_threads}")
 	return number_of_threads
-
-
-@app.on_event("startup")
-async def startup_event():
-
-	pkgbot_admins = config.PkgBot.get("Admins")
-
-	for admin in pkgbot_admins:
-		user_object = schemas.PkgBotAdmin_In(
-			username = admin,
-			slack_id = pkgbot_admins.get(admin),
-			full_admin =  True
-		)
-		await core.user.create_or_update(user_object)
 
 
 if __name__ == "__main__":

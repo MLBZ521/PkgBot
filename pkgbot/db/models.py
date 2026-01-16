@@ -202,11 +202,11 @@ class Policies(Model):
 
 
 class CallBack(BaseModel):
-	egress: Optional[str]
+	egress: Optional[str] = None
 	ingress: Literal["Schedule", "API", "Slack"] = "Schedule"
-	channel: Optional[str]
+	channel: Optional[str] = None
 	start: datetime = asyncio.run(utility.get_timestamp())
-	completed: Optional[datetime]
+	completed: Optional[datetime] = None
 
 	@validator('ingress')
 	def prevent_none(cls, v, values):
@@ -225,12 +225,12 @@ class AutoPkgCMD(CallBack):
 	verb: Literal["help", "disable", "enable", "repo-add", "run",
 		"update-trust-info", "verify-trust-info", "version"]
 	ignore_parent_trust: bool = False
-	overrides: Optional[str]
+	overrides: Optional[str] = None
 	pkg_only: bool = False
 	quiet: bool = True
 	verbose: str = "vvv"
 
-	match_pkg: Optional[str]
+	match_pkg: Optional[str] = None
 	promote: bool = False
 
 	@validator('promote')
