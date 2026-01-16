@@ -8,7 +8,7 @@ config = config.load_config()
 TORTOISE_CONFIG = {
 	"connections": {
 		# "default": "sqlite://:memory:"
-		"default": f"sqlite:{config.Database.get('location')}"
+		"default": f"sqlite:{config.Database.location}"
 	},
 	"apps": {
 		"pkgbot": {
@@ -17,7 +17,7 @@ TORTOISE_CONFIG = {
 		}
 	},
 	"use_tz": False,
-	"timezone": config.Common.get("timezone")
+	"timezone": config.Common.timezone
 }
 
 

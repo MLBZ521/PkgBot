@@ -42,7 +42,7 @@ async def verify_pkgbot_webhook(request: Request):
 		body = json.loads(await request.body())
 
 		digest = await utility.compute_hex_digest(
-			config.PkgBot.get("webhook_secret").encode("UTF-8"),
+			config.PkgBot.webhook_secret.encode("UTF-8"),
 			str(body).encode("UTF-8"),
 			hashlib.sha512
 		)

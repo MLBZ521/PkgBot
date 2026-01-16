@@ -120,7 +120,7 @@ async def authorizations(token: str = Depends(oauth2_scheme)):
 
 	user_details = user_details_response.json()
 
-	sites_unauthorized = config.JamfPro_Prod.get("unauthorized_sites")
+	sites_unauthorized = config.JamfPro_Prod.unauthorized_sites
 
 	try:
 		return [

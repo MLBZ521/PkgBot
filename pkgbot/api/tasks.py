@@ -64,7 +64,7 @@ async def cache_policies(user_object: schemas.PkgBotAdmin_In = Depends(core.user
 async def package_cleanup(kwargs: dict | None = None,
 	user_object: schemas.PkgBotAdmin_In = Depends(core.user.get_current)):
 
-	package_cleanup_config = config.PkgBot.get("Package_Cleanup")
+	package_cleanup_config = config.JamfPro_Prod.Package_Cleanup
 	kwargs.setdefault("source", "API")
 	kwargs.setdefault("called_by", user_object.username)
 	kwargs.setdefault("versions_to_keep", package_cleanup_config.get("versions_to_keep"))

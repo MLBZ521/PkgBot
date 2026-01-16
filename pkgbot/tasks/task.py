@@ -42,7 +42,7 @@ def send_webhook(self, task_id):
 	data = { "task_id": task_id }
 
 	headers["x-pkgbot-signature"] = asyncio.run(utility.compute_hex_digest(
-		config.PkgBot.get("webhook_secret").encode("UTF-8"),
+		config.PkgBot.webhook_secret.encode("UTF-8"),
 		str(data).encode("UTF-8"),
 		hashlib.sha512
 	))
@@ -137,9 +137,9 @@ def perform_pre_checks(task_id: str, ignore_parent_trust: bool):
 def check_space(self):
 	"""Checks free space on PkgBot storage volume"""
 
-	minimum_free_space = config.AutoPkg.get("minimum_free_space")
-	warning_free_space = config.AutoPkg.get("warning_free_space")
-	cache_volume = config.AutoPkg.get("cache_volume")
+	minimum_free_space = config.AutoPkg.minimum_free_space
+	warning_free_space = config.AutoPkg.warning_free_space
+	cache_volume = config.AutoPkg.cache_volume
 	log.debug(f"Checking available free space on:  {cache_volume}")
 	current_free_space = asyncio.run(utility.get_disk_usage(cache_volume))[2]
 	current_free_space_int, current_free_space_unit = current_free_space.split(" ")
@@ -183,14 +183,14 @@ def git_pull_private_repo(self):
 
 	log.info("Checking for private repo updates...")
 
-	repo_primary_branch = config.Git.get("repo_primary_branch")
-	repo_push_branch = config.Git.get("repo_push_branch")
+	repo_primary_branch = config.Git.repo_primary_branch
+	repo_push_branch = config.Git.repo_push_branch
 	stashed = False
 	use_remote_push = False
 
 	try:
 
-		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
+		private_repo = git.Repo(os.path.expanduser(config.Git.local_repo_dir))
 
 		if private_repo.is_dirty():
 			_ = private_repo.git.stash()
@@ -350,8 +350,8 @@ def autopkg_repo_update(self):
 	"""Performs an `autopkg repo-update all`"""
 
 	log.info("Updating parent recipe repos...")
-	autopkg_repo_update_command = ( f"{config.AutoPkg.get('binary')} repo-update all "
-		f"--prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'" )
+	autopkg_repo_update_command = ( f"{config.AutoPkg.binary} repo-update all "
+		f"--prefs=\'{os.path.abspath(config.JamfPro_Dev.autopkg_prefs)}\'" )
 
 	if task_utils.get_user_context():
 		autopkg_repo_update_command = ( f"su - {task_utils.get_console_user()} -c"
@@ -445,17 +445,17 @@ def autopkg_run(self, recipes: list, autopkg_cmd: dict, **kwargs):
 
 			autopkg_cmd |= {
 				"ignore_parent_trust": True,
-				"prefs": os.path.abspath(config.JamfPro_Prod.get("autopkg_prefs")),
+				"prefs": os.path.abspath(config.JamfPro_Prod.autopkg_prefs),
 				"promote_recipe_id": recipe.get("recipe_id"),
 				"verbose": autopkg_cmd.get("verbose")
 			}
 
 			if recipe.get("pkg_only"):
 				# Only upload the .pkg, do not create/update a Policy
-				recipe_id = config.JamfPro_Prod.get("recipe_template_pkg_only")
+				recipe_id = config.JamfPro_Prod.recipe_template_pkg_only
 				autopkg_cmd |= { "pkg_only": True }
 			else:
-				recipe_id = config.JamfPro_Prod.get("recipe_template")
+				recipe_id = config.JamfPro_Prod.recipe_template
 
 			queued_task = run_recipe.apply_async(
 				({"event": "promote", "id": kwargs.get("event_id")},
@@ -525,7 +525,7 @@ def run_recipe(self, parent_task_results: dict, recipe_id: str, autopkg_cmd: dic
 		# Generate AutoPkg options
 		options = task_utils.generate_autopkg_args(**autopkg_cmd)
 		# Build the autopkg command
-		cmd = f"{config.AutoPkg.get('binary')} run {recipe_id} {options}"
+		cmd = f"{config.AutoPkg.binary} run {recipe_id} {options}"
 
 		if task_utils.get_user_context():
 			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -568,14 +568,14 @@ def autopkg_verify_trust(self, recipe_id: str, autopkg_cmd: dict, task_id: str |
 	_ = autopkg_cmd.pop("overrides", None)
 
 	autopkg_cmd |= {
-		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),
+		"prefs": os.path.abspath(config.JamfPro_Dev.autopkg_prefs),
 		"verbose": "vvv"
 	}
 
 	# Generate AutoPkg options
 	options = task_utils.generate_autopkg_args(**autopkg_cmd)
 	# Build the autopkg command
-	cmd = f"{config.AutoPkg.get('binary')} verify-trust-info {recipe_id} {options}"
+	cmd = f"{config.AutoPkg.binary} verify-trust-info {recipe_id} {options}"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -617,14 +617,14 @@ def autopkg_update_trust(
 
 	# Generate AutoPkg options
 	autopkg_options = task_utils.generate_autopkg_args(
-		prefs=os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")))
+		prefs=os.path.abspath(config.JamfPro_Dev.autopkg_prefs))
 
-	repo_push_branch = config.Git.get("repo_push_branch")
+	repo_push_branch = config.Git.repo_push_branch
 	stashed = False
 
 	try:
 
-		private_repo = git.Repo(os.path.expanduser(config.Git.get("local_repo_dir")))
+		private_repo = git.Repo(os.path.expanduser(config.Git.local_repo_dir))
 
 		if private_repo.is_dirty():
 			_ = private_repo.git.stash()
@@ -639,7 +639,7 @@ def autopkg_update_trust(
 		if repo_push_branch != active_branch:
 			_ = private_repo.git.checkout(repo_push_branch)
 
-		cmd = f"{config.AutoPkg.get('binary')} update-trust-info {recipe_id} {autopkg_options}"
+		cmd = f"{config.AutoPkg.binary} update-trust-info {recipe_id} {autopkg_options}"
 
 		if task_utils.get_user_context():
 			cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -661,7 +661,7 @@ def autopkg_update_trust(
 
 			_ = private_repo.git.commit(
 				"--message", "Updated Trust Info", "--message",
-				f"By:  {config.Slack.get('bot_name')}"
+				f"By:  {config.Slack.bot_name}"
 			)
 
 			_ = private_repo.git.push("--set-upstream", "origin", repo_push_branch)
@@ -704,7 +704,7 @@ def autopkg_version(self, autopkg_cmd: dict, task_id: str | None = None):
 	"""
 
 	# Build the autopkg command
-	cmd = f"{config.AutoPkg.get('binary')} version"
+	cmd = f"{config.AutoPkg.binary} version"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -742,13 +742,13 @@ def autopkg_repo_add(self, repo: str, autopkg_cmd: dict, task_id: str | None = N
 	log.info(f"Adding repo:  {repo}")
 
 	autopkg_options = {
-		"prefs": os.path.abspath(config.JamfPro_Dev.get("autopkg_prefs")),
+		"prefs": os.path.abspath(config.JamfPro_Dev.autopkg_prefs),
 	}
 
 	# Generate AutoPkg options
 	options = task_utils.generate_autopkg_args(**autopkg_options)
 	# Build the autopkg command
-	cmd = f"{config.AutoPkg.get('binary')} repo-add {repo} {options}"
+	cmd = f"{config.AutoPkg.binary} repo-add {repo} {options}"
 
 	if task_utils.get_user_context():
 		cmd = f"su - {task_utils.get_console_user()} -c \"{cmd}\""
@@ -914,7 +914,7 @@ def package_cleanup(self, **kwargs):
 		log.info(f"Adhoc Package Cleanup was requested by {called_by}")
 
 	log.debug("Getting all packages...")
-	pkg_cleanup_config = config.PkgBot.get("Package_Cleanup")
+	pkg_cleanup_config = config.JamfPro_Prod.Package_Cleanup
 	versions_to_keep = kwargs.get("versions_to_keep", pkg_cleanup_config.get("versions_to_keep"))
 	dry_run = kwargs.get("dry_run", pkg_cleanup_config.get("dry_run"))
 	max_allowed_pkgs_to_delete = kwargs.get("maximum_allowed_packages_to_delete")

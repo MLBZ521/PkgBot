@@ -19,10 +19,10 @@ def route_task(name, args, kwargs, options, task=None, **kw):
 
 
 class CeleryConfig:
-	broker_url: str = os.environ.get("broker_url", config.Celery.get("broker_url"))
+	broker_url: str = os.environ.get("broker_url", config.Celery.broker_url)
 	# result_backend: str = os.environ.get("result_backend", "rpc://")
 	result_backend: str = os.environ.get(
-		"result_backend", f"db+sqlite:///{config.Database.get('location')}")
+		"result_backend", f"db+sqlite:///{config.Database.location}")
 
 	task_queues: list = (
 		Queue("pkgbot", queue_arguments={"x-max-priority": 10}),
@@ -32,7 +32,7 @@ class CeleryConfig:
 
 	task_routes = (route_task,)
 	worker_prefetch_multiplier = 1
-	timezone = config.Common.get("timezone")
+	timezone = config.Common.timezone
 
 
 @lru_cache()

@@ -169,7 +169,7 @@ async def event_disk_space_warning(task_results):
 
 	# Post Slack Message
 	results = await core.chatbot.send.acknowledge_msg(
-		"Disk Space Warning", stderr, config.PkgBot.get('icon_warning'))
+		"Disk Space Warning", stderr, config.PkgBot.icon_warning)
 
 	# Create DB entry
 	await core.error.create({
@@ -198,7 +198,7 @@ async def event_failed_pre_checks(task_results):
 			results = await core.chatbot.send.acknowledge_msg(
 				"Error while updating AutoPkg recipe repos",
 				child_task_results.get("stderr"),
-				config.PkgBot.get('icon_error')
+				config.PkgBot.icon_error
 			)
 
 			# Create DB entry
@@ -217,7 +217,7 @@ async def event_failed_pre_checks(task_results):
 			results = await core.chatbot.send.acknowledge_msg(
 				"Disk Space Critical",
 				child_task_results.get("stderr"),
-				config.PkgBot.get('icon_error')
+				config.PkgBot.icon_error
 			)
 
 			# Create DB entry
@@ -236,7 +236,7 @@ async def event_failed_pre_checks(task_results):
 			results = await core.chatbot.send.acknowledge_msg(
 				"Error attempting to sync private git repo",
 				f"```{child_task_results.get('stderr')}```",
-				config.PkgBot.get('icon_error')
+				config.PkgBot.icon_error
 			)
 
 			# Create DB entry
@@ -283,7 +283,7 @@ async def event_recipe_run(task_results):
 
 	pkg_note = {
 		"package_id": pkg_name,
-		"submitted_by": config.Slack.get('bot_name'),
+		"submitted_by": config.Slack.bot_name,
 		"note": pkg_processor.get("Input").get("pkg_notes")
 	}
 
@@ -376,7 +376,7 @@ async def event_autopkg_version(task_results):
 			redacted_error = await utility.replace_sensitive_strings(stderr)
 			await core.chatbot.send.basic_msg(
 				f"Failed to obtain the AutoPkg Version.\nError:  {redacted_error}",
-				config.PkgBot.get("icon_error"),
+				config.PkgBot.icon_error,
 				alt_image_text="Error"
 			)
 
@@ -415,7 +415,7 @@ async def event_autopkg_repo_add(task_results):
 			redacted_error = await utility.replace_sensitive_strings(stderr)
 			await core.chatbot.send.basic_msg(
 				f"Failed to add recipe repo(s):  {repo}.\nError:  {redacted_error}",
-				config.PkgBot.get("icon_error"),
+				config.PkgBot.icon_error,
 				alt_image_text="Error"
 			)
 

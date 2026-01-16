@@ -232,32 +232,32 @@ async def replace_sensitive_strings(message, sensitive_strings=None, sensitive_r
 	all_sensitive_strings = r"bearer\s[\w+.-]+|"
 	sensitive_key_names = r"password|secret|license|serial|key"
 
-	if config.Common.get("additional_sensitive_key_names"):
-		sensitive_key_names += f"|{config.Common.get('additional_sensitive_key_names')}"
+	if config.Common.additional_sensitive_key_names:
+		sensitive_key_names += f"|{config.Common.additional_sensitive_key_names}"
 
 	for plist in [
-		config.JamfPro_Prod.get("autopkg_prefs"),
-		config.JamfPro_Dev.get("autopkg_prefs")
+		config.JamfPro_Prod.autopkg_prefs,
+		config.JamfPro_Dev.autopkg_prefs
 	]:
 		plist_contents = await plist_reader(plist)
 		all_sensitive_strings += await parse_for_sensitive_keys(plist_contents, sensitive_key_names)
 
 	for string in [
-		config.Common.get("redaction_strings"),
+		config.Common.redaction_strings,
 		sensitive_regex_strings
 	]:
 		if string:
 			all_sensitive_strings = "|".join([all_sensitive_strings, string])
 
 	for string in [
-		config.JamfPro_Dev.get("api_user"),
-		config.JamfPro_Dev.get("api_password"),
-		config.JamfPro_Dev.get("dp1_user"),
-		config.JamfPro_Dev.get("dp1_password"),
-		config.JamfPro_Prod.get("api_user"),
-		config.JamfPro_Prod.get("api_password"),
-		config.JamfPro_Prod.get("dp1_user"),
-		config.JamfPro_Prod.get("dp1_password"),
+		config.JamfPro_Dev.api_user,
+		config.JamfPro_Dev.api_password,
+		config.JamfPro_Dev.dp1_user,
+		config.JamfPro_Dev.dp1_password,
+		config.JamfPro_Prod.api_user,
+		config.JamfPro_Prod.api_password,
+		config.JamfPro_Prod.dp1_user,
+		config.JamfPro_Prod.dp1_password,
 		sensitive_strings
 	]:
 		if string:

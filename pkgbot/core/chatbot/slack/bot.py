@@ -331,7 +331,7 @@ async def validate_request(request: Request):
 		signature_basestring = (f"v0:{slack_timestamp}:{slack_body}").encode()
 
 		computed_signature = "v0=" + await utility.compute_hex_digest(
-			bytes(config.Slack.get("signing_secret"), "UTF-8"),
+			bytes(config.Slack.signing_secret, "UTF-8"),
 			signature_basestring)
 
 		slack_signature = request.headers.get("X-Slack-Signature")

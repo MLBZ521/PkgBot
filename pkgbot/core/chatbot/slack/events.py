@@ -20,7 +20,7 @@ async def known_user(username, user_id, channel, trigger_id, user_object):
 		# Considered doing this:  https://api.slack.com/tutorials/tracks/account-binding
 			# But I don't think it's needed at this time...
 		# bind_token = secrets.token_urlsafe(64)
-		# f"You can login here:  <https://{config.PkgBot.get('host')}/bind_token={bind_token}|{config.PkgBot.get('host')}/bind_token={bind_token}>"
+		# f"You can login here:  <https://{config.PkgBot.host}/bind_token={bind_token}|{config.PkgBot.host}/bind_token={bind_token}>"
 
 		# core.user.create_or_update({
 		# 	"username": username,
@@ -32,15 +32,15 @@ async def known_user(username, user_id, channel, trigger_id, user_object):
 			trigger_id,
 			"Please login to PkgBot",
 			"Hello, before you can utilize this function, you will need to login to PkgBot.\n\n"
-				f"You can login here:  <https://{config.PkgBot.get('host')}|{config.PkgBot.get('host')}>",
+				f"You can login here:  <https://{config.PkgBot.host}|{config.PkgBot.host}>",
 			"Done",
-			image = f"{config.PkgBot.get('icon_warning')}"
+			image = f"{config.PkgBot.icon_warning}"
 		)
 		# Haven't decided which method to use yet...
 		# await core.chatbot.send.direct_msg(
 		# 	user_id,
 		# 	"Hello, before you can utilize this function, you will need to login to PkgBot.\n\n"
-		# 		f"You can login here:  <https://{config.PkgBot.get('host')}|{config.PkgBot.get('host')}>",
+		# 		f"You can login here:  <https://{config.PkgBot.host}|{config.PkgBot.host}>",
 		# 	channel,
 		# 	alt_text = "Please login to PkgBot"
 		# )
@@ -60,7 +60,7 @@ async def unauthorized_function(username, user_id, trigger_id):
 		"WARNING:  Unauthorized access attempted!\n\nOnly PkgBot Admins are authorized to "
 			f"perform this action.\n\n`{username}` will be reported to the robot overloads.",
 		"Ok",
-		image = f"{config.PkgBot.get('icon_permission_denied')}"
+		image = f"{config.PkgBot.icon_permission_denied}"
 	)
 
 
@@ -209,7 +209,7 @@ async def slash_cmd(incoming_cmd):
 		trigger_id = trigger_id, user_object = user_that_clicked):
 		return
 
-	if not user_that_clicked.full_admin and not config.Slack.get("slash_cmds_enabled"):
+	if not user_that_clicked.full_admin and not config.Slack.slash_cmds_enabled:
 		return await core.chatbot.send.modal_notification(
 			trigger_id,
 			"PkgBot Slash Commands",
@@ -404,7 +404,7 @@ async def message_shortcut(payload):
 		trigger_id = trigger_id, user_object = user_object):
 		return
 
-	if not user_object.full_admin and not config.Slack.get("shortcuts_enabled"):
+	if not user_object.full_admin and not config.Slack.shortcuts_enabled:
 		return await core.chatbot.send.modal_notification(
 			trigger_id,
 			"PkgBot Shortcuts :jamf:",
@@ -412,7 +412,7 @@ async def message_shortcut(payload):
 			"Ok.... :disappointed:"
 		)
 
-	if channel != config.Slack.get("channel"):
+	if channel != config.Slack.channel:
 		return await core.chatbot.send.modal_notification(
 			trigger_id,
 			"PkgBot Shortcuts :jamf:",

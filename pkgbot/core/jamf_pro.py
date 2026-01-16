@@ -11,9 +11,9 @@ from pkgbot.utilities import common as utility
 
 log = utility.log
 config = config.load_config()
-JPS_URL = config.JamfPro_Prod.get("jps_url")
-API_USER = config.JamfPro_Prod.get("api_user")
-API_PASSWORD = config.JamfPro_Prod.get("api_password")
+JPS_URL = config.JamfPro_Prod.jps_url
+API_USER = config.JamfPro_Prod.api_user
+API_PASSWORD = config.JamfPro_Prod.api_password
 API_TOKEN = None
 API_TOKEN_EXPIRES = 0
 
@@ -42,7 +42,6 @@ async def get_token(username: str = API_USER, password: str = API_PASSWORD):
 	except httpx.ReadTimeout as timeout:
 		log.error(f"Login timed out for:  {username}")
 		return False, False
-
 
 
 async def fixup_token_expiration(token_expires: str):
@@ -76,7 +75,6 @@ async def api(method: str, endpoint: str, in_content_type: str = "json", out_con
 	# 		API_TOKEN, API_TOKEN_EXPIRES = await core.jamf_pro.get_token()
 	# except:
 		# log.warning(f"Something is wrong with API_TOKEN_EXPIRES:  {API_TOKEN_EXPIRES}")
-
 
 	# log.debug(f"{API_TOKEN = }")
 

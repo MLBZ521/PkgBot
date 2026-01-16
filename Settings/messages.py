@@ -9,9 +9,10 @@ from . import blocks as block
 
 
 config = config.load_config()
-SECURE = "s" if config.PkgBot.get("enable_ssl") else ""
-PKGBOT_HOST = config.PkgBot.get('host')
-PKGBOT_SERVER = f"http{SECURE}://{PKGBOT_HOST}:{config.PkgBot.get('port')}"
+SECURE = "s" if config.PkgBot.enable_ssl else ""
+PKGBOT_HOST = config.PkgBot.host
+PKGBOT_SERVER = f"http{SECURE}://{PKGBOT_HOST}"
+# PKGBOT_SERVER = f"http{SECURE}://{PKGBOT_HOST}:{config.PkgBot.port}"
 
 
 async def format_json(the_json, indent=4):
@@ -37,7 +38,7 @@ async def new_pkg(pkg_object: schemas.Package_In):
 		section_block,
 		await block.brick_footer([
 			f"*Dev*:  {pkg_object.dict().get('packaged_date')}\t"
-			f"*Uploaded by*:  @{config.Slack.get('bot_name')}"
+			f"*Uploaded by*:  @{config.Slack.bot_name}"
 		]),
 		await block.brick_section_text("_Promote to production?_"),
 		await block.brick_action_buttons([
@@ -54,7 +55,7 @@ async def recipe_error(recipe_id: str, id: int, error: dict):
 	blocks = [
 		await block.brick_header(f"Encountered an error in:  {recipe_id}"),
 		await block.brick_section_text(f"{error}") | \
-			await block.brick_accessory_image(config.PkgBot.get("icon_error"), ":x:"),
+			await block.brick_accessory_image(config.PkgBot.icon_error, ":x:"),
 		await block.brick_action_buttons([("Acknowledge", "danger", "Recipe_Error:ack")])
 	]
 
@@ -67,7 +68,7 @@ async def trust_diff(id: int, recipe: str, diff_msg: str = None):
 		await block.brick_header("Trust Verification Failure"),
 		await block.brick_section_text(
 			f"*Recipe:*  `{recipe}`\n\n_Trust diff review required._\n\n") | \
-			await block.brick_accessory_image(config.PkgBot.get("icon_warning"), ":warning:"),
+			await block.brick_accessory_image(config.PkgBot.icon_warning, ":warning:"),
 	]
 
 	if diff_msg:
@@ -101,7 +102,7 @@ async def deny_pkg(pkg_object: schemas.Package_In ):
 		section_block,
 		await block.brick_footer([
 			f"*Dev*:  {pkg_object.dict().get('packaged_date')}\t"
-			f"*Uploaded by*:  @{config.Slack.get('bot_name')}",
+			f"*Uploaded by*:  @{config.Slack.bot_name}",
 			f"*Denied by*: @{pkg_object.dict().get('updated_by')}\t"
 			f"*On*:  {pkg_object.dict().get('last_update')}"
 		])
@@ -115,7 +116,7 @@ async def deny_trust(result_object: schemas.RecipeResult_In):
 	blocks = [
 		await block.brick_section_text(
 			f"Denied update to trust info for `{result_object.recipe.recipe_id}`") | \
-			await block.brick_accessory_image(config.PkgBot.get("icon_denied"), ":denied:"),
+			await block.brick_accessory_image(config.PkgBot.icon_denied, ":denied:"),
 		await block.brick_footer([
 			f"*Denied by*:  @{result_object.dict().get('updated_by')}\t"
 			f"*On*:  {result_object.dict().get('last_update')}"
@@ -142,7 +143,7 @@ async def promote(pkg_object: schemas.Package_In):
 		section_block,
 		await block.brick_footer([
 			f"*Dev*:  {pkg_object.dict().get('packaged_date')}\t"
-			f"*Uploaded by*:  @{config.Slack.get('bot_name')}",
+			f"*Uploaded by*:  @{config.Slack.bot_name}",
 			f"*Prod*:  {pkg_object.dict().get('promoted_date')}\t"
 			f"*Approved by*:  @{pkg_object.dict().get('updated_by')}"
 		])
@@ -168,7 +169,7 @@ async def update_trust_success(result_object: schemas.RecipeResult_In):
 async def update_trust_error(msg: str, result_object: schemas.RecipeResult_In):
 
 	section_block = await block.brick_section_text(f"```{msg}```") | \
-		await block.brick_accessory_image(config.PkgBot.get("icon_error"), ":x:")
+		await block.brick_accessory_image(config.PkgBot.icon_error, ":x:")
 
 	blocks = [
 		await block.brick_header(
@@ -188,7 +189,7 @@ async def unauthorized(user: str):
 			f"action.\n\n`{user}` will be reported to the robot overloads."
 		) | \
 			await block.brick_accessory_image(
-				config.PkgBot.get("icon_permission_denied"), ":denied:")
+				config.PkgBot.icon_permission_denied, ":denied:")
 	]
 
 	return await format_json(blocks)
@@ -250,7 +251,7 @@ async def package_cleanup_report(total_package_count, packages_in_use, **kwargs)
 		await block.brick_header(
 			f":mega::bangbang: Jamf Pro Monthly Package Retirement Report {date_stamp} :bangbang::mega:"),
 		await block.brick_section_text(message) # | \
-			# await block.brick_accessory_image(config.PkgBot.get("icon_warning"), ":warning:")
+			# await block.brick_accessory_image(config.PkgBot.icon_warning, ":warning:")
 	]
 
 	return await format_json(blocks)

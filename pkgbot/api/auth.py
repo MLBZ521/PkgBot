@@ -85,7 +85,7 @@ async def login(
 
 	access_token = login_manager.create_access_token(
 		data = { "sub": form_data.username },
-		expires = timedelta(minutes=config.PkgBot.get("token_valid_for"))
+		expires = timedelta(minutes=config.PkgBot.token_valid_for)
 	)
 
 	# Record the web session token

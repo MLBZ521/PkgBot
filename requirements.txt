@@ -30,7 +30,7 @@ MarkupSafe==3.0.2
 multidict==6.4.3
 passlib==1.7.4
 prompt_toolkit==3.0.51
-pydantic==1.10.4
+pydantic==2.11.4
 PyJWT==2.10.1
 pypika-tortoise==0.5.0
 python-multipart==0.0.20

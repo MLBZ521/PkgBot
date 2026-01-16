@@ -6,10 +6,9 @@ from pkgbot import config
 
 config = config.load_config()
 
-SECURE = "s" if config.PkgBot.get("enable_ssl") else ""
-PKGBOT_SERVER = f"http{SECURE}://{config.PkgBot.get('host')}"
-if config.PkgBot.get('port'):
-	PKGBOT_SERVER = f"{PKGBOT_SERVER}:{config.PkgBot.get('port')}"
+SECURE = "s" if config.PkgBot.enable_ssl else ""
+PKGBOT_SERVER = f"http{SECURE}://{config.PkgBot.host}:{config.PkgBot.port}"
+
 
 async def brick_header(text):
 

@@ -7,8 +7,11 @@ from celery.schedules import crontab
 
 from tortoise import Tortoise
 
-from pkgbot import settings
+from pkgbot import config, settings
 from pkgbot.tasks import task
+
+
+config = config.load_config()
 
 
 async def create_celery(celery_app=pkgbot_celery_app):
@@ -17,11 +20,12 @@ async def create_celery(celery_app=pkgbot_celery_app):
 	celery_app.conf.update(task_acks_late=True)
 	celery_app.conf.update(task_default_priority=5)
 	celery_app.conf.update(task_queue_max_priority=10)
+	celery_app.conf.update(result_expires=timedelta(days=config.Celery.result_expires))
 	celery_app.conf.beat_schedule = {
 		# Executes scheduled `autopkg run` tasks
 		"celery.run_recipes": {
 			"task": "pkgbot:run_recipes",
-			"schedule": config.Services.get("autopkg_service_start_interval"),
+			"schedule": config.Services.autopkg_service_start_interval,
 			"args": (),
 			"kwargs": { "source": "Scheduled", "called_by": "Celery Beat" },
 			"options": {

@@ -51,7 +51,7 @@ async def life_span_events(app: FastAPI):
 app = create_pkgbot(life_span_events=life_span_events)
 celery = app.celery_app
 
-app.mount("/static", StaticFiles(directory=config.PkgBot.get("jinja_static")), name="static")
+app.mount("/static", StaticFiles(directory=config.PkgBot.jinja_static), name="static")
 app.include_router(api.views.router)
 app.include_router(api.auth.router)
 app.include_router(api.autopkg.router)
@@ -69,7 +69,7 @@ app.include_router(api.tasks.router)
 app.add_exception_handler(api.auth.NotAuthenticatedException, api.auth.exc_handler)
 api.auth.login_manager.attach_middleware(app)
 
-if config.PkgBot.get("enable_ssl"):
+if config.PkgBot.enable_ssl:
 
 	# Enforces that all incoming requests must be https.
 	app.add_middleware(HTTPSRedirectMiddleware)
@@ -100,14 +100,16 @@ async def number_of_workers():
 
 if __name__ == "__main__":
 
+	# asyncio.run(life_span_events())
+
 	uvicorn.run(
 		"PkgBot:app",
-		reload = config.PkgBot.get("keep_alive"),
-		host = config.PkgBot.get("host"),
-		port = config.PkgBot.get("port"),
-		log_config = config.PkgBot.get("log_config"),
-		log_level = config.PkgBot.get("uvicorn_log_level"),
+		reload = config.PkgBot.keep_alive,
+		host = config.PkgBot.host,
+		port = config.PkgBot.port,
+		log_config = config.PkgBot.log_config,
+		log_level = config.PkgBot.uvicorn_log_level,
 		# workers = asyncio.run(number_of_workers()),
-		ssl_keyfile = config.PkgBot.get("ssl_keyfile"),
-		ssl_certfile = config.PkgBot.get("ssl_certfile")
+		ssl_keyfile = config.PkgBot.ssl_keyfile,
+		ssl_certfile = config.PkgBot.ssl_certfile
 	)

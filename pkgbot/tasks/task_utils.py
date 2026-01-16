@@ -47,10 +47,8 @@ def check_recipe_schedule(interval, last_ran):
 
 
 def api_url_helper():
-	secure = "s" if config.PkgBot.get("enable_ssl") else ""
-	pkgbot_server = f"http{secure}://{config.PkgBot.get('host')}"
-	if config.PkgBot.get('port'):
-		pkgbot_server = f"{pkgbot_server}:{config.PkgBot.get('port')}"
+	secure = "s" if config.PkgBot.enable_ssl else ""
+	pkgbot_server = f"http{secure}://{config.PkgBot.host}:{config.PkgBot.port}"
 	headers = { "Content-Type": "application/json" }
 	return pkgbot_server, headers
 
@@ -69,7 +67,7 @@ def generate_autopkg_args(**kwargs):
 	if kwargs.get("prefs"):
 		options = f"{options} --prefs=\'{kwargs.get('prefs')}\'"
 	else:
-		options = f"{options} --prefs=\'{os.path.abspath(config.JamfPro_Dev.get('autopkg_prefs'))}\'"
+		options = f"{options} --prefs=\'{os.path.abspath(config.JamfPro_Dev.autopkg_prefs)}\'"
 
 	# PkgBot args
 	if kwargs.get("promote_recipe_id"):
