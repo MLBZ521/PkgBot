@@ -11,6 +11,7 @@ class AutoPkg(BaseModel):
 	warning_free_space: int
 	recipe_config: Optional[str]
 	public_repo_list: Optional[str]
+	recurring_fail_count: int = 5
 
 
 class Celery(BaseModel):

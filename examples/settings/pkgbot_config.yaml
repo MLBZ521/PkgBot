@@ -18,6 +18,8 @@ AutoPkg:
 # recipe_config: ./settings/recipe_config.yaml
 # Location a of plain text file that lists all repos that are decencies of your recipes
 # public_repo_list: list_of_public_repos.txt
+  # How many times a recipe can fail before an error message is sent
+  recurring_fail_count: 5
 
 
 Celery:

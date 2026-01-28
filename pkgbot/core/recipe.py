@@ -74,38 +74,51 @@ async def delete(recipe_filter: dict):
 
 async def error(recipe_id: str, event: str, error: str, task_id: str = None):
 
-	# Create DB entry in errors table
-	recipe_result = await create_result({
-		"type": event,
-		"recipe_id": recipe_id,
-		"task_id": task_id,
-		"details": error
-	})
+	recipe = await get({ "recipe_id": recipe_id })
 
-	# Construct error content
-	error_dict = await core.error.construct_msg(recipe_id, error, task_id)
+	if recipe.recurring_fail_count >= config.AutoPkg.recurring_fail_count:
 
-	# Send error message
-	results = await core.chatbot.send.recipe_error_msg(recipe_id, recipe_result.id, error_dict)
+		# Create DB entry in errors table
+		recipe_result = await create_result({
+			"type": event,
+			"recipe_id": recipe_id,
+			"task_id": task_id,
+			"details": error
+		})
 
-	# Update error message
-	await update_result(
-		{ "id": recipe_result.id },
-		{
-			"slack_channel": results.get('channel'),
-			"slack_ts": results.get('ts'),
-			"status": "Notified"
-		}
-	)
+		# Construct error content
+		error_dict = await core.error.construct_msg(recipe_id, error, task_id)
 
-	# Mark the recipe disabled
-	if recipe := await get({ "recipe_id": recipe_id }):
+		# Send error message
+		results = await core.chatbot.send.recipe_error_msg(recipe_id, recipe_result.id, error_dict)
 
+		# Update error message
+		await update_result(
+			{ "id": recipe_result.id },
+			{
+				"slack_channel": results.get('channel'),
+				"slack_ts": results.get('ts'),
+				"status": "Notified"
+			}
+		)
+
+		# Mark the recipe disabled
 		await update(
 			{ "recipe_id": recipe_id },
 			{
 				"enabled": False,
 				"recurring_fail_count": recipe.recurring_fail_count + 1
+			}
+		)
+
+	else:
+		failure_count = recipe.recurring_fail_count + 1
+		log.debug(f"FAILED RECIPE:  {recipe_id = } | Failure count:  {failure_count}")
+
+		await update(
+			{ "recipe_id": recipe_id },
+			{
+				"recurring_fail_count": failure_count
 			}
 		)
 
